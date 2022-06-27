@@ -1,8 +1,14 @@
 package schools;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.Utils;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,8 +40,20 @@ public class SchoolListExtractor {
      *
      * @return A list of schools.
      */
-    public static List<School> extract_ACCS(String url) {
+    @Nullable
+    public static List<School> extract_ACCS(@NotNull String url) {
         logger.info("Extracting schools from Association of Classical Christian Schools");
+
+        Document doc;
+        try {
+            doc = Utils.download(url);
+        } catch (IOException e) {
+            logger.error("Failed to download ACCS website", e);
+            return null;
+        }
+
+        logger.info("Downloaded " + doc.title());
+
         return new ArrayList<>();
     }
 
@@ -46,8 +64,20 @@ public class SchoolListExtractor {
      *
      * @return A list of schools.
      */
-    public static List<School> extract_IFCE(String url) {
+    @Nullable
+    public static List<School> extract_IFCE(@NotNull String url) {
         logger.info("Extracting schools from Institute for Classical Education");
+
+        Document doc;
+        try {
+            doc = Utils.download(url);
+        } catch (IOException e) {
+            logger.error("Failed to download IFCE website", e);
+            return null;
+        }
+
+        logger.info("Downloaded " + doc.title());
+
         return new ArrayList<>();
     }
 
@@ -58,8 +88,20 @@ public class SchoolListExtractor {
      *
      * @return A list of schools.
      */
-    public static List<School> extract_Hillsdale(String url) {
+    @Nullable
+    public static List<School> extract_Hillsdale(@NotNull String url) {
         logger.info("Extracting schools from Hillsdale Classical Schools");
+
+        Document doc;
+        try {
+            doc = Utils.download(url);
+        } catch (IOException e) {
+            logger.error("Failed to download Hillsdale website", e);
+            return null;
+        }
+
+        logger.info("Downloaded " + doc.title());
+
         return new ArrayList<>();
     }
 
@@ -70,8 +112,20 @@ public class SchoolListExtractor {
      *
      * @return A list of schools.
      */
-    public static List<School> extract_ICLE(String url) {
+    @Nullable
+    public static List<School> extract_ICLE(@NotNull String url) {
         logger.info("Extracting schools from Institute for Catholic Liberal Education");
+
+        Document doc;
+        try {
+            doc = Utils.download(url);
+        } catch (IOException e) {
+            logger.error("Failed to download ICLE website", e);
+            return null;
+        }
+
+        logger.info("Downloaded " + doc.title());
+
         return new ArrayList<>();
     }
 
@@ -82,8 +136,20 @@ public class SchoolListExtractor {
      *
      * @return A list of schools.
      */
-    public static List<School> extract_ASA(String url) {
+    @Nullable
+    public static List<School> extract_ASA(@NotNull String url) {
         logger.info("Extracting schools from Anglican School Association");
+
+        Document doc;
+        try {
+            doc = Utils.download(url);
+        } catch (IOException e) {
+            logger.error("Failed to download ASA website", e);
+            return null;
+        }
+
+        logger.info("Downloaded " + doc.title());
+
         return new ArrayList<>();
     }
 
@@ -94,8 +160,20 @@ public class SchoolListExtractor {
      *
      * @return A list of schools.
      */
-    public static List<School> extract_CCLE(String url) {
+    @Nullable
+    public static List<School> extract_CCLE(@NotNull String url) {
         logger.info("Extracting schools from Consortium for Classical Lutheran Education");
+
+        Document doc;
+        try {
+            doc = Utils.download(url);
+        } catch (IOException e) {
+            logger.error("Failed to download CCLE website", e);
+            return null;
+        }
+
+        logger.info("Downloaded " + doc.title());
+
         return new ArrayList<>();
     }
 
