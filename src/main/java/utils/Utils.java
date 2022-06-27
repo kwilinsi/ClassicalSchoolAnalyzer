@@ -30,15 +30,15 @@ public class Utils {
     public static Document download(@NotNull String url) throws IOException {
         Connection connection = Jsoup.connect(url);
 
-        if (Config.getBool(Config.USE_USERAGENT))
+        if (Config.USE_USERAGENT.getBool())
             try {
-                connection.userAgent(Config.get(Config.USERAGENT));
+                connection.userAgent(Config.USERAGENT.get());
             } catch (NullPointerException e) {
                 logger.warn("Failed to get the useragent property when requested. It was not set.", e);
             }
 
         try {
-            connection.timeout(Config.getInt(Config.CONNECTION_TIMEOUT));
+            connection.timeout(Config.CONNECTION_TIMEOUT.getInt());
         } catch (NullPointerException e) {
             logger.warn("Failed to get the timeout value. Reverting to default 30,000.", e);
         } catch (NumberFormatException e) {
@@ -52,13 +52,27 @@ public class Utils {
             return connection.get();
         } catch (HttpStatusException e) {
             // If strict HTTP handling is enabled, throw this error
-            if (Config.getBool(Config.STRICT_HTTP)) throw e;
+            if (Config.STRICT_HTTP.getBool()) throw e;
 
             // Otherwise, retry the connection
             logger.debug("Encountered an HTTP error. Retrying connection", e);
             connection.ignoreHttpErrors(true);
             return connection.get();
         }
+    }
+
+    /**
+     * Parse an HTML file using {@link Jsoup} to obtain a {@link Document}. The file is parsed with the UTF-8 charset.
+     *
+     * @param file The file to parse.
+     * @param url  The URL corresponding to that file (used for resolving relative links).
+     *
+     * @return The parsed document.
+     * @throws IOException If there is an error while parsing the file or the file doesn't exist.
+     */
+    @NotNull
+    public static Document parseDocument(@NotNull File file, @NotNull String url) throws IOException {
+        return Jsoup.parse(file, "UTF-8", url);
     }
 
     /**
