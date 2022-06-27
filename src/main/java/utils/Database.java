@@ -1,0 +1,73 @@
+package utils;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+
+public class Database {
+    private static final Logger logger = LoggerFactory.getLogger(Database.class);
+    private static HikariDataSource dataSource;
+
+    /**
+     * Load the settings for HikariCP and create a connection to the database.
+     */
+    public static void load() {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(
+                String.format("jdbc:mysql://%s:%d/%s",
+                        Config.DATABASE_IP.get(), Config.DATABASE_PORT.getInt(), Config.DATABASE_NAME.get()
+                )
+        );
+
+        config.setUsername(Config.DATABASE_USERNAME.get());
+        config.setPassword(Config.DATABASE_PASSWORD.get());
+
+        // See https://github.com/brettwooldridge/HikariCP/wiki/MySQL-Configuration for more info on the settings.
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        config.addDataSourceProperty("useServerPrepStmts", "true");
+        config.addDataSourceProperty("useLocalSessionState", "true");
+        config.addDataSourceProperty("rewriteBatchedStatements", "true");
+        config.addDataSourceProperty("cacheResultSetMetadata", "true");
+        config.addDataSourceProperty("cacheServerConfiguration", "true");
+        config.addDataSourceProperty("elideSetAutoCommits", "true");
+        config.addDataSourceProperty("maintainTimeStats", "false");
+
+        // See https://github.com/brettwooldridge/HikariCP/issues/210.
+        config.setIdleTimeout(240000);
+        config.setMaxLifetime(240000);
+        config.setMinimumIdle(0);
+
+        dataSource = new HikariDataSource(config);
+    }
+
+    /**
+     * Get a connection to the SQL database. If the {@link #dataSource} has not been configured yet, it will be {@link
+     * #load() loaded} here.
+     * <p>
+     * If there is an error creating the connection, the exception is {@link #logger logged} and then thrown. Therefore,
+     * when catching exceptions caused by this method, they need not be logged to the console.
+     *
+     * @return A new connection.
+     * @throws SQLException If there is an error creating the connection.
+     */
+    @NotNull
+    public static Connection getConnection() throws SQLException {
+        if (dataSource == null)
+            load();
+
+        try {
+            return dataSource.getConnection();
+        } catch (SQLException e) {
+            logger.error("Error creating connection to database.", e);
+            throw e;
+        }
+    }
+
+}

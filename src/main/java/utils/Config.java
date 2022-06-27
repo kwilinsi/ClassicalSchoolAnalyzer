@@ -19,7 +19,17 @@ public enum Config {
 
     CONNECTION_TIMEOUT(30000),
 
-    STRICT_HTTP(false);
+    STRICT_HTTP(false),
+
+    DATABASE_IP(null),
+
+    DATABASE_PORT(3306),
+
+    DATABASE_NAME("classical"),
+
+    DATABASE_USERNAME(null),
+
+    DATABASE_PASSWORD(null);
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
     private static final String FILE_NAME = "config.properties";
@@ -30,16 +40,51 @@ public enum Config {
     }
 
     /**
-     * Get the value of some config setting. Initially, the config.properties resource file is checked. If the setting
+     * {@link #getRaw() Get} a configuration setting, ensuring that it is not null. If it would otherwise be null,
+     * a {@link NullPointerException} is thrown instead.
+     *
+     * @return The value of that setting.
+     * @throws NullPointerException If the setting is null.
+     */
+    @NotNull
+    public String get() throws NullPointerException {
+        String r = this.getRaw();
+        if (r == null)
+            throw new NullPointerException("Retrieved property " + this.key() + " was null.");
+        return r;
+    }
+
+    /**
+     * This is a convenience method for {@link #getRaw()} that {@link Boolean#parseBoolean(String) parses} the
+     * result to a boolean.
+     *
+     * @return The value of that setting.
+     */
+    public boolean getBool() {
+        return Boolean.parseBoolean(this.getRaw());
+    }
+
+    /**
+     * This is a convenience method for {@link #get()} that {@link Integer#parseInt(String) parses} the result to
+     * an integer. It will throw an error if the property is null or not a valid integer.
+     *
+     * @return The value of that setting.
+     * @throws NullPointerException  If the value returned by {@link #getRaw()} is <code>null</code>.
+     * @throws NumberFormatException If the string property cannot be coerced into an integer.
+     */
+    public int getInt() throws NullPointerException, NumberFormatException {
+        return Integer.parseInt(this.get());
+    }
+
+    /**
+     * Get the value of this config setting. Initially, the config.properties resource file is checked. If the setting
      * is not there, its default value is used. If that default value is null, then the user is prompted to provide a
      * value for the setting, which is then stored in the config.properties file.
      *
-     * @param config The config setting to retrieve.
-     *
-     * @return The current value of that setting.
+     * @return The current value of this setting.
      */
     @Nullable
-    public static String getRaw(@NotNull Config config) {
+    public String getRaw() {
         File configFile = Utils.getInstallationFile(FILE_NAME);
         Properties properties = new Properties();
 
@@ -52,18 +97,18 @@ public enum Config {
         }
 
         // Check the properties file for the config setting
-        String prop = properties.getProperty(config.key());
+        String prop = properties.getProperty(this.key());
 
         // If a matching property is found in the config file, return it
         if (prop != null) return prop;
 
-        String val = String.valueOf(config.defaultValue);
+        String val = String.valueOf(this.defaultValue);
 
         // If no value is found anywhere, ask the user to provide one
-        if (val == null) {
+        if (this.defaultValue == null) {
             System.out.printf(
                     "Missing a required configuration setting. Please provide the following:%n%s = ",
-                    config.key()
+                    this.key()
             );
 
             Scanner in = new Scanner(System.in);
@@ -71,7 +116,7 @@ public enum Config {
         }
 
         // Save the new value (whether from the Config enum itself or from the user) to the properties file
-        properties.put(config.key(), val);
+        properties.put(this.key(), val);
         logger.debug("Saving properties to " + configFile.getAbsolutePath() + ".");
 
         OutputStream out;
@@ -90,49 +135,6 @@ public enum Config {
         }
 
         return val;
-    }
-
-    /**
-     * {@link #getRaw(Config) Get} a configuration setting, ensuring that it is not null. If it would otherwise be null,
-     * a {@link NullPointerException} is thrown instead.
-     *
-     * @param config The configuration setting to retrieve.
-     *
-     * @return The value of that setting.
-     * @throws NullPointerException If the setting is null.
-     */
-    @NotNull
-    public static String get(@NotNull Config config) throws NullPointerException {
-        String r = getRaw(config);
-        if (r == null)
-            throw new NullPointerException("Retrieved property " + config.key() + " was null.");
-        return r;
-    }
-
-    /**
-     * This is a convenience method for {@link #getRaw(Config)} that {@link Boolean#parseBoolean(String) parses} the
-     * result to a boolean.
-     *
-     * @param config The configuration setting to retrieve.
-     *
-     * @return The value of that setting.
-     */
-    public static boolean getBool(@NotNull Config config) {
-        return Boolean.parseBoolean(getRaw(config));
-    }
-
-    /**
-     * This is a convenience method for {@link #get(Config)} that {@link Integer#parseInt(String) parses} the result to
-     * an integer. It will throw an error if the property is null or not a valid integer.
-     *
-     * @param config The configuration setting to retrieve.
-     *
-     * @return The value of that setting.
-     * @throws NullPointerException  If the value returned by {@link #getRaw(Config)} is <code>null</code>.
-     * @throws NumberFormatException If the string property cannot be coerced into an integer.
-     */
-    public static int getInt(@NotNull Config config) throws NullPointerException, NumberFormatException {
-        return Integer.parseInt(get(config));
     }
 
     /**
