@@ -68,9 +68,11 @@ public class OrganizationManager {
 
         try (Connection connection = Database.getConnection()) {
             for (Organization organization : ORGANIZATIONS) {
-                String sql = "INSERT INTO Organizations (id, name, name_abbr, homepage_url, school_list_url) " +
-                             "VALUES (?, ?, ?, ?, ?)";
-                PreparedStatement preparedStatement = connection.prepareStatement(sql);
+                @SuppressWarnings("SqlInsertValues")
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "INSERT INTO Organizations (id, name, name_abbr, homepage_url, school_list_url) " +
+                        "VALUES (?, ?, ?, ?, ?)"
+                );
                 preparedStatement.setInt(1, organization.get_id());
                 preparedStatement.setString(2, organization.get_name());
                 preparedStatement.setString(3, organization.get_name_abbr());

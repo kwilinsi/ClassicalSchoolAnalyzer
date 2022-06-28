@@ -2,8 +2,6 @@ package constructs;
 
 import constructs.organizations.Organization;
 import constructs.schools.School;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import utils.Config;
 
 import java.nio.file.Path;
@@ -13,8 +11,6 @@ import java.nio.file.Path;
  * Organizations} and {@link School Schools}.
  */
 public class BaseConstruct {
-    private static final Logger logger = LoggerFactory.getLogger(BaseConstruct.class);
-
     /**
      * Take the given file name (or often directory) and append it to the root {@link Config#DATA_DIRECTORY
      * data_directory} defined in the program configuration.
