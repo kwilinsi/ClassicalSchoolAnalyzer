@@ -12,24 +12,22 @@ import java.util.Scanner;
 
 public enum Config {
 
+    // Jsoup configuration
     USE_USERAGENT(true),
-
     USERAGENT("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit 537.36 (KHTML, like Gecko) " +
               "Chrome/102.0.5005.136 Safari/537.36"),
-
     CONNECTION_TIMEOUT(30000),
-
     STRICT_HTTP(false),
 
+    // Database configuration
     DATABASE_IP(null),
-
     DATABASE_PORT(3306),
-
     DATABASE_NAME("classical"),
-
     DATABASE_USERNAME(null),
+    DATABASE_PASSWORD(null),
 
-    DATABASE_PASSWORD(null);
+    // General configuration
+    DATA_DIRECTORY(null);
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
     private static final String FILE_NAME = "config.properties";
@@ -40,8 +38,8 @@ public enum Config {
     }
 
     /**
-     * {@link #getRaw() Get} a configuration setting, ensuring that it is not null. If it would otherwise be null,
-     * a {@link NullPointerException} is thrown instead.
+     * {@link #getRaw() Get} a configuration setting, ensuring that it is not null. If it would otherwise be null, a
+     * {@link NullPointerException} is thrown instead.
      *
      * @return The value of that setting.
      * @throws NullPointerException If the setting is null.
@@ -55,8 +53,8 @@ public enum Config {
     }
 
     /**
-     * This is a convenience method for {@link #getRaw()} that {@link Boolean#parseBoolean(String) parses} the
-     * result to a boolean.
+     * This is a convenience method for {@link #getRaw()} that {@link Boolean#parseBoolean(String) parses} the result to
+     * a boolean.
      *
      * @return The value of that setting.
      */
@@ -65,8 +63,8 @@ public enum Config {
     }
 
     /**
-     * This is a convenience method for {@link #get()} that {@link Integer#parseInt(String) parses} the result to
-     * an integer. It will throw an error if the property is null or not a valid integer.
+     * This is a convenience method for {@link #get()} that {@link Integer#parseInt(String) parses} the result to an
+     * integer. It will throw an error if the property is null or not a valid integer.
      *
      * @return The value of that setting.
      * @throws NullPointerException  If the value returned by {@link #getRaw()} is <code>null</code>.
