@@ -10,6 +10,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class Utils {
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
@@ -109,5 +113,26 @@ public class Utils {
             logger.warn("Failed to create " + newFile.getAbsolutePath() + ".", e);
         }
         return newFile;
+    }
+
+    /**
+     * Run one of the SQL scripts in the resources directory.
+     *
+     * @param fileName   The name of the script file to run.
+     * @param connection The connection to the database.
+     *
+     * @throws IOException  If there is an error locating or reading the script file.
+     * @throws SQLException If there is an error running the script.
+     */
+    public static void runSqlScript(String fileName, java.sql.Connection connection) throws IOException, SQLException {
+        InputStream fileStream = Utils.class.getResourceAsStream("/sql/" + fileName);
+        if (fileStream == null)
+            throw new IOException("Failed to find SQL script " + fileName + ".");
+        byte[] encoded = fileStream.readAllBytes();
+        String[] sql = new String(encoded, StandardCharsets.UTF_8).split(";");
+        Statement statement = connection.createStatement();
+        for (String s : sql)
+            statement.addBatch(s);
+        statement.executeBatch();
     }
 }

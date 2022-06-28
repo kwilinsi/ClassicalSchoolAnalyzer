@@ -3,6 +3,7 @@ package main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import organizations.Organization;
+import utils.Database;
 
 import java.io.IOException;
 
@@ -31,5 +32,11 @@ public class Actions {
     public static void performAnalysis() {
         logger.info("Performing analysis on classical schools");
         notImplemented();
+    }
+
+    public static void configureDatabase() {
+        logger.info("Configuring database");
+        Database.deleteTables();
+        Database.createTables();
     }
 }

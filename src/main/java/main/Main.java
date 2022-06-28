@@ -15,7 +15,8 @@ public class Main {
             System.out.println("[1] Download School List");
             System.out.println("[2] Download School Websites");
             System.out.println("[3] Perform Analysis");
-            System.out.println("[4] Exit");
+            System.out.println("[4] Configure Database");
+            System.out.println("[5] Exit");
             System.out.print("\n> ");
 
             String val = in.next();
@@ -38,7 +39,8 @@ public class Main {
                 case 1 -> Actions.downloadSchoolList();
                 case 2 -> Actions.downloadSchoolWebsites();
                 case 3 -> Actions.performAnalysis();
-                case 4 -> {
+                case 4 -> Actions.configureDatabase();
+                default -> {
                     return;
                 }
             }

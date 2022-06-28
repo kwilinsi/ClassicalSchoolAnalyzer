@@ -2,21 +2,29 @@ package utils;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.pool.HikariPool;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class Database {
     private static final Logger logger = LoggerFactory.getLogger(Database.class);
+
+    /**
+     * This is the data source from which all {@link #getConnection() connections} are created. It is initialized once
+     * per program execution via {@link #load()}.
+     */
     private static HikariDataSource dataSource;
 
     /**
      * Load the settings for HikariCP and create a connection to the database.
      */
-    public static void load() {
+    private static void load() {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(
                 String.format("jdbc:mysql://%s:%d/%s",
@@ -41,10 +49,49 @@ public class Database {
 
         // See https://github.com/brettwooldridge/HikariCP/issues/210.
         config.setIdleTimeout(240000);
-        config.setMaxLifetime(240000);
         config.setMinimumIdle(0);
 
-        dataSource = new HikariDataSource(config);
+        try {
+            dataSource = new HikariDataSource(config);
+        } catch (HikariPool.PoolInitializationException e) {
+            logger.error("Failed to initialize HikariCP. Was the 'classical' database created?", e);
+            System.exit(1);
+        }
+    }
+
+    /**
+     * Make sure all the tables in the database are present. Create any missing tables.
+     */
+    public static void createTables() {
+        if (dataSource == null) load();
+
+        try (Connection connection = dataSource.getConnection()) {
+            Utils.runSqlScript("setup.sql", connection);
+        } catch (IOException e) {
+            logger.error("Failed to load setup.sql script.", e);
+        } catch (SQLException e) {
+            logger.error("Failed to create tables.", e);
+        }
+    }
+
+    /**
+     * Delete all the tables in the 'classical' database.
+     */
+    public static void deleteTables() {
+        if (dataSource == null) load();
+
+        try (Connection connection = dataSource.getConnection()) {
+            Statement statement = connection.createStatement();
+            statement.addBatch("DROP TABLE IF EXISTS PageWords");
+            statement.addBatch("DROP TABLE IF EXISTS PageTexts");
+            statement.addBatch("DROP TABLE IF EXISTS Links");
+            statement.addBatch("DROP TABLE IF EXISTS Pages");
+            statement.addBatch("DROP TABLE IF EXISTS Schools");
+            statement.addBatch("DROP TABLE IF EXISTS Organizations");
+            statement.executeBatch();
+        } catch (SQLException e) {
+            logger.error("Failed to recreate database.", e);
+        }
     }
 
     /**
@@ -59,8 +106,7 @@ public class Database {
      */
     @NotNull
     public static Connection getConnection() throws SQLException {
-        if (dataSource == null)
-            load();
+        if (dataSource == null) load();
 
         try {
             return dataSource.getConnection();
@@ -69,5 +115,4 @@ public class Database {
             throw e;
         }
     }
-
 }
