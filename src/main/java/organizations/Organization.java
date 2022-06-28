@@ -4,6 +4,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import schools.School;
 import utils.Database;
 import utils.Utils;
 
@@ -13,6 +16,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.function.Function;
 
 /**
  * There are multiple organization of Classical (Christian) schools. Each instance of this class represents one of those
@@ -71,43 +76,50 @@ public class Organization {
                     "http://www.ccle.org",
                     "http://www.ccle.org/directory/")
     };
-
+    private static final Logger logger = LoggerFactory.getLogger(Organization.class);
     /**
      * This is the organization's unique id as it appears in the SQL database. This is used as a primary and foreign key
      * in SQL.
      */
-    int id;
+    private final int id;
 
     /**
      * This is the full name of the organization.
      */
     @NotNull
-    String name;
+    private final String name;
 
     /**
      * This is the abbreviated name of the organization.
      */
     @NotNull
-    String name_abbr;
+    private final String name_abbr;
 
     /**
      * This is the URL pointing to the homepage of the organization.
      */
     @NotNull
-    String homepage_url;
+    private final String homepage_url;
 
     /**
      * This is the URL pointing to the organization's list of member schools.
      */
     @NotNull
-    String school_list_url;
+    private final String school_list_url;
 
     /**
      * This is the path to an HTML file containing the school list page. It will be null until the organization's school
      * list page is first downloaded and saved.
      */
     @Nullable
-    String school_list_page_file;
+    private final String school_list_page_file;
+
+    /**
+     * This is a reference to the function in {@link OrganizationListExtractor} that parses the school list page for
+     * this organization.
+     */
+    @NotNull
+    private final Function<Document, List<School>> schoolListParser;
 
     public Organization(int id,
                         @NotNull String name,
@@ -121,6 +133,10 @@ public class Organization {
         this.homepage_url = homepage_url;
         this.school_list_url = school_list_url;
         this.school_list_page_file = school_list_page_file;
+        Function<Document, List<School>> extractor = OrganizationListExtractor.getExtractor(this.name_abbr);
+        if (extractor == null)
+            throw new NullPointerException("No extractor found for organization " + this.name_abbr + ".");
+        this.schoolListParser = extractor;
     }
 
     public Organization(int id,
@@ -143,21 +159,73 @@ public class Organization {
      * @return The contents of the school list page as a {@link Document}.
      * @throws IOException If there is an error loading the page.
      */
+    @NotNull
     public Document loadSchoolListPage(boolean useCache) throws IOException {
-        // If there is a reference to a cached file, load that file
-        if (this.school_list_page_file != null)
-            return Utils.parseDocument(new File(this.school_list_page_file), this.school_list_url);
+        // If caching is enabled, look for caches
+        if (useCache) {
+            // If there is a reference to a cached file, load that file
+            if (this.school_list_page_file != null) {
+                logger.debug("Loading cached school list page for organization " + this.name_abbr + ".");
+                return Utils.parseDocument(new File(this.school_list_page_file), this.school_list_url);
+            }
 
-        // Look for a cached file in the database
-        try (Connection connection = Database.getConnection()) {
-            PreparedStatement statement = connection.prepareStatement("SHOW DATABASES;");
-            ResultSet results = statement.executeQuery();
-            while (results.next())
-                System.out.println(results.getString(1));
-        } catch (SQLException ignored) {
+            // Look for a cached file in the database
+            logger.debug("Searching database for cached school list page for organization " + this.name_abbr + ".");
+            try (Connection connection = Database.getConnection()) {
+                PreparedStatement statement = connection.prepareStatement(
+                        "SELECT school_list_page_file FROM Organizations " +
+                        "WHERE id = ? AND school_list_page_file IS NOT NULL");
+                statement.setInt(1, this.id);
+                ResultSet results = statement.executeQuery();
+                if (results.next())
+                    return Utils.parseDocument(new File(results.getString(1)), this.school_list_url);
+            } catch (SQLException e) {
+                // If there's an exception, don't worry about it and just re-download the page
+                logger.warn("Error retrieving cached school list page from database for " + this.name_abbr +
+                            ". Re-downloading page instead.", e);
+            }
         }
 
-        // If there is no cached file, download the page and cache it
-        return null;
+        // If there is no cached file, download the page
+        logger.debug("Downloading school list page for organization " + this.name_abbr + ".");
+        Document download = null;
+        try {
+            download = Utils.download(this.school_list_url);
+        } catch (IOException e) {
+            logger.error("Error downloading school list page for " + this.name_abbr + ".", e);
+        }
+
+        // Attempt to cache the newly downloaded page
+        if (download != null) {
+            logger.debug("Caching school list page for organization " + this.name_abbr + ".");
+            try (Connection connection = Database.getConnection()) {
+                PreparedStatement statement = connection.prepareStatement(
+                        "UPDATE Organizations SET school_list_page_file = ? " +
+                        "WHERE id = ?");
+                statement.setString(1, download.baseUri());
+                statement.setInt(2, this.id);
+                statement.executeUpdate();
+            } catch (SQLException e) {
+                logger.warn("Error caching school list page for " + this.name_abbr + ".", e);
+            }
+            return download;
+        }
+
+        throw new IOException("Failed to load school list page for " + this.name_abbr + ".");
+    }
+
+    /**
+     * Get a list of schools from this organization's school list page.
+     *
+     * @param useCache If this is true, a cached version of the school list page will be used, if available. If there is
+     *                 no cache, or if this is False, the page will be downloaded through JSoup.
+     *
+     * @return A list of schools from this organization's school list page.
+     * @throws IOException If there is an error {@link #loadSchoolListPage(boolean) retrieving} the page {@link
+     *                     Document}.
+     */
+    public List<School> getSchools(boolean useCache) throws IOException {
+        Document page = loadSchoolListPage(useCache);
+        return schoolListParser.apply(page);
     }
 }

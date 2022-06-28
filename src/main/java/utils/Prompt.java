@@ -15,38 +15,44 @@ public class Prompt {
     private final String prompt;
 
     /**
-     * The list of actions to show the user.
+     * The list of options to show the user.
      */
-    private final Action[] actions;
+    private final Option[] options;
 
     /**
-     * Create a new prompt with a list of possible actions.
+     * Create a new prompt with a list of possible options.
      *
-     * @param prompt  The message to show the user before the actions.
-     * @param actions The list of actions to show the user.
+     * @param prompt  The message to show the user before the options.
+     * @param options The list of options to show the user.
      */
-    public Prompt(String prompt, Action... actions) {
+    public Prompt(String prompt, Option... options) {
         this.prompt = prompt;
-        this.actions = actions;
+        this.options = options;
     }
 
     /**
      * Create a new prompt and immediately {@link #display()} it.
      *
-     * @param prompt  The message to show the user before the actions.
-     * @param actions The list of actions to show the user.
+     * @param prompt  The message to show the user before the options.
+     * @param options The list of options to show the user.
+     *
+     * @return The result of {@link #display()}.
      */
-    public static void run(String prompt, Action... actions) {
-        new Prompt(prompt, actions).display();
+    public static String run(String prompt, Option... options) {
+        return new Prompt(prompt, options).display();
     }
 
     /**
-     * Prompt the user with the list of {@link #actions}.
+     * Prompt the user with the list of {@link #options}. If the user chooses a {@link Selection Selection}, its {@link
+     * Selection#value value} is returned. If the user chooses an {@link Action Action}, it's {@link Action#run() run}.
+     *
+     * @return The value if a user chose a Selection, or <code>null</code> if the user chose an Action.
      */
-    public void display() {
+    @Nullable
+    public String display() {
         System.out.println(prompt);
-        for (int i = 0; i < actions.length; i++)
-            System.out.printf(" [%d] %s%n", i + 1, actions[i].name);
+        for (int i = 0; i < options.length; i++)
+            System.out.printf(" [%d] %s%n", i + 1, options[i].name);
 
         Scanner scanner = new Scanner(System.in);
 
@@ -56,9 +62,15 @@ public class Prompt {
             try {
                 int choice = Integer.parseInt(input);
 
-                if (choice <= 0 || choice > actions.length)
+                if (choice <= 0 || choice > options.length)
                     System.out.println("ERR: Invalid selection.");
-                else if (actions[choice - 1].run()) return;
+                else {
+                    if (options[choice - 1].isRunnable) {
+                        if (((Action) options[choice - 1]).run()) return null;
+                    } else {
+                        return ((Selection) options[choice - 1]).value;
+                    }
+                }
 
             } catch (NumberFormatException e) {
                 System.out.println("ERR: Please enter a valid number.");
@@ -66,13 +78,25 @@ public class Prompt {
         }
     }
 
-    public static class Action {
+    public static class Option {
         /**
-         * The name associated with this action, shown to the user.
+         * The name associated with this option, shown to the user.
          */
         @NotNull
         private final String name;
 
+        /**
+         * Whether this option can be run (i.e. whether it's an {@link Action Action}.)
+         */
+        private final boolean isRunnable;
+
+        private Option(@NotNull String name, boolean isRunnable) {
+            this.name = name;
+            this.isRunnable = isRunnable;
+        }
+    }
+
+    public static class Action extends Option {
         /**
          * The action to perform when this action is selected.
          */
@@ -86,7 +110,7 @@ public class Prompt {
         private final String confirmationWarning;
 
         private Action(@NotNull String name, @NotNull Runnable runnable, @Nullable String confirmationPrompt) {
-            this.name = name;
+            super(name, true);
             this.runnable = runnable;
             this.confirmationWarning = confirmationPrompt;
         }
@@ -144,6 +168,20 @@ public class Prompt {
                     System.out.println("ERR: Please enter either 'Y' or 'N'.");
                 }
             }
+        }
+    }
+
+    public static class Selection extends Option {
+        @NotNull
+        private final String value;
+
+        private Selection(@NotNull String name, @NotNull String value) {
+            super(name, false);
+            this.value = value;
+        }
+
+        public static Selection of(@NotNull String name, @NotNull String value) {
+            return new Selection(name, value);
         }
     }
 }

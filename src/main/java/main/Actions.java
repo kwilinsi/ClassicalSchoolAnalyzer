@@ -3,9 +3,13 @@ package main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import organizations.Organization;
+import schools.School;
 import utils.Database;
+import utils.Prompt;
+import utils.Prompt.Selection;
 
 import java.io.IOException;
+import java.util.List;
 
 public class Actions {
     private static final Logger logger = LoggerFactory.getLogger(Actions.class);
@@ -17,10 +21,20 @@ public class Actions {
     public static void downloadSchoolList() {
         logger.info("Downloading school list");
 
-        try {
-            Organization.ORGANIZATIONS[0].loadSchoolListPage(false);
-        } catch (IOException e) {
-            e.printStackTrace();
+        String choice = Prompt.run(
+                "Would you like to use cached pages if available?",
+                Selection.of("Use Cache", "c"),
+                Selection.of("Download", "d")
+        );
+
+        for (Organization organization : Organization.ORGANIZATIONS) {
+            try {
+                List<School> schools = organization.getSchools(choice.equals("c"));
+                for (School school : schools)
+                    System.out.println(school);
+            } catch (IOException e) {
+                logger.error("Failed to load school list.", e);
+            }
         }
     }
 
