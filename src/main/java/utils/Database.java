@@ -64,6 +64,7 @@ public class Database {
      */
     public static void createTables() {
         if (dataSource == null) load();
+        logger.info("Creating SQL tables from setup.sql.");
 
         try (Connection connection = dataSource.getConnection()) {
             Utils.runSqlScript("setup.sql", connection);
@@ -79,6 +80,7 @@ public class Database {
      */
     public static void deleteTables() {
         if (dataSource == null) load();
+        logger.info("Deleting all SQL tables");
 
         try (Connection connection = dataSource.getConnection()) {
             Statement statement = connection.createStatement();

@@ -9,7 +9,7 @@ public class Main {
 
         while (true) {
             Prompt.run(
-                    "\nPlease select an action to perform:\n",
+                    "Please select an action to perform:\n",
                     Action.of("Download school list", Actions::downloadSchoolList),
                     Action.of("Download school websites", Actions::downloadSchoolWebsites),
                     Action.of("Perform analysis", Actions::performAnalysis),

@@ -1,22 +1,23 @@
-package organizations;
+package constructs.organizations;
 
+import constructs.BaseConstruct;
+import constructs.schools.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import schools.School;
+import utils.Config;
 import utils.Database;
 import utils.Utils;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -26,57 +27,9 @@ import java.util.function.Function;
  * Currently, there are 6 distinct organizations. Adding new organizations requires writing a custom function for
  * parsing those organizations' school lists.
  */
-public class Organization {
-    /**
-     * This is the complete list of all organizations supported by this program. It contains an {@link Organization}
-     * object for each of the organizations. No other objects should be created for any organization at any time during
-     * the program execution. These objects may be modified as more data is obtained for each organization, such as
-     * downloading the {@link #school_list_page_file}.
-     */
-    public static final Organization[] ORGANIZATIONS = {
-            new Organization(
-                    1,
-                    "Association of Classical Christian Schools",
-                    "ACCS",
-                    "https://classicalchristian.org",
-                    "https://classicalchristian.org/find-a-school/"
-            ),
-            new Organization(
-                    2,
-                    "Institute for Classical Education",
-                    "IFCE",
-                    "https://classicaleducation.institute",
-                    "https://batchgeo.com/map/f0a726285be76dc6dc336e561b0726e6"
-            ),
-            new Organization(
-                    3,
-                    "Hillsdale Classical Schools",
-                    "Hillsdale",
-                    "https://k12.hillsdale.edu",
-                    "https://k12.hillsdale.edu/Schools/Affiliate-Classical-Schools/"
-            ),
-            new Organization(
-                    4,
-                    "Institute for Catholic Liberal Education",
-                    "ICLE",
-                    "https://catholicliberaleducation.org",
-                    "https://my.catholicliberaleducation.org/map-of-schools/"
-            ),
-            new Organization(
-                    5,
-                    "Anglican School Association",
-                    "ASA",
-                    "https://anglicanschools.org",
-                    "https://anglicanschools.org/members/"
-            ),
-            new Organization(
-                    6,
-                    "Consortium for Classical Lutheran Education",
-                    "CCLE",
-                    "http://www.ccle.org",
-                    "http://www.ccle.org/directory/")
-    };
+public class Organization extends BaseConstruct {
     private static final Logger logger = LoggerFactory.getLogger(Organization.class);
+
     /**
      * This is the organization's unique id as it appears in the SQL database. This is used as a primary and foreign key
      * in SQL.
@@ -119,7 +72,7 @@ public class Organization {
      * this organization.
      */
     @NotNull
-    private final Function<Document, List<School>> schoolListParser;
+    private final Function<Document, School[]> schoolListParser;
 
     public Organization(int id,
                         @NotNull String name,
@@ -133,7 +86,8 @@ public class Organization {
         this.homepage_url = homepage_url;
         this.school_list_url = school_list_url;
         this.school_list_page_file = school_list_page_file;
-        Function<Document, List<School>> extractor = OrganizationListExtractor.getExtractor(this.name_abbr);
+
+        Function<Document, School[]> extractor = OrganizationListExtractor.getExtractor(this.name_abbr);
         if (extractor == null)
             throw new NullPointerException("No extractor found for organization " + this.name_abbr + ".");
         this.schoolListParser = extractor;
@@ -145,6 +99,30 @@ public class Organization {
                         @NotNull String homepage_url,
                         @NotNull String school_list_url) {
         this(id, name, name_abbr, homepage_url, school_list_url, null);
+    }
+
+    public int get_id() {
+        return id;
+    }
+
+    @NotNull
+    public String get_name() {
+        return name;
+    }
+
+    @NotNull
+    public String get_name_abbr() {
+        return name_abbr;
+    }
+
+    @NotNull
+    public String get_homepage_url() {
+        return homepage_url;
+    }
+
+    @NotNull
+    public String get_school_list_url() {
+        return school_list_url;
     }
 
     /**
@@ -161,12 +139,17 @@ public class Organization {
      */
     @NotNull
     public Document loadSchoolListPage(boolean useCache) throws IOException {
+        logger.debug("Attempting to load school list page for " + this.name_abbr + ".");
+
         // If caching is enabled, look for caches
         if (useCache) {
             // If there is a reference to a cached file, load that file
             if (this.school_list_page_file != null) {
-                logger.debug("Loading cached school list page for organization " + this.name_abbr + ".");
-                return Utils.parseDocument(new File(this.school_list_page_file), this.school_list_url);
+                logger.debug("Identified available cache. Loading school list.");
+                return Utils.parseDocument(
+                        getFilePath(this.school_list_page_file).toFile(),
+                        this.school_list_url
+                );
             }
 
             // Look for a cached file in the database
@@ -178,19 +161,24 @@ public class Organization {
                 statement.setInt(1, this.id);
                 ResultSet results = statement.executeQuery();
                 if (results.next())
-                    return Utils.parseDocument(new File(results.getString(1)), this.school_list_url);
+                    return Utils.parseDocument(
+                            getFilePath(results.getString(1)).toFile(),
+                            this.school_list_url
+                    );
             } catch (SQLException e) {
                 // If there's an exception, don't worry about it and just re-download the page
                 logger.warn("Error retrieving cached school list page from database for " + this.name_abbr +
                             ". Re-downloading page instead.", e);
             }
+
+            logger.info("Couldn't find cached page. Downloading from URL instead.");
         }
 
         // If there is no cached file, download the page
         logger.debug("Downloading school list page for organization " + this.name_abbr + ".");
         Document download = null;
         try {
-            download = Utils.download(this.school_list_url);
+            download = Utils.download(this.school_list_url, true);
         } catch (IOException e) {
             logger.error("Error downloading school list page for " + this.name_abbr + ".", e);
         }
@@ -198,16 +186,37 @@ public class Organization {
         // Attempt to cache the newly downloaded page
         if (download != null) {
             logger.debug("Caching school list page for organization " + this.name_abbr + ".");
+
+            String fileName;
+            try {
+                // Determine where to save the file
+                fileName = Config.SCHOOL_LIST_FILE_NAME.get();
+                Path path = getFilePath(fileName);
+
+                // Save the html file
+                logger.debug("Saving school list file.");
+                Utils.saveDocument(path, download);
+            } catch (NullPointerException e) {
+                logger.warn("Failed to retrieve information from the program configuration. Couldn't save cache.", e);
+                return download;
+            } catch (IOException e) {
+                logger.warn("Failed to save downloaded HTML file. Couldn't save cache.", e);
+                return download;
+            }
+
+            // Save the reference to the file in the database
             try (Connection connection = Database.getConnection()) {
+                logger.debug("Saving reference to school list file in database.");
                 PreparedStatement statement = connection.prepareStatement(
                         "UPDATE Organizations SET school_list_page_file = ? " +
                         "WHERE id = ?");
-                statement.setString(1, download.baseUri());
+                statement.setString(1, fileName);
                 statement.setInt(2, this.id);
                 statement.executeUpdate();
             } catch (SQLException e) {
-                logger.warn("Error caching school list page for " + this.name_abbr + ".", e);
+                logger.warn("Error saving cached school list page to database for " + this.name_abbr + ".", e);
             }
+
             return download;
         }
 
@@ -215,17 +224,32 @@ public class Organization {
     }
 
     /**
-     * Get a list of schools from this organization's school list page.
+     * Get a list of {@link School Schools} from this organization's school list page.
      *
      * @param useCache If this is true, a cached version of the school list page will be used, if available. If there is
      *                 no cache, or if this is False, the page will be downloaded through JSoup.
      *
-     * @return A list of schools from this organization's school list page.
+     * @return An array of schools from this organization's school list page.
      * @throws IOException If there is an error {@link #loadSchoolListPage(boolean) retrieving} the page {@link
      *                     Document}.
      */
-    public List<School> getSchools(boolean useCache) throws IOException {
+    @NotNull
+    public School[] getSchools(boolean useCache) throws IOException {
+        logger.info("Retrieving school list for " + this.name_abbr + (useCache ? " using cache." : "."));
         Document page = loadSchoolListPage(useCache);
         return schoolListParser.apply(page);
+    }
+
+    /**
+     * Get the path to a file within the data directory, placed in the subdirectory for this {@link Organization}.
+     *
+     * @param file The name of the file.
+     *
+     * @return A complete path to that file.
+     * @throws NullPointerException If the data directory cannot be retrieved from the program configuration.
+     */
+    @Override
+    public Path getFilePath(String file) throws NullPointerException {
+        return super.getFilePath(name_abbr).resolve(file);
     }
 }

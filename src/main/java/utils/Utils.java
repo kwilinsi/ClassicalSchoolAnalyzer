@@ -11,10 +11,11 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Scanner;
 
 public class Utils {
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
@@ -26,14 +27,20 @@ public class Utils {
      * However, this utility method also includes user-adjustable properties from the Config class to perform additional
      * tasks, such as setting the user agent timeout length.
      *
-     * @param url The URL to download.
+     * @param url               The URL to download.
+     * @param ignoreContentType If this is true, {@link Connection#ignoreContentType(boolean)} is called with true. This
+     *                          should typically be false, but may be useful in some cases.
      *
      * @return The website as a Jsoup Document.
      * @throws IOException If there is an error downloading the website.
      */
     @NotNull
-    public static Document download(@NotNull String url) throws IOException {
+    public static Document download(@NotNull String url, boolean ignoreContentType) throws IOException {
+        logger.debug("Jsoup downloading {}", url);
+
         Connection connection = Jsoup.connect(url);
+
+        connection.ignoreContentType(ignoreContentType);
 
         if (Config.USE_USERAGENT.getBool())
             try {
@@ -135,5 +142,31 @@ public class Utils {
         for (String s : sql)
             statement.addBatch(s);
         statement.executeBatch();
+    }
+
+    /**
+     * Save the contents of an HTML document to a file.
+     *
+     * @param path     The path to the desired output file.
+     * @param document The document to save.
+     *
+     * @throws IOException If the file does not exist and there is an error creating it.
+     */
+    public static void saveDocument(Path path, Document document) throws IOException {
+        File file = path.toFile();
+
+        // Create the file (and parent directories) if it doesn't exist
+        if (!file.exists()) {
+            logger.debug("Creating file " + file.getAbsolutePath());
+            if (file.getParentFile().mkdirs())
+                logger.debug("Successfully created parent directory " + file.getParentFile().getAbsolutePath());
+            if (!file.createNewFile())
+                throw new IOException("Failed to create file " + file.getAbsolutePath() + ".");
+        }
+
+        // Write the document to the file
+        try (PrintWriter writer = new PrintWriter(file)) {
+            writer.println(document.outerHtml());
+        }
     }
 }

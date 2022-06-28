@@ -1,11 +1,11 @@
-package organizations;
+package constructs.organizations;
 
+import constructs.schools.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import schools.School;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -29,12 +29,14 @@ public class OrganizationListExtractor {
      * @return The function for extracting the school list from that organization's school list page.
      */
     @Nullable
-    public static Function<Document, List<School>> getExtractor(@NotNull String organizationAbbreviation) {
+    public static Function<Document, School[]> getExtractor(@NotNull String organizationAbbreviation) {
         Method[] methods = OrganizationListExtractor.class.getDeclaredMethods();
+        String name = "extract_" + organizationAbbreviation;
         for (Method method : methods) {
-            if (method.getName().equals("extract" + organizationAbbreviation))
+            if (method.getName().equals(name))
                 return toFunction(method);
         }
+        logger.debug("Failed to find an extraction method '" + name + "'.");
         return null;
     }
 
@@ -51,14 +53,13 @@ public class OrganizationListExtractor {
      * @return The function.
      */
     @NotNull
-    public static Function<Document, List<School>> toFunction(Method m) {
+    public static Function<Document, School[]> toFunction(Method m) {
         return document -> {
             try {
-                m.invoke(OrganizationListExtractor.class, document);
+                return (School[]) m.invoke(OrganizationListExtractor.class, document);
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             }
-            return null;
         };
     }
 
@@ -70,11 +71,11 @@ public class OrganizationListExtractor {
      * @return A list of schools.
      */
     @NotNull
-    public static List<School> extract_ACCS(@NotNull Document doc) {
+    public static School[] extract_ACCS(@NotNull Document doc) {
         List<School> list = new ArrayList<>();
         logger.debug("Running extract_ACCS()...");
 
-        return list;
+        return list.toArray(new School[0]);
     }
 
     /**
@@ -82,14 +83,14 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return A list of schools.
+     * @return An array of schools.
      */
     @NotNull
-    public static List<School> extract_IFCE(@NotNull Document doc) {
+    public static School[] extract_IFCE(@NotNull Document doc) {
         List<School> list = new ArrayList<>();
         logger.debug("Running extract_IFCE()...");
 
-        return list;
+        return list.toArray(new School[0]);
     }
 
     /**
@@ -97,14 +98,14 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return A list of schools.
+     * @return An array of schools.
      */
     @NotNull
-    public static List<School> extract_Hillsdale(@NotNull Document doc) {
+    public static School[] extract_Hillsdale(@NotNull Document doc) {
         List<School> list = new ArrayList<>();
         logger.debug("Running extract_Hillsdale()...");
 
-        return list;
+        return list.toArray(new School[0]);
     }
 
     /**
@@ -112,14 +113,14 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return A list of schools.
+     * @return An array of schools.
      */
     @NotNull
-    public static List<School> extract_ICLE(@NotNull Document doc) {
+    public static School[] extract_ICLE(@NotNull Document doc) {
         List<School> list = new ArrayList<>();
         logger.debug("Running extract_ICLE()...");
 
-        return list;
+        return list.toArray(new School[0]);
     }
 
     /**
@@ -127,14 +128,14 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return A list of schools.
+     * @return An array of schools.
      */
     @NotNull
-    public static List<School> extract_ASA(@NotNull Document doc) {
+    public static School[] extract_ASA(@NotNull Document doc) {
         List<School> list = new ArrayList<>();
         logger.debug("Running extract_ASA()...");
 
-        return list;
+        return list.toArray(new School[0]);
     }
 
     /**
@@ -142,13 +143,13 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return A list of schools.
+     * @return An array of schools.
      */
     @NotNull
-    public static List<School> extract_CCLE(@NotNull Document doc) {
+    public static School[] extract_CCLE(@NotNull Document doc) {
         List<School> list = new ArrayList<>();
         logger.debug("Running extract_CCLE()...");
 
-        return list;
+        return list.toArray(new School[0]);
     }
 }

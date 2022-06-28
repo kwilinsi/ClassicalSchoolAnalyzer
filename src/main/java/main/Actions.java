@@ -1,15 +1,15 @@
 package main;
 
+import constructs.organizations.OrganizationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import organizations.Organization;
-import schools.School;
+import constructs.organizations.Organization;
+import constructs.schools.School;
 import utils.Database;
 import utils.Prompt;
 import utils.Prompt.Selection;
 
 import java.io.IOException;
-import java.util.List;
 
 public class Actions {
     private static final Logger logger = LoggerFactory.getLogger(Actions.class);
@@ -24,12 +24,12 @@ public class Actions {
         String choice = Prompt.run(
                 "Would you like to use cached pages if available?",
                 Selection.of("Use Cache", "c"),
-                Selection.of("Download", "d")
+                Selection.of("Force Download", "d")
         );
 
-        for (Organization organization : Organization.ORGANIZATIONS) {
+        for (Organization organization : OrganizationManager.ORGANIZATIONS) {
             try {
-                List<School> schools = organization.getSchools(choice.equals("c"));
+                School[] schools = organization.getSchools(choice.equals("c"));
                 for (School school : schools)
                     System.out.println(school);
             } catch (IOException e) {
@@ -52,5 +52,6 @@ public class Actions {
         logger.info("Configuring database");
         Database.deleteTables();
         Database.createTables();
+        OrganizationManager.addOrganizationsToSQL();
     }
 }

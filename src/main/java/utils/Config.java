@@ -27,7 +27,9 @@ public enum Config {
     DATABASE_PASSWORD(null),
 
     // General configuration
-    DATA_DIRECTORY(null);
+    DATA_DIRECTORY(null),
+
+    SCHOOL_LIST_FILE_NAME("school_list.html");
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
     private static final String FILE_NAME = "config.properties";

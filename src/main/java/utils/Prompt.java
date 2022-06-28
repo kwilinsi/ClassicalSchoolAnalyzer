@@ -50,7 +50,7 @@ public class Prompt {
      */
     @Nullable
     public String display() {
-        System.out.println(prompt);
+        System.out.println("\n" + prompt);
         for (int i = 0; i < options.length; i++)
             System.out.printf(" [%d] %s%n", i + 1, options[i].name);
 
@@ -158,14 +158,14 @@ public class Prompt {
                 System.out.print("> ");
                 String input = in.nextLine();
 
-                if (input.equalsIgnoreCase("y")) {
+                if (input.equalsIgnoreCase("y") || input.equalsIgnoreCase("yes")) {
                     System.out.println();
                     runnable.run();
                     return true;
-                } else if (input.equalsIgnoreCase("n")) {
+                } else if (input.equalsIgnoreCase("n") || input.equalsIgnoreCase("no")) {
                     return false;
                 } else {
-                    System.out.println("ERR: Please enter either 'Y' or 'N'.");
+                    System.out.println("ERR: Please enter either 'y' or 'n'.");
                 }
             }
         }
