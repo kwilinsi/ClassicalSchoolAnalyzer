@@ -47,9 +47,11 @@ public class ACCSSchool extends School {
      * <p>
      * If a school is a partial match, the user is {@link Prompt asked} whether this school is a match. If they answer
      * yes, the <code>id</code> of the matching school is returned. If they answer no, -1 is returned to indicate
-     * no match.
+     * no match. The user can also choose to ignore this school, meaning it won't be added to the database in any way.
+     * This choice returns -2.
      *
-     * @return The <code>id</code> of the matching school in the SQL database, or -1 to indicate no match.
+     * @return The <code>id</code> of the matching school in the SQL database, or -1 to indicate no match, or -2 to
+     *         ignore this school entirely.
      */
     @Override
     public int findMatchingSchool() {
@@ -102,11 +104,13 @@ public class ACCSSchool extends School {
                                  "\tACCS Page URL: " + myAccsUrl;
 
                 int choice = Prompt.run(message,
-                        Prompt.Selection.of("Yes", 1),
-                        Prompt.Selection.of("No", 0)
+                        Prompt.Selection.of("Yes - Update database", 1),
+                        Prompt.Selection.of("No - Insert new school", 0),
+                        Prompt.Selection.of("No - Ignore this school", -2)
                 );
 
                 if (choice == 1) return id;
+                if (choice == -2) return -2;
             }
         } catch (SQLException e) {
             logger.error("Failed to access SQL database to check for matching school: " + myName + ", " + myAccsUrl, e);

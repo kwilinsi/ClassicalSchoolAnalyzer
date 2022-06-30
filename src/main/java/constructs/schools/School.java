@@ -10,7 +10,10 @@ import utils.Config;
 import utils.Database;
 import utils.Utils;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -175,8 +178,11 @@ public class School extends BaseConstruct {
         // Determine if there's already a school with the same name and URL
         int matchId = findMatchingSchool();
 
-        String sql;
+        // If the match finder returns -3, ignore this school entirely, without adding to the database
+        if (matchId == -3) return;
 
+
+        String sql;
         if (matchId == -1) {
             // If there is no matching school, construct SQL statements for INSERTing this one
             StringBuilder columns = new StringBuilder();
