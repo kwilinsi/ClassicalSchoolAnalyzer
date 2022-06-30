@@ -27,7 +27,7 @@ public class Actions {
     }
 
     public static void downloadSchoolList() {
-        logger.info("Downloading school list");
+        logger.info("Downloading school list.");
 
         int choice = Prompt.run(
                 "Select a download mode:",
@@ -50,7 +50,7 @@ public class Actions {
                     try {
                         school.saveToDatabase();
                     } catch (SQLException e) {
-                        logger.error("Failed to save school " + school.get(School.Attribute.name) + " to database", e);
+                        logger.error("Failed to save school " + school.name() + " to database", e);
                     }
             } catch (IOException e) {
                 logger.error("Failed to load school list.", e);
@@ -59,17 +59,17 @@ public class Actions {
     }
 
     public static void downloadSchoolWebsites() {
-        logger.info("Downloading school websites");
+        logger.info("Downloading school websites.");
         notImplemented();
     }
 
     public static void performAnalysis() {
-        logger.info("Performing analysis on classical schools");
+        logger.info("Performing analysis on classical schools.");
         notImplemented();
     }
 
     public static void setupDatabase() {
-        logger.info("Setting up SQL database");
+        logger.info("Setting up SQL database.");
         Database.deleteTables();
         Database.createTables();
         OrganizationManager.addOrganizationsToSQL();
@@ -83,7 +83,7 @@ public class Actions {
      * question</a> on StackOverflow.
      */
     public static void clearDataDirectory() {
-        logger.info("Clearing data directory");
+        logger.info("Clearing data directory.");
 
         String p;
         try {

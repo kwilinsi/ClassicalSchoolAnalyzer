@@ -1,13 +1,15 @@
 package constructs.organizations;
 
+import constructs.schools.ACCSSchool;
+import constructs.schools.Attribute;
 import constructs.schools.School;
-import constructs.schools.School.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.Config;
 import utils.JsoupHandler;
 import utils.JsoupHandler.DownloadConfig;
 import utils.Pair;
@@ -29,7 +31,7 @@ public class ACCSSchoolParser implements Callable<School> {
     private static final Pattern SCHOOL_NAME_PATTERN = Pattern.compile("^(.*?)(?:\\s\\((.*)\\))?$");
 
     /**
-     * This is a list of strings that are mapped to <code>null</code> by {@link #extract(Document, String)}.
+     * This is a list of strings that are mapped to <code>null</code> by {@link #extractStr(Document, String)}.
      */
     private static final String[] NULL_STRINGS = {"", "N/A", "null", "not available", "not applicable", "none"};
 
@@ -78,10 +80,12 @@ public class ACCSSchoolParser implements Callable<School> {
     @Override
     @NotNull
     public School call() throws IOException {
-        School school = new School(OrganizationManager.ACCS);
+        School school = new ACCSSchool();
+        school.put(constructs.schools.Attribute.accs_page_url, accs_page_url);
 
         // Download the ACCS page for this school
         Document document;
+        String state;
         try {
             // Download the school
             Pair<Document, Boolean> download = JsoupHandler.downloadAndResults(
@@ -91,72 +95,99 @@ public class ACCSSchoolParser implements Callable<School> {
             document = download.a;
 
             // Get the name of the school
-            Pair<String, String> nameStatePair = parseACCSName(extract(document, "div#school-single h1"));
-            school.put(Attribute.name, nameStatePair.a);
-            school.put(Attribute.state, nameStatePair.b);
-            if (school.get(Attribute.name) == null)
+            Pair<String, String> nameStatePair = parseACCSName(extractStr(document, "div#school-single h1"));
+            school.put(constructs.schools.Attribute.name, nameStatePair.a);
+            state = nameStatePair.b;
+            if (school.get(constructs.schools.Attribute.name) == null)
                 throw new NullPointerException("Failed to find name of school: " + accs_page_url);
 
             // Cache the school's ACCS page, only if it was actually downloaded with Jsoup
             if (download.b)
                 JsoupHandler.save(
-                        OrganizationManager.ACCS.getFilePath("school_pages")
-                                .resolve(school.get(Attribute.name) + ".html"),
+                        OrganizationManager.ACCS.getFilePath("school_pages").resolve(school.getHtmlFile()),
                         document
                 );
         } catch (IOException e) {
             throw new IOException("Failed to download ACCS page " + accs_page_url + ".", e);
         } catch (NullPointerException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e);
         }
 
-        // Extract all the information available on this school's ACCS page
-        school.put(Attribute.website_url, extractLink(document,
-                "div#school-single a[href]"));
-        school.put(Attribute.phone, extract(document,
+        // If the state is two letters long, it's probably a state, and the country is the US. Otherwise, the "state"
+        // is most likely actually the country.
+        if (state != null && state.length() == 2) {
+            school.put(constructs.schools.Attribute.state, state);
+            school.put(constructs.schools.Attribute.country, "US");
+        } else {
+            school.put(constructs.schools.Attribute.state, null);
+            school.put(constructs.schools.Attribute.country, state);
+        }
+
+        // Get the school's website
+        school.put(constructs.schools.Attribute.website_url, extractLink(document,
+                "div#school-single h2 a[href]"));
+
+        // If the website URL isn't null, we'll say they have a website for now
+        school.put(constructs.schools.Attribute.has_website, school.get(
+                constructs.schools.Attribute.website_url) != null);
+
+        // Extract other information from the ACCS page
+        school.put(constructs.schools.Attribute.phone, extractStr(document,
                 "p:has(strong:contains(phone))"));
-        school.put(Attribute.address, extract(document,
+        school.put(constructs.schools.Attribute.address, extractStr(document,
                 "p:has(strong:contains(address))"));
-        school.put(Attribute.contact_name, extract(document,
+        school.put(constructs.schools.Attribute.contact_name, extractStr(document,
                 "div:contains(contact name) ~ div"));
-        school.put(Attribute.accs_accredited, extractBool(document,
+        school.put(constructs.schools.Attribute.accs_accredited, extractBool(document,
                 "div:contains(accs accredited) ~ div"));
-        school.put(Attribute.office_phone, extract(document,
+        school.put(constructs.schools.Attribute.office_phone, extractStr(document,
                 "div:contains(office phone) ~ div"));
-        school.put(Attribute.date_accredited, extractDate(document,
+        school.put(constructs.schools.Attribute.date_accredited, extractDate(document,
                 "div:contains(date accredited) ~ div"));
-        school.put(Attribute.year_founded, extractInt(document,
+        school.put(constructs.schools.Attribute.year_founded, extractInt(document,
                 "div:contains(year founded) ~ div"));
-        school.put(Attribute.grades_offered, extract(document,
+        school.put(constructs.schools.Attribute.grades_offered, extractStr(document,
                 "div:contains(grades offered) ~ div"));
-        school.put(Attribute.membership_date, extractDate(document,
+        school.put(constructs.schools.Attribute.membership_date, extractDate(document,
                 "div:contains(membership date) ~ div"));
-        school.put(Attribute.number_of_students_k_6, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_students_k_6, extractInt(document,
                 "div:contains(number of students k-6) ~ div"));
-        school.put(Attribute.number_of_students_k_6_non_traditional, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_students_k_6_non_traditional, extractInt(document,
                 "div:contains(number of students k-6 non-traditional) ~ div"));
-        school.put(Attribute.classroom_format, extract(document,
+        school.put(constructs.schools.Attribute.classroom_format, extractStr(document,
                 "div:contains(classroom format) ~ div"));
-        school.put(Attribute.number_of_students_7_12, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_students_7_12, extractInt(document,
                 "div:contains(number of students 7-12) ~ div"));
-        school.put(Attribute.number_of_students_7_12_non_traditional, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_students_7_12_non_traditional, extractInt(document,
                 "div:contains(number of students 7-12 non-traditional) ~ div"));
-        school.put(Attribute.number_of_teachers, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_teachers, extractInt(document,
                 "div:contains(number of teachers) ~ div"));
-        school.put(Attribute.student_teacher_ratio, extract(document,
+        school.put(constructs.schools.Attribute.student_teacher_ratio, extractStr(document,
                 "div:contains(student teacher ratio) ~ div"));
-        school.put(Attribute.international_student_program, extractBool(document,
+        school.put(constructs.schools.Attribute.international_student_program, extractBool(document,
                 "div:contains(international student program) ~ div"));
-        school.put(Attribute.tuition_range, extract(document,
+        school.put(constructs.schools.Attribute.tuition_range, extractStr(document,
                 "div:contains(tuition range) ~ div"));
-        school.put(Attribute.headmaster_name, extract(document,
+        school.put(constructs.schools.Attribute.headmaster_name, extractStr(document,
                 "div:contains(headmaster) ~ div"));
-        school.put(Attribute.church_affiliated, extractBool(document,
+        school.put(constructs.schools.Attribute.church_affiliated, extractBool(document,
                 "div:contains(church affiliation) ~ div"));
-        school.put(Attribute.chairman_name, extract(document,
+        school.put(constructs.schools.Attribute.chairman_name, extractStr(document,
                 "div:contains(chairman name) ~ div"));
-        school.put(Attribute.accredited_other, extract(document,
+        school.put(constructs.schools.Attribute.accredited_other, extractStr(document,
                 "div:contains(accredited other) ~ div"));
+
+
+        // Determine if a school should be excluded (i.e. no website or name)
+        boolean hasWebsite = school.getBool(constructs.schools.Attribute.has_website);
+        boolean hasName = !school.name().isBlank();
+        if (!hasName || !hasWebsite) {
+            school.put(constructs.schools.Attribute.is_excluded, true);
+            school.put(
+                    Attribute.excluded_reason,
+                    hasName ? "No website" : (hasWebsite ? "No name" : "No website or name")
+            );
+        }
 
         return school;
     }
@@ -164,12 +195,17 @@ public class ACCSSchoolParser implements Callable<School> {
     /**
      * Separate the school's name from its state, given the name on the ACCS page.
      *
-     * @param name The name of the school, with the state in parentheses
+     * @param name The name of the school, with the state in parentheses. If this is <code>null</code>, then a pair
+     *             containing {@link Config#MISSING_NAME_SUBSTITUTION} and <code>null</code> is returned.
      *
      * @return A pair containing first the actual name and then the state abbreviation.
      * @throws IllegalArgumentException If there is an error parsing the name.
      */
-    private Pair<String, String> parseACCSName(String name) throws IllegalArgumentException {
+    @NotNull
+    private Pair<String, String> parseACCSName(@Nullable String name) throws IllegalArgumentException {
+        if (name == null)
+            return new Pair<>(Config.MISSING_NAME_SUBSTITUTION.get(), null);
+
         Matcher matcher = SCHOOL_NAME_PATTERN.matcher(name);
 
         if (matcher.find())
@@ -179,7 +215,25 @@ public class ACCSSchoolParser implements Callable<School> {
     }
 
     /**
-     * Extract the {@link Element#ownText() contents} of an {@link Element} given its selector.
+     * Extract an {@link Element} from the given {@link Document} using the given CSS selector. If the selector returns
+     * no matches, a warning is logged to the console.
+     *
+     * @param document The document to search.
+     * @param selector The selector to use.
+     *
+     * @return The element, or <code>null</code> if the element is not found.
+     */
+    @Nullable
+    private Element extract(Document document, String selector) {
+        Element element = document.select(selector).first();
+        if (element == null)
+            logger.warn("Failed to find element with selector '" + selector + "' for school: " + this.accs_page_url);
+        return element;
+    }
+
+    /**
+     * {@link #extract(Document, String) Extract} the {@link Element#ownText() contents} of an {@link Element} given its
+     * selector.
      * <p>
      * If the text is any of the {@link #NULL_STRINGS}, it will be replaced with <code>null</code>.
      *
@@ -189,12 +243,9 @@ public class ACCSSchoolParser implements Callable<School> {
      * @return The contents of the element, or <code>null</code> if the element is not found.
      */
     @Nullable
-    private String extract(Document document, String selector) {
-        Element element = document.select(selector).first();
-        if (element == null) {
-            logger.info("Failed to find element with selector '" + selector + "' for school: " + this.accs_page_url);
-            return null;
-        }
+    private String extractStr(Document document, String selector) {
+        Element element = extract(document, selector);
+        if (element == null) return null;
 
         String text = element.ownText();
 
@@ -207,8 +258,8 @@ public class ACCSSchoolParser implements Callable<School> {
     }
 
     /**
-     * Convenience method for {@link #extract(Document, String)} that returns <code>true</code> if the text is "yes" or
-     * "true", and <code>false</code> otherwise.
+     * Convenience method for {@link #extractStr(Document, String)} that returns <code>true</code> if the text is "yes"
+     * or "true", and <code>false</code> otherwise.
      *
      * @param document The document to search.
      * @param selector The selector to use.
@@ -216,13 +267,13 @@ public class ACCSSchoolParser implements Callable<School> {
      * @return The text parsed to a boolean.
      */
     private boolean extractBool(Document document, String selector) {
-        String s = extract(document, selector);
+        String s = extractStr(document, selector);
         if (s == null) return false;
         return s.equalsIgnoreCase("yes") || s.equalsIgnoreCase("true");
     }
 
     /**
-     * Convenience method for {@link #extract(Document, String)} that returns the text parsed as an {@link Integer}.
+     * Convenience method for {@link #extractStr(Document, String)} that returns the text parsed as an {@link Integer}.
      * Note that this is not a primitive int, meaning <code>null</code> may be returned.
      *
      * @param document The document to search.
@@ -232,7 +283,7 @@ public class ACCSSchoolParser implements Callable<School> {
      */
     @Nullable
     private Integer extractInt(Document document, String selector) {
-        String s = extract(document, selector);
+        String s = extractStr(document, selector);
         if (s == null) return null;
         try {
             return Integer.parseInt(s);
@@ -242,7 +293,7 @@ public class ACCSSchoolParser implements Callable<School> {
     }
 
     /**
-     * Convenience method for {@link #extract(Document, String)} that returns the text {@link Utils#parseDate(String)
+     * Convenience method for {@link #extractStr(Document, String)} that returns the text {@link Utils#parseDate(String)
      * parsed} as a {@link LocalDate}.
      *
      * @param document The document to search.
@@ -252,13 +303,15 @@ public class ACCSSchoolParser implements Callable<School> {
      */
     @Nullable
     private LocalDate extractDate(Document document, String selector) {
-        return Utils.parseDate(extract(document, selector));
+        return Utils.parseDate(extractStr(document, selector));
     }
 
     /**
-     * Similar to {@link #extract(Document, String)}, except instead of returning the {@link Element#ownText()
-     * ownText()}, this returns {@link Element#attr(String) attr()} for the <code>"href"</code> attribute. If the
-     * resulting link is an empty string, this will return <code>null</code>.
+     * Similar to {@link #extractStr(Document, String)}, this {@link #extract(Document, String) extracts} an element.
+     * But instead of returning the element's {@link Element#ownText() ownText()}, this returns the {@link
+     * Element#attr(String) attr()} for the <code>"href"</code> attribute. If the resulting link is an empty string,
+     * this will return
+     * <code>null</code>.
      * <p>
      * If the link text is found in the list of {@link #NULL_LINKS}, <code>null</code> is returned.
      *
@@ -269,11 +322,8 @@ public class ACCSSchoolParser implements Callable<School> {
      */
     @Nullable
     private String extractLink(Document document, String selector) {
-        Element element = document.select(selector).first();
-        if (element == null) {
-            logger.info("Failed to find element with selector '" + selector + "' for school: " + this.accs_page_url);
-            return null;
-        }
+        Element element = extract(document, selector);
+        if (element == null) return null;
 
         // Get the link, and replace any null links with null
         String link = element.attr("href");

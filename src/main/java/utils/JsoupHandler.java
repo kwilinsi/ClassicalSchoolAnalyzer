@@ -206,7 +206,7 @@ public class JsoupHandler {
             statement.setString(3, file.getAbsolutePath());
             statement.execute();
         } catch (SQLException e) {
-            logger.warn("Failed to add document reference to Cache table.", e);
+            logger.warn("Failed to add document reference to Cache table: " + file.getAbsolutePath(), e);
         }
     }
 

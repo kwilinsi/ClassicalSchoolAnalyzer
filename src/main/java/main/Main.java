@@ -1,10 +1,16 @@
 package main;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import utils.Prompt;
 import utils.Prompt.Action;
 
 public class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+
     public static void main(String[] args) {
+        logger.info("Initialized logger.");
+
         System.out.println("Welcome to the ClassicalSchoolAnalyzer!");
 
         while (true) {

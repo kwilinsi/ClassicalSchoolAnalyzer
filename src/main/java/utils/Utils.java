@@ -116,4 +116,21 @@ public class Utils {
         logger.info("Failed to parse String as date: " + text);
         return null;
     }
+
+    /**
+     * Clean a file name from illegal characters and optionally add an extension.
+     *
+     * @param file      The name of the file (not the full path or directory).
+     * @param extension The extension to add, or <code>null</code> to skip adding an extension. Don't include a period
+     *                  in the extension.
+     *
+     * @return The cleaned file name.
+     */
+    @NotNull
+    public static String cleanFile(@NotNull String file, @Nullable String extension) {
+        String clean = file.replaceAll("[:/*?\"<>|\\\\]", "");
+        if (extension != null)
+            return clean + "." + extension;
+        return clean;
+    }
 }

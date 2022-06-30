@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS Cache
 (
     id        INTEGER AUTO_INCREMENT,
     url       VARCHAR(150),
-    file_path VARCHAR(100),
+    file_path VARCHAR(200),
     PRIMARY KEY (id),
     UNIQUE (url)
 );
@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS Schools
     headmaster_name                         VARCHAR(100),
     church_affiliated                       BOOL,
     chairman_name                           VARCHAR(100),
-    accredited_other                        VARCHAR(100),
+    accredited_other                        VARCHAR(300),
+    accs_page_url                           VARCHAR(150),
     is_excluded                             BOOL         NOT NULL,
     excluded_reason                         VARCHAR(100),
     PRIMARY KEY (id),

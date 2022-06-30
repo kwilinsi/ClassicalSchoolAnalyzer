@@ -6,10 +6,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.Config;
 import utils.Database;
+import utils.Utils;
 
 import java.sql.*;
-import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -31,12 +33,12 @@ public class School extends BaseConstruct {
         this.organization = organization;
 
         // Add all the Attributes to the attributes map.
-        attributes = new LinkedHashMap<>(Attribute.values().length);
-        for (Attribute attribute : Attribute.values())
+        attributes = new LinkedHashMap<>(constructs.schools.Attribute.values().length);
+        for (Attribute attribute : constructs.schools.Attribute.values())
             attributes.put(attribute, attribute.defaultValue);
 
         // Save the organization id
-        put(Attribute.organization_id, organization.get_id());
+        put(constructs.schools.Attribute.organization_id, organization.get_id());
     }
 
     /**
@@ -47,7 +49,7 @@ public class School extends BaseConstruct {
      * @param value     The value of the attribute.
      */
     public void put(@NotNull Attribute attribute, @Nullable Object value) {
-        attributes.put(attribute, value);
+        attributes.put(attribute, attribute.clean(value, this));
     }
 
     /**
@@ -58,142 +60,172 @@ public class School extends BaseConstruct {
      *
      * @return The current value of that attribute.
      */
+    @Nullable
     public Object get(@NotNull Attribute attribute) {
         return attributes.get(attribute);
     }
 
-    public void saveToDatabase() throws SQLException {
-        logger.debug("Saving school " + get(Attribute.name) + " to database.");
+    /**
+     * This is a wrapper for {@link #get(Attribute)} that returns a boolean instead of a generic {@link Object}.
+     *
+     * @param attribute The attribute to retrieve (must be type {@link Boolean#TYPE}).
+     *
+     * @return The current value of that attribute.
+     */
+    public boolean getBool(@NotNull Attribute attribute) {
+        Object o = get(attribute);
+        return o instanceof Boolean && (Boolean) o;
+    }
 
-        // Construct the SQL statement to insert this school
-        StringBuilder columns = new StringBuilder();
-        StringBuilder placeholders = new StringBuilder();
-        StringBuilder conflicts = new StringBuilder();
+    /**
+     * {@link #get(Attribute) Get} the {@link Attribute#name name} of this school. If the name attribute is
+     * <code>null</code>, {@link Config#MISSING_NAME_SUBSTITUTION} is returned instead.
+     *
+     * @return The name.
+     */
+    @NotNull
+    public String name() {
+        Object o = get(constructs.schools.Attribute.name);
+        return o == null ? Config.MISSING_NAME_SUBSTITUTION.get() : (String) o;
+    }
 
-        for (Attribute attribute : Attribute.values()) {
-            columns.append(attribute.name()).append(", ");
-            placeholders.append("?, ");
-            conflicts.append(attribute.name()).append(" = ?, ");
+    /**
+     * Get the name of this school with a <code>.html</code> file extension. The name is cleaned using {@link
+     * Utils#cleanFile(String, String)}. The name is followed by the {@link LocalTime#now() current} {@link
+     * LocalTime#toNanoOfDay() nanoseconds} today, to help ensure unique file names. This means that calling this method
+     * twice in a row will result in two different file names.
+     *
+     * @return The unique, cleaned file name.
+     */
+    @NotNull
+    public String getHtmlFile() {
+        return Utils.cleanFile(
+                String.format("%s - %d", name(), LocalTime.now().toNanoOfDay()),
+                "html"
+        );
+    }
+
+    /**
+     * Determine if the SQL database already contains this {@link School}. If it does, the <code>id</code> column is
+     * returned. If it doesn't, -1 is returned to indicate no match.
+     * <ul>
+     *     <li>An existing school is considered a match <i>if and only if</i> it has the same URL and name as this
+     *         {@link School} instance and the URL is NOT null. If such a match is found, the <code>id</code> of that
+     *         school is returned.
+     *     <li>If an existing school has the same URL <i>OR</i> the same name (but not both), it is considered a
+     *         possible match. Note that if the name is {@link Config#MISSING_NAME_SUBSTITUTION}, then that's not a
+     *         match, it just means both schools don't have a name. This is not considered a match for partial
+     *         matching purposes.
+     *     <li>A warning is {@link #logger logged} to the console, indicating the need for manual review. If no
+     *         school has the same URL or name as this one, -1 is returned.
+     * </ul>
+     * <p>
+     * Note: If two URLs are <code>null</code>, they will never count as a match. If two names are
+     * {@link Config#MISSING_NAME_SUBSTITUTION}, they will never count as a partial match, but they may be counted as
+     * a full match if the URLs also match.
+     *
+     * @return The id of the match school in the SQL database, or -1 if there is no match.
+     */
+    public int findMatchingSchool() {
+        String myUrl = (String) get(constructs.schools.Attribute.website_url);
+        String myName = this.name();
+
+        // Open a connection and search for a matching school
+        try (Connection connection = Database.getConnection()) {
+            PreparedStatement statement = connection.prepareStatement(
+                    "SELECT id, name, website_url FROM Schools WHERE name = ? OR website_url = ?"
+            );
+            statement.setString(1, myName);
+            statement.setString(2, myUrl);
+            ResultSet results = statement.executeQuery();
+
+            // Look for a match
+            if (results.next()) {
+                int id = results.getInt("id");
+                String name = results.getString("name");
+                String url = results.getString("website_url");
+
+                boolean nameMatch = name.equals(myName);
+                boolean urlMatch = myUrl != null && myUrl.equals(url);
+
+                if (nameMatch && urlMatch)
+                    return id;
+                else if (nameMatch && !myName.equals(Config.MISSING_NAME_SUBSTITUTION.get()))
+                    logger.warn("Possible school match: name ({}) URL ({}) matches original name ({}).",
+                            myName, myUrl, name);
+                else if (urlMatch)
+                    logger.warn("Possible school match: name ({}) URL ({}) matches original URL ({}).",
+                            myName, myUrl, url);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to access SQL database to check for existing school. " + myName, e);
         }
 
-        // Remove trailing commas from each string
-        columns.delete(columns.length() - 2, columns.length());
-        placeholders.delete(placeholders.length() - 2, placeholders.length());
-        conflicts.delete(conflicts.length() - 2, conflicts.length());
+        return -1;
+    }
 
-        String sql = String.format(
-                "INSERT INTO Schools (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s",
-                columns, placeholders, conflicts
-        );
+    /**
+     * Save this {@link School} to the SQL database.
+     *
+     * @throws SQLException If there is an error saving to the database.
+     */
+    public void saveToDatabase() throws SQLException {
+        logger.debug("Saving school " + get(constructs.schools.Attribute.name) + " to database.");
+
+        // Determine if there's already a school with the same name and URL
+        int matchId = findMatchingSchool();
+
+        String sql;
+
+        if (matchId == -1) {
+            // If there is no matching school, construct SQL statements for INSERTing this one
+            StringBuilder columns = new StringBuilder();
+            StringBuilder placeholders = new StringBuilder();
+
+            for (Attribute attribute : constructs.schools.Attribute.values()) {
+                columns.append(attribute.name()).append(", ");
+                placeholders.append("?, ");
+            }
+
+            columns.delete(columns.length() - 2, columns.length());
+            placeholders.delete(placeholders.length() - 2, placeholders.length());
+
+            sql = String.format("INSERT INTO Schools (%s) VALUES (%s)", columns, placeholders);
+
+        } else {
+            // If there is a matching school, construct SQL statements for UPDATEing it
+            StringBuilder conflicts = new StringBuilder();
+
+            for (Attribute attribute : constructs.schools.Attribute.values())
+                conflicts.append(attribute.name()).append(" = ?, ");
+
+            conflicts.delete(conflicts.length() - 2, conflicts.length());
+
+            sql = String.format("UPDATE Schools SET %s WHERE id = ?", conflicts);
+        }
 
         // Open database connection
         try (Connection connection = Database.getConnection()) {
             PreparedStatement statement = connection.prepareStatement(sql);
 
             // Add values to the statement according to their type
-            Attribute[] values = Attribute.values();
-            for (int i = 0; i < values.length; i++) {
-                Attribute attribute = values[i];
-                attribute.addToStatement(statement, attributes.get(attribute), i + 1);
-                attribute.addToStatement(statement, attributes.get(attribute), i + 1 + values.length);
-            }
+            Attribute[] values = constructs.schools.Attribute.values();
+            for (int i = 0; i < values.length; i++)
+                values[i].addToStatement(statement, attributes.get(values[i]), i + 1);
+
+            // Add id match if there is one (meaning this is an UPDATE statement)
+            if (matchId != -1)
+                statement.setInt(values.length + 1, matchId);
 
             // Execute the finished statement
             statement.execute();
         }
+
+        logger.info("Saved school " + this.name() + " to database.");
     }
 
     @NotNull
     public Organization get_organization() {
         return organization;
-    }
-
-    /**
-     * This is the list of attributes that a school may have.
-     * <p>
-     * <b>Note:</b> The order here is intentional. It is the same order of the columns of the Schools table in
-     * the database.
-     */
-    public enum Attribute {
-        name(String.class, null),
-        organization_id(Integer.TYPE, -1),
-        phone(String.class, null),
-        address(String.class, null),
-        state(String.class, null),
-        country(String.class, null),
-        website_url(String.class, null),
-        website_url_redirect(String.class, null),
-        has_website(Boolean.TYPE, false),
-        contact_name(String.class, null),
-        accs_accredited(Boolean.class, null),
-        office_phone(String.class, null),
-        date_accredited(LocalDate.class, null),
-        year_founded(Integer.class, null),
-        grades_offered(String.class, null),
-        membership_date(LocalDate.class, null),
-        number_of_students_k_6(Integer.class, null),
-        number_of_students_k_6_non_traditional(Integer.class, null),
-        classroom_format(String.class, null),
-        number_of_students_7_12(Integer.class, null),
-        number_of_students_7_12_non_traditional(Integer.class, null),
-        number_of_teachers(Integer.class, null),
-        student_teacher_ratio(String.class, null),
-        international_student_program(Boolean.class, null),
-        tuition_range(String.class, null),
-        headmaster_name(String.class, null),
-        church_affiliated(Boolean.class, null),
-        chairman_name(String.class, null),
-        accredited_other(String.class, null),
-        is_excluded(Boolean.TYPE, false),
-        excluded_reason(String.class, null);
-
-        private final Class<?> type;
-        private final Object defaultValue;
-
-        <T> Attribute(Class<T> type, T defaultValue) {
-            this.type = type;
-            this.defaultValue = defaultValue;
-        }
-
-        /**
-         * Add some value to a {@link PreparedStatement} based on the {@link #type} of this {@link Attribute
-         * Attribute}.
-         *
-         * @param statement The statement to add the value to.
-         * @param value     The value to add.
-         * @param position  The position to add the value to.
-         *
-         * @throws SQLException             If there is an error adding the value to the statement.
-         * @throws IllegalArgumentException If this {@link Attribute Attribute's} type isn't recognized.
-         */
-        public void addToStatement(PreparedStatement statement, Object value, int position) throws SQLException {
-            if (value == null) {
-                int sqlType;
-                if (type == String.class)
-                    sqlType = Types.VARCHAR;
-                else if (type == Integer.class)
-                    sqlType = Types.INTEGER;
-                else if (type == Boolean.class)
-                    sqlType = Types.BOOLEAN;
-                else if (type == LocalDate.class)
-                    sqlType = Types.DATE;
-                else
-                    throw new IllegalArgumentException("Unknown type: " + type);
-                statement.setNull(position, sqlType);
-                return;
-            }
-
-            if (type == String.class)
-                statement.setString(position, (String) value);
-            else if (type == Integer.class || type == Integer.TYPE)
-                statement.setInt(position, (int) value);
-            else if (type == Boolean.class || type == Boolean.TYPE)
-                statement.setBoolean(position, (boolean) value);
-            else if (type == LocalDate.class)
-                statement.setDate(position, Date.valueOf((LocalDate) value));
-            else
-                throw new IllegalArgumentException("Unknown type: " + type);
-
-        }
     }
 }
