@@ -38,7 +38,7 @@ public class Prompt {
      *
      * @return The result of {@link #display()}.
      */
-    public static String run(String prompt, Option... options) {
+    public static int run(String prompt, Option... options) {
         return new Prompt(prompt, options).display();
     }
 
@@ -46,10 +46,9 @@ public class Prompt {
      * Prompt the user with the list of {@link #options}. If the user chooses a {@link Selection Selection}, its {@link
      * Selection#value value} is returned. If the user chooses an {@link Action Action}, it's {@link Action#run() run}.
      *
-     * @return The value if a user chose a Selection, or <code>null</code> if the user chose an Action.
+     * @return The value if a user chose a Selection, or <code>-1</code> if the user chose an Action.
      */
-    @Nullable
-    public String display() {
+    public int display() {
         System.out.println("\n" + prompt);
         for (int i = 0; i < options.length; i++)
             System.out.printf(" [%d] %s%n", i + 1, options[i].name);
@@ -66,7 +65,7 @@ public class Prompt {
                     System.out.println("ERR: Invalid selection.");
                 else {
                     if (options[choice - 1].isRunnable) {
-                        if (((Action) options[choice - 1]).run()) return null;
+                        if (((Action) options[choice - 1]).run()) return -1;
                     } else {
                         return ((Selection) options[choice - 1]).value;
                     }
@@ -172,15 +171,14 @@ public class Prompt {
     }
 
     public static class Selection extends Option {
-        @NotNull
-        private final String value;
+        private final int value;
 
-        private Selection(@NotNull String name, @NotNull String value) {
+        private Selection(@NotNull String name, int value) {
             super(name, false);
             this.value = value;
         }
 
-        public static Selection of(@NotNull String name, @NotNull String value) {
+        public static Selection of(@NotNull String name, int value) {
             return new Selection(name, value);
         }
     }

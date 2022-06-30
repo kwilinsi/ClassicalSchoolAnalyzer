@@ -1,91 +1,36 @@
 package utils;
 
 import org.jetbrains.annotations.NotNull;
-import org.jsoup.Connection;
-import org.jsoup.HttpStatusException;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 public class Utils {
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
 
     /**
-     * Download a website using JSoup. This effectively calls
-     * <code>{@link Jsoup}{@link Jsoup#connect(String) .connect(url)}{@link Connection#get() .get();}</code>
-     * <p>
-     * However, this utility method also includes user-adjustable properties from the Config class to perform additional
-     * tasks, such as setting the user agent timeout length.
-     *
-     * @param url               The URL to download.
-     * @param ignoreContentType If this is true, {@link Connection#ignoreContentType(boolean)} is called with true. This
-     *                          should typically be false, but may be useful in some cases.
-     *
-     * @return The website as a Jsoup Document.
-     * @throws IOException If there is an error downloading the website.
+     * This is a list of all date formats that are recognized by {@link #parseDate(String)}.
      */
-    @NotNull
-    public static Document download(@NotNull String url, boolean ignoreContentType) throws IOException {
-        logger.debug("Jsoup downloading {}", url);
-
-        Connection connection = Jsoup.connect(url);
-
-        connection.ignoreContentType(ignoreContentType);
-
-        if (Config.USE_USERAGENT.getBool())
-            try {
-                connection.userAgent(Config.USERAGENT.get());
-            } catch (NullPointerException e) {
-                logger.warn("Failed to get the useragent property when requested. It was not set.", e);
-            }
-
-        try {
-            connection.timeout(Config.CONNECTION_TIMEOUT.getInt());
-        } catch (NullPointerException e) {
-            logger.warn("Failed to get the timeout value. Reverting to default 30,000.", e);
-        } catch (NumberFormatException e) {
-            logger.warn(
-                    "The timeout property must be a valid integer in milliseconds. Reverting to default 30,000.", e);
-        } catch (IllegalArgumentException e) {
-            logger.warn("The timeout must be non-negative. Reverting to default 30,000.", e);
-        }
-
-        try {
-            return connection.get();
-        } catch (HttpStatusException e) {
-            // If strict HTTP handling is enabled, throw this error
-            if (Config.STRICT_HTTP.getBool()) throw e;
-
-            // Otherwise, retry the connection
-            logger.debug("Encountered an HTTP error. Retrying connection", e);
-            connection.ignoreHttpErrors(true);
-            return connection.get();
-        }
-    }
-
-    /**
-     * Parse an HTML file using {@link Jsoup} to obtain a {@link Document}. The file is parsed with the UTF-8 charset.
-     *
-     * @param file The file to parse.
-     * @param url  The URL corresponding to that file (used for resolving relative links).
-     *
-     * @return The parsed document.
-     * @throws IOException If there is an error while parsing the file or the file doesn't exist.
-     */
-    @NotNull
-    public static Document parseDocument(@NotNull File file, @NotNull String url) throws IOException {
-        return Jsoup.parse(file, "UTF-8", url);
-    }
+    private static final DateTimeFormatter[] DATE_FORMATS = {
+            DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+            DateTimeFormatter.ofPattern("MM-dd-yyyy"),
+            DateTimeFormatter.ofPattern("MM/dd/yy"),
+            DateTimeFormatter.ofPattern("MM-dd-yy"),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+            DateTimeFormatter.ofPattern("yy/MM/dd"),
+            DateTimeFormatter.ofPattern("yy-MM-dd")
+    };
 
     /**
      * Get a file by its name in the installation directory. If the file does not exist, it is created.
@@ -102,7 +47,7 @@ public class Utils {
         if (!installationDir.isDirectory()) {
             if (!installationDir.mkdir()) {
                 // If creating the directory fails, log a warning and exit
-                logger.warn("Failed to create installation/ directory.");
+                logger.warn("Failed to create installation directory.");
                 return new File("");
             }
         }
@@ -132,7 +77,8 @@ public class Utils {
      * @throws IOException  If there is an error locating or reading the script file.
      * @throws SQLException If there is an error running the script.
      */
-    public static void runSqlScript(String fileName, java.sql.Connection connection) throws IOException, SQLException {
+    public static void runSqlScript(String fileName, java.sql.Connection connection) throws
+            IOException, SQLException {
         InputStream fileStream = Utils.class.getResourceAsStream("/sql/" + fileName);
         if (fileStream == null)
             throw new IOException("Failed to find SQL script " + fileName + ".");
@@ -145,28 +91,29 @@ public class Utils {
     }
 
     /**
-     * Save the contents of an HTML document to a file.
+     * Attempt to parse a string as a date. This will try a {@link #DATE_FORMATS barrage} of different date formats,
+     * returning <code>null</code> if all of them fail.
      *
-     * @param path     The path to the desired output file.
-     * @param document The document to save.
+     * @param text The text to parse, or <code>null</code> to skip parsing and return <code>null</code>.
      *
-     * @throws IOException If the file does not exist and there is an error creating it.
+     * @return The parsed date; or <code>null</code> if <code>text</code> is <code>null</code> or all parsing formats
+     *         failed.
      */
-    public static void saveDocument(Path path, Document document) throws IOException {
-        File file = path.toFile();
+    @Nullable
+    public static LocalDate parseDate(@Nullable String text) {
+        if (text == null) return null;
 
-        // Create the file (and parent directories) if it doesn't exist
-        if (!file.exists()) {
-            logger.debug("Creating file " + file.getAbsolutePath());
-            if (file.getParentFile().mkdirs())
-                logger.debug("Successfully created parent directory " + file.getParentFile().getAbsolutePath());
-            if (!file.createNewFile())
-                throw new IOException("Failed to create file " + file.getAbsolutePath() + ".");
+        // Try each of the formats in turn
+        for (DateTimeFormatter formatter : DATE_FORMATS) {
+            try {
+                return LocalDate.parse(text, formatter);
+            } catch (DateTimeParseException ignored) {
+                // Ignore errors and try another format
+            }
         }
 
-        // Write the document to the file
-        try (PrintWriter writer = new PrintWriter(file)) {
-            writer.println(document.outerHtml());
-        }
+        // If all formats failed, log this un-parsable string and return null
+        logger.info("Failed to parse String as date: " + text);
+        return null;
     }
 }

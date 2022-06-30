@@ -9,6 +9,14 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class OrganizationManager {
+    public static final Organization ACCS = new Organization(
+            1,
+            "Association of Classical Christian Schools",
+            "ACCS",
+            "https://classicalchristian.org",
+            "https://classicalchristian.org/find-a-school/"
+    );
+
     /**
      * This is the complete list of all organizations supported by this program. It contains an {@link Organization}
      * object for each of the organizations. No other objects should be created for any organization at any time during
@@ -16,13 +24,7 @@ public class OrganizationManager {
      * downloading the school_list_page_file.
      */
     public static final Organization[] ORGANIZATIONS = {
-            new Organization(
-                    1,
-                    "Association of Classical Christian Schools",
-                    "ACCS",
-                    "https://classicalchristian.org",
-                    "https://classicalchristian.org/find-a-school/"
-            ),
+            ACCS,
             new Organization(
                     2,
                     "Institute for Classical Education",
@@ -84,4 +86,5 @@ public class OrganizationManager {
             logger.error("Error adding Organizations to SQL database.", e);
         }
     }
+
 }

@@ -90,6 +90,7 @@ public class Database {
             statement.addBatch("DROP TABLE IF EXISTS Pages");
             statement.addBatch("DROP TABLE IF EXISTS Schools");
             statement.addBatch("DROP TABLE IF EXISTS Organizations");
+            statement.addBatch("DROP TABLE IF EXISTS Cache");
             statement.executeBatch();
         } catch (SQLException e) {
             logger.error("Failed to recreate database.", e);

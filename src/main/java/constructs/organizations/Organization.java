@@ -3,21 +3,15 @@ package constructs.organizations;
 import constructs.BaseConstruct;
 import constructs.schools.School;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
-import utils.Database;
-import utils.Utils;
+import utils.JsoupHandler;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.function.Function;
 
 /**
@@ -61,13 +55,6 @@ public class Organization extends BaseConstruct {
     private final String school_list_url;
 
     /**
-     * This is the path to an HTML file containing the school list page. It will be null until the organization's school
-     * list page is first downloaded and saved.
-     */
-    @Nullable
-    private final String school_list_page_file;
-
-    /**
      * This is a reference to the function in {@link OrganizationListExtractor} that parses the school list page for
      * this organization.
      */
@@ -78,27 +65,17 @@ public class Organization extends BaseConstruct {
                         @NotNull String name,
                         @NotNull String name_abbr,
                         @NotNull String homepage_url,
-                        @NotNull String school_list_url,
-                        @Nullable String school_list_page_file) {
+                        @NotNull String school_list_url) {
         this.id = id;
         this.name = name;
         this.name_abbr = name_abbr;
         this.homepage_url = homepage_url;
         this.school_list_url = school_list_url;
-        this.school_list_page_file = school_list_page_file;
 
         Function<Document, School[]> extractor = OrganizationListExtractor.getExtractor(this.name_abbr);
         if (extractor == null)
             throw new NullPointerException("No extractor found for organization " + this.name_abbr + ".");
         this.schoolListParser = extractor;
-    }
-
-    public Organization(int id,
-                        @NotNull String name,
-                        @NotNull String name_abbr,
-                        @NotNull String homepage_url,
-                        @NotNull String school_list_url) {
-        this(id, name, name_abbr, homepage_url, school_list_url, null);
     }
 
     public int get_id() {
@@ -130,9 +107,8 @@ public class Organization extends BaseConstruct {
      * Document}. If the page has already been downloaded and there is an available cache, that cache will be returned
      * instead.
      *
-     * @param useCache If this is true, the {@link #school_list_page_file} will be loaded and returned, if it is
-     *                 available. If this is false, the website will be downloaded via JSoup, cached for later, and
-     *                 returned.
+     * @param useCache If this is true, the {@link JsoupHandler.DownloadConfig} configuration instance will have
+     *                 useCache enabled.
      *
      * @return The contents of the school list page as a {@link Document}.
      * @throws IOException If there is an error loading the page.
@@ -141,86 +117,15 @@ public class Organization extends BaseConstruct {
     public Document loadSchoolListPage(boolean useCache) throws IOException {
         logger.debug("Attempting to load school list page for " + this.name_abbr + ".");
 
-        // If caching is enabled, look for caches
-        if (useCache) {
-            // If there is a reference to a cached file, load that file
-            if (this.school_list_page_file != null) {
-                logger.debug("Identified available cache. Loading school list.");
-                return Utils.parseDocument(
-                        getFilePath(this.school_list_page_file).toFile(),
-                        this.school_list_url
-                );
-            }
+        // Select a config based on whether caching is enabled
+        JsoupHandler.DownloadConfig config = JsoupHandler.DownloadConfig.of(useCache, true);
 
-            // Look for a cached file in the database
-            logger.debug("Searching database for cached school list page for organization " + this.name_abbr + ".");
-            try (Connection connection = Database.getConnection()) {
-                PreparedStatement statement = connection.prepareStatement(
-                        "SELECT school_list_page_file FROM Organizations " +
-                        "WHERE id = ? AND school_list_page_file IS NOT NULL");
-                statement.setInt(1, this.id);
-                ResultSet results = statement.executeQuery();
-                if (results.next())
-                    return Utils.parseDocument(
-                            getFilePath(results.getString(1)).toFile(),
-                            this.school_list_url
-                    );
-            } catch (SQLException e) {
-                // If there's an exception, don't worry about it and just re-download the page
-                logger.warn("Error retrieving cached school list page from database for " + this.name_abbr +
-                            ". Re-downloading page instead.", e);
-            }
-
-            logger.info("Couldn't find cached page. Downloading from URL instead.");
-        }
-
-        // If there is no cached file, download the page
-        logger.debug("Downloading school list page for organization " + this.name_abbr + ".");
-        Document download = null;
-        try {
-            download = Utils.download(this.school_list_url, true);
-        } catch (IOException e) {
-            logger.error("Error downloading school list page for " + this.name_abbr + ".", e);
-        }
-
-        // Attempt to cache the newly downloaded page
-        if (download != null) {
-            logger.debug("Caching school list page for organization " + this.name_abbr + ".");
-
-            String fileName;
-            try {
-                // Determine where to save the file
-                fileName = Config.SCHOOL_LIST_FILE_NAME.get();
-                Path path = getFilePath(fileName);
-
-                // Save the html file
-                logger.debug("Saving school list file.");
-                Utils.saveDocument(path, download);
-            } catch (NullPointerException e) {
-                logger.warn("Failed to retrieve information from the program configuration. Couldn't save cache.", e);
-                return download;
-            } catch (IOException e) {
-                logger.warn("Failed to save downloaded HTML file. Couldn't save cache.", e);
-                return download;
-            }
-
-            // Save the reference to the file in the database
-            try (Connection connection = Database.getConnection()) {
-                logger.debug("Saving reference to school list file in database.");
-                PreparedStatement statement = connection.prepareStatement(
-                        "UPDATE Organizations SET school_list_page_file = ? " +
-                        "WHERE id = ?");
-                statement.setString(1, fileName);
-                statement.setInt(2, this.id);
-                statement.executeUpdate();
-            } catch (SQLException e) {
-                logger.warn("Error saving cached school list page to database for " + this.name_abbr + ".", e);
-            }
-
-            return download;
-        }
-
-        throw new IOException("Failed to load school list page for " + this.name_abbr + ".");
+        // Download the document
+        return JsoupHandler.downloadAndSave(
+                this.school_list_url,
+                config,
+                getFilePath(Config.SCHOOL_LIST_FILE_NAME.get())
+        );
     }
 
     /**

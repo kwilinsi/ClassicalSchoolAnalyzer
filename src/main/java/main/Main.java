@@ -13,8 +13,10 @@ public class Main {
                     Action.of("Download school list", Actions::downloadSchoolList),
                     Action.of("Download school websites", Actions::downloadSchoolWebsites),
                     Action.of("Perform analysis", Actions::performAnalysis),
-                    Action.of("Configure database", Actions::configureDatabase,
+                    Action.of("Setup database", Actions::setupDatabase,
                             "This will delete all data in the database and recreate it."),
+                    Action.of("Clear data directory", Actions::clearDataDirectory,
+                            "This will delete all downloaded files in the data directory."),
                     Action.of("Exit", () -> System.exit(0))
             );
         }
