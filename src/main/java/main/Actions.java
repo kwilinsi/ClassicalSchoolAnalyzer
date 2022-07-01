@@ -17,7 +17,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.Comparator;
-import java.util.Random;
 
 public class Actions {
     private static final Logger logger = LoggerFactory.getLogger(Actions.class);
@@ -29,23 +28,31 @@ public class Actions {
     public static void downloadSchoolList() {
         logger.info("Downloading school list.");
 
-        int choice = Prompt.run(
-                "Select a download mode:",
-                Selection.of("Use Cache", 1),
-                Selection.of("Force New Download", 2),
-                Selection.of("Test one Organization (incl. cache)", 3)
+        int orgChoice = Prompt.run(
+                "Select the organization(s) to download:",
+                OrganizationManager.getAsSelections()
         );
 
-        // Select the whole list of organizations, or just pick one at random if "Test one Organization" was chosen
-        Organization[] orgs = choice == 3 ?
-                new Organization[]{OrganizationManager.ORGANIZATIONS[
-                        new Random().nextInt(OrganizationManager.ORGANIZATIONS.length)]} :
-                OrganizationManager.ORGANIZATIONS;
+        if (orgChoice == -1) {
+            logger.info("Aborting download.");
+            return;
+        }
+
+        int cacheChoice = Prompt.run(
+                "Select a download mode for the organization " + (orgChoice == 0 ? "page:" : "pages:"),
+                Selection.of("Use Cache", 1),
+                Selection.of("Force New Download", 2)
+        );
+
+        // Get the organizations to use, either one of them or all
+        Organization[] orgs = orgChoice == 0 ?
+                OrganizationManager.ORGANIZATIONS :
+                new Organization[]{OrganizationManager.getById(orgChoice)};
 
         // Download schools from each organization
         for (Organization organization : orgs) {
             try {
-                School[] schools = organization.getSchools(choice != 2);
+                School[] schools = organization.getSchools(cacheChoice == 1);
                 for (School school : schools)
                     try {
                         school.saveToDatabase();

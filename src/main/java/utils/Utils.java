@@ -1,5 +1,7 @@
 package utils;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -132,5 +134,37 @@ public class Utils {
         if (extension != null)
             return clean + "." + extension;
         return clean;
+    }
+
+    /**
+     * Extract an element from an {@link JsonArray} as a string. If it is <code>null</code> or {@link String#isBlank()
+     * blank}, this returns <code>null</code>. Otherwise, the string is {@link String#trim() trimmed} and returned.
+     *
+     * @param arr   The JSON array to extract from.
+     * @param index The index of the element to extract.
+     *
+     * @return The extracted element, or <code>null</code> if the element is <code>null</code> or empty.
+     */
+    @Nullable
+    public static String extractJson(@NotNull JsonArray arr, int index) {
+        String val = arr.get(index).getAsString();
+        if (val == null || val.isBlank()) return null;
+        return val.trim();
+    }
+
+    /**
+     * See {@link #extractJson(JsonArray, int)}. This behaves similarly, but using string keys rather than indices for
+     * selecting the desired element.
+     *
+     * @param obj The JSON object to extract from.
+     * @param key The key of the element to extract.
+     *
+     * @return The extracted element, or <code>null</code> if the element is <code>null</code> or empty.
+     */
+    @Nullable
+    public static String extractJson(@NotNull JsonObject obj, @NotNull String key) {
+        String val = obj.get(key).getAsString();
+        if (val == null || val.isBlank()) return null;
+        return val.trim();
     }
 }

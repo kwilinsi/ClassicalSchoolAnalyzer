@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS Cache
 (
     id        INTEGER AUTO_INCREMENT,
-    url       VARCHAR(150),
+    url       VARCHAR(300),
     file_path VARCHAR(200),
     PRIMARY KEY (id),
     UNIQUE (url)
@@ -9,39 +9,40 @@ CREATE TABLE IF NOT EXISTS Cache
 
 CREATE TABLE IF NOT EXISTS Organizations
 (
-    id              INT          NOT NULL AUTO_INCREMENT,
+    id              INTEGER      NOT NULL AUTO_INCREMENT,
     name            VARCHAR(50)  NOT NULL,
     name_abbr       VARCHAR(10)  NOT NULL,
-    homepage_url    VARCHAR(100) NOT NULL,
-    school_list_url VARCHAR(100) NOT NULL,
+    homepage_url    VARCHAR(300) NOT NULL,
+    school_list_url VARCHAR(300) NOT NULL,
     PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS Schools
 (
-    id                                      INT          NOT NULL AUTO_INCREMENT,
+    id                                      INTEGER      NOT NULL AUTO_INCREMENT,
     name                                    VARCHAR(100) NOT NULL,
-    organization_id                         INT          NOT NULL,
+    organization_id                         INTEGER      NOT NULL,
     phone                                   VARCHAR(20),
     address                                 VARCHAR(100),
+    mailing_address                         VARCHAR(100),
     state                                   VARCHAR(40),
     country                                 VARCHAR(30),
-    website_url                             VARCHAR(150),
-    website_url_redirect                    VARCHAR(150),
+    website_url                             VARCHAR(300),
+    website_url_redirect                    VARCHAR(300),
     has_website                             BOOL         NOT NULL,
     contact_name                            VARCHAR(100),
     accs_accredited                         BOOL,
     office_phone                            VARCHAR(20),
     date_accredited                         DATE,
-    year_founded                            INT,
+    year_founded                            INTEGER,
     grades_offered                          VARCHAR(100),
     membership_date                         DATE,
-    number_of_students_k_6                  INT,
-    number_of_students_k_6_non_traditional  INT,
+    number_of_students_k_6                  INTEGER,
+    number_of_students_k_6_non_traditional  INTEGER,
     classroom_format                        VARCHAR(100),
-    number_of_students_7_12                 INT,
-    number_of_students_7_12_non_traditional INT,
-    number_of_teachers                      INT,
+    number_of_students_7_12                 INTEGER,
+    number_of_students_7_12_non_traditional INTEGER,
+    number_of_teachers                      INTEGER,
     student_teacher_ratio                   VARCHAR(50),
     international_student_program           BOOL,
     tuition_range                           VARCHAR(50),
@@ -49,7 +50,10 @@ CREATE TABLE IF NOT EXISTS Schools
     church_affiliated                       BOOL,
     chairman_name                           VARCHAR(100),
     accredited_other                        VARCHAR(300),
-    accs_page_url                           VARCHAR(150),
+    latitude                                FLOAT(10, 6),
+    longitude                               FLOAT(10, 6),
+    lat_long_accuracy                       VARCHAR(25),
+    accs_page_url                           VARCHAR(300),
     is_excluded                             BOOL         NOT NULL,
     excluded_reason                         VARCHAR(100),
     PRIMARY KEY (id),
@@ -58,11 +62,11 @@ CREATE TABLE IF NOT EXISTS Schools
 
 CREATE TABLE IF NOT EXISTS Pages
 (
-    id              INT          NOT NULL AUTO_INCREMENT,
-    school_id       INT          NOT NULL,
-    url             VARCHAR(200) NOT NULL,
+    id              INTEGER      NOT NULL AUTO_INCREMENT,
+    school_id       INTEGER      NOT NULL,
+    url             VARCHAR(300) NOT NULL,
     is_homepage     BOOL         NOT NULL,
-    relevancy_score INT,
+    relevancy_score INTEGER,
     PRIMARY KEY (id),
     FOREIGN KEY (school_id) REFERENCES Schools (id),
     UNIQUE (url)
@@ -70,13 +74,13 @@ CREATE TABLE IF NOT EXISTS Pages
 
 CREATE TABLE IF NOT EXISTS Links
 (
-    id                  INT          NOT NULL AUTO_INCREMENT,
-    school_id           INT          NOT NULL,
-    source_page_id      INT          NOT NULL,
+    id                  INTEGER      NOT NULL AUTO_INCREMENT,
+    school_id           INTEGER      NOT NULL,
+    source_page_id      INTEGER      NOT NULL,
     target_text         VARCHAR(100),
-    target_url          VARCHAR(200) NOT NULL,
-    target_url_redirect VARCHAR(200),
-    target_page_id      INT,
+    target_url          VARCHAR(300) NOT NULL,
+    target_url_redirect VARCHAR(300),
+    target_page_id      INTEGER,
     is_inner            BOOL         NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (school_id) REFERENCES Schools (id),
@@ -87,10 +91,10 @@ CREATE TABLE IF NOT EXISTS Links
 
 CREATE TABLE IF NOT EXISTS PageTexts
 (
-    id         INT  NOT NULL AUTO_INCREMENT,
-    school_id  INT  NOT NULL,
-    page_id    INT  NOT NULL,
-    text_group TEXT NOT NULL,
+    id         INTEGER NOT NULL AUTO_INCREMENT,
+    school_id  INTEGER NOT NULL,
+    page_id    INTEGER NOT NULL,
+    text_group TEXT    NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (school_id) REFERENCES Schools (id),
     FOREIGN KEY (page_id) REFERENCES Pages (id)
@@ -98,10 +102,10 @@ CREATE TABLE IF NOT EXISTS PageTexts
 
 CREATE TABLE IF NOT EXISTS PageWords
 (
-    school_id INT         NOT NULL,
-    page_id   INT         NOT NULL,
+    school_id INTEGER     NOT NULL,
+    page_id   INTEGER     NOT NULL,
     word      VARCHAR(50) NOT NULL,
-    frequency INT         NOT NULL,
+    frequency INTEGER     NOT NULL,
     PRIMARY KEY (page_id, word),
     FOREIGN KEY (school_id) REFERENCES Schools (id),
     FOREIGN KEY (page_id) REFERENCES Pages (id)

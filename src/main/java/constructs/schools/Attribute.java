@@ -14,18 +14,20 @@ import java.time.LocalDate;
 /**
  * This is the set of attributes that a school may have.
  * <p>
- * <b>Note:</b> The order and spelling here is intentional. It is the same order of the columns of the Schools
- * table in the database.
+ * <b>Note:</b> These attributes have a one-to-one correspondence with the columns of the Schools table in the
+ * database, as specified by the setup script. The only exception is that there is no enumerated attribute for the
+ * school's id. All other attributes are spelled and ordered exactly as they appear in the database.
  */
 public enum Attribute {
     name(String.class, null, 100),
     organization_id(Integer.TYPE, -1),
     phone(String.class, null, 20),
     address(String.class, null, 100),
+    mailing_address(String.class, null, 100),
     state(String.class, null, 40),
     country(String.class, null, 30),
-    website_url(String.class, null, 150),
-    website_url_redirect(String.class, null, 150),
+    website_url(String.class, null, 300),
+    website_url_redirect(String.class, null, 300),
     has_website(Boolean.TYPE, false),
     contact_name(String.class, null, 100),
     accs_accredited(Boolean.class, null),
@@ -47,7 +49,10 @@ public enum Attribute {
     church_affiliated(Boolean.class, null),
     chairman_name(String.class, null, 100),
     accredited_other(String.class, null, 300),
-    accs_page_url(String.class, null, 150),
+    latitude(Double.class, null),
+    longitude(Double.class, null),
+    lat_long_accuracy(String.class, null, 25),
+    accs_page_url(String.class, null, 300),
     is_excluded(Boolean.TYPE, false),
     excluded_reason(String.class, null, 100);
 
@@ -113,6 +118,7 @@ public enum Attribute {
      * @throws IllegalArgumentException If this {@link constructs.schools.Attribute Attribute's} type isn't recognized.
      */
     public void addToStatement(PreparedStatement statement, Object value, int position) throws SQLException {
+        // Handle null values
         if (value == null) {
             int sqlType;
             if (type == String.class)
@@ -123,12 +129,15 @@ public enum Attribute {
                 sqlType = Types.BOOLEAN;
             else if (type == LocalDate.class)
                 sqlType = Types.DATE;
+            else if (type == Double.class)
+                sqlType = Types.DOUBLE;
             else
                 throw new IllegalArgumentException("Unknown type: " + type);
             statement.setNull(position, sqlType);
             return;
         }
 
+        // Handle non-null values
         if (type == String.class)
             statement.setString(position, (String) value);
         else if (type == Integer.class || type == Integer.TYPE)
@@ -137,6 +146,8 @@ public enum Attribute {
             statement.setBoolean(position, (boolean) value);
         else if (type == LocalDate.class)
             statement.setDate(position, Date.valueOf((LocalDate) value));
+        else if (type == Double.class || type == Double.TYPE)
+            statement.setDouble(position, (double) value);
         else
             throw new IllegalArgumentException("Unknown type: " + type);
 

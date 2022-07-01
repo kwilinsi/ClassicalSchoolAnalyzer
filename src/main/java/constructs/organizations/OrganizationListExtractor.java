@@ -1,5 +1,11 @@
 package constructs.organizations;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+import com.google.gson.stream.JsonReader;
+import constructs.schools.Attribute;
 import constructs.schools.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -10,12 +16,15 @@ import org.slf4j.LoggerFactory;
 import utils.Config;
 import utils.Prompt;
 import utils.Prompt.Selection;
+import utils.Utils;
 
+import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -133,6 +142,7 @@ public class OrganizationListExtractor {
             }
 
         // Return the final assembled list of ACCS schools.
+        logger.info("Extracted " + list.size() + " ACCS schools.");
         return list.toArray(new School[0]);
     }
 
@@ -144,10 +154,82 @@ public class OrganizationListExtractor {
      * @return An array of schools.
      */
     @NotNull
-    public static School[] extract_IFCE(@NotNull Document doc) {
+    public static School[] extract_ICE(@NotNull Document doc) {
         List<School> list = new ArrayList<>();
-        logger.debug("Running extract_IFCE()...");
+        logger.debug("Running extract_ICE()...");
 
+        JsonArray jsonSchools;
+        JsonArray jsonSchoolMap;
+        try {
+            // Extract the text of the document and parse to a JSON object using gson.
+            String rawText = doc.text();
+            rawText = rawText.substring(6); // Remove the "per = " thing at the start
+            JsonReader reader = new JsonReader(new StringReader(rawText));
+            reader.setLenient(true); // Allow malformed JSON
+            JsonObject rootObj = JsonParser.parseReader(reader).getAsJsonObject();
+
+            // This array contains the main information on each school.
+            jsonSchools = rootObj.getAsJsonArray("dataRS");
+            // This includes the latitude and longitude of each school.
+            jsonSchoolMap = rootObj.getAsJsonArray("mapRS");
+        } catch (IndexOutOfBoundsException | JsonParseException | IllegalStateException e) {
+            logger.error("Failed to extract ICE schools.", e);
+            return new School[0];
+        }
+
+        // Iterate through each school, extracting the information from the JSON structures.
+        for (int i = 0; i < jsonSchools.size(); i++) {
+            try {
+                JsonArray schoolArr = jsonSchools.get(i).getAsJsonArray();
+                JsonObject schoolObj = jsonSchoolMap.get(i).getAsJsonObject();
+
+                // Extract values from the school's array
+                String name = Utils.extractJson(schoolArr, 0);
+                String address = Utils.extractJson(schoolArr, 1);
+                String servingGrades = Utils.extractJson(schoolArr, 2);
+                String website = Utils.extractJson(schoolArr, 3);
+
+                // Extract values from the school's object
+                String name2 = Utils.extractJson(schoolObj, "t");
+                String address2 = Utils.extractJson(schoolObj, "a");
+                String servingGrades2 = Utils.extractJson(schoolObj, "g");
+                String mailingAddress = Utils.extractJson(schoolObj, "u");
+                double latitude = schoolObj.get("lt").getAsDouble();
+                double longitude = schoolObj.get("ln").getAsDouble();
+                String latLongAccuracy = Utils.extractJson(schoolObj, "accuracy");
+
+                // Make sure these values correspond. If they don't, log a warning and skip this school
+                if (!Objects.equals(name, name2)) {
+                    logger.warn("ICE school name mismatch: '{}' != '{}'. Skipping school.", name, name2);
+                    continue;
+                } else if (!Objects.equals(address, address2)) {
+                    logger.warn("ICE school address mismatch: '{}' != '{}'. Skipping school.", address, address2);
+                    continue;
+                } else if (!Objects.equals(servingGrades, servingGrades2)) {
+                    logger.warn("ICE school serving grades mismatch: '{}' != '{}'. Skipping school.",
+                            servingGrades, servingGrades2);
+                    continue;
+                }
+
+                // Create a school instance from this information
+                School school = new School(OrganizationManager.ICE);
+                school.put(Attribute.name, name);
+                school.put(Attribute.address, address);
+                school.put(Attribute.grades_offered, servingGrades);
+                school.put(Attribute.website_url, website);
+                school.put(Attribute.mailing_address, mailingAddress);
+                school.put(Attribute.latitude, latitude);
+                school.put(Attribute.longitude, longitude);
+                school.put(Attribute.lat_long_accuracy, latLongAccuracy);
+
+                logger.debug("Added ICE school: " + school.name());
+                list.add(school);
+            } catch (IndexOutOfBoundsException | IllegalStateException | ClassCastException | NullPointerException e) {
+                logger.debug("Failed to parse ICE school at index " + i + ".", e);
+            }
+        }
+
+        logger.info("Extracted " + list.size() + " ICE schools.");
         return list.toArray(new School[0]);
     }
 

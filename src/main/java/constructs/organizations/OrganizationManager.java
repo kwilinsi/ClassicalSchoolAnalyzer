@@ -1,20 +1,47 @@
 package constructs.organizations;
 
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Database;
+import utils.Prompt;
+import utils.Prompt.Selection;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class OrganizationManager {
+    /**
+     * <b>Name:</b> Association of Classical Christian Schools
+     */
     public static final Organization ACCS = new Organization(
             1,
             "Association of Classical Christian Schools",
             "ACCS",
             "https://classicalchristian.org",
             "https://classicalchristian.org/find-a-school/"
+    );
+
+    /**
+     * <b>Name:</b> Institute for Classical Education
+     * <p>
+     * <b>Notes:</b> This organization does not have an easily "parsable" list of schools. Their actual school list
+     * page can be found <a href="https://classicaleducation.institute/communities-networking/find-a-school/">here</a>.
+     * This forwards to a fullscreen
+     * <a href="https://classicaleducation.institute/communities-networking/find-a-school/">batchgeo page</a>
+     * that shows the schools at the bottom. But those schools are loaded through JavaScript, so Jsoup can't read them.
+     * Instead, inspecting the network tab reveals a link to
+     * <a href="https://static.batchgeo.com/map/json/f0a726285be76dc6dc336e561b0726e6/1654008594?_=1656448797243">this
+     * page</a>, which contains JSON data for the list of schools. This will probably break in the future, though, as
+     * new schools are added.
+     */
+    public static final Organization ICE = new Organization(
+            2,
+            "Institute for Classical Education",
+            "ICE",
+            "https://classicaleducation.institute",
+            "https://static.batchgeo.com/map/json/f0a726285be76dc6dc336e561b0726e6/1654008594?_=1656448797243"
     );
 
     /**
@@ -25,13 +52,7 @@ public class OrganizationManager {
      */
     public static final Organization[] ORGANIZATIONS = {
             ACCS,
-            new Organization(
-                    2,
-                    "Institute for Classical Education",
-                    "IFCE",
-                    "https://classicaleducation.institute",
-                    "https://static.batchgeo.com/map/json/f0a726285be76dc6dc336e561b0726e6/1654008594?_=1656448797243"
-            ),
+            ICE,
             new Organization(
                     3,
                     "Hillsdale Classical Schools",
@@ -85,6 +106,43 @@ public class OrganizationManager {
         } catch (SQLException e) {
             logger.error("Error adding Organizations to SQL database.", e);
         }
+    }
+
+    /**
+     * Get the list of {@link #ORGANIZATIONS} as {@link Selection Selections} for the user to choose between in a {@link
+     * Prompt}. Each selection will be assigned a value corresponding to the {@link Organization Organization 's} {@link
+     * Organization#get_id() id}.
+     * <p>
+     * The first selection option is "All", which returns the value 0, and the last option is "None", which returns the
+     * value -1.
+     *
+     * @return A list of selections.
+     */
+    public static Prompt.Selection[] getAsSelections() {
+        Prompt.Selection[] selections = new Prompt.Selection[ORGANIZATIONS.length + 2];
+        selections[0] = Selection.of("All organizations", 0);
+        selections[ORGANIZATIONS.length + 1] = Selection.of("None", -1);
+        for (int i = 0; i < ORGANIZATIONS.length; i++)
+            selections[i + 1] = Selection.of(
+                    ORGANIZATIONS[i].get_name_abbr() + " - " + ORGANIZATIONS[i].get_name(),
+                    ORGANIZATIONS[i].get_id()
+            );
+        return selections;
+    }
+
+    /**
+     * Get an {@link Organization} from its {@link Organization#get_id() id}.
+     *
+     * @param id The id of the desired organization.
+     *
+     * @return The organization with the given id, or <code>null</code> if no organization with that id exists.
+     */
+    @Nullable
+    public static Organization getById(int id) {
+        for (Organization organization : ORGANIZATIONS)
+            if (organization.get_id() == id)
+                return organization;
+        return null;
     }
 
 }

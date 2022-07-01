@@ -56,8 +56,8 @@ public class ACCSSchool extends School {
     @Override
     public int findMatchingSchool() {
         String myName = this.name();
-        String myUrl = (String) get(constructs.schools.Attribute.website_url);
-        String myAccsUrl = (String) get(constructs.schools.Attribute.accs_page_url);
+        String myUrl = (String) get(Attribute.website_url);
+        String myAccsUrl = (String) get(Attribute.accs_page_url);
 
         logger.debug("Testing for matching school with " + name() + " at " + myUrl + " (accs " + myAccsUrl + ").");
 

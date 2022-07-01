@@ -29,19 +29,20 @@ public class School extends BaseConstruct {
     private final Map<Attribute, Object> attributes;
 
     /**
-     * Create a new {@link School} by providing the {@link Organization} it comes from. Everything else is added later
-     * via {@link #put(Attribute, Object)}.
+     * Create a new {@link School} by providing the {@link Organization} it comes from. This also sets the {@link
+     * Attribute#organization_id organization_id} attribute. Everything else is added later via {@link #put(Attribute,
+     * Object)}.
      */
     public School(@NotNull Organization organization) {
         this.organization = organization;
 
         // Add all the Attributes to the attributes map.
-        attributes = new LinkedHashMap<>(constructs.schools.Attribute.values().length);
-        for (Attribute attribute : constructs.schools.Attribute.values())
+        attributes = new LinkedHashMap<>(Attribute.values().length);
+        for (Attribute attribute : Attribute.values())
             attributes.put(attribute, attribute.defaultValue);
 
         // Save the organization id
-        put(constructs.schools.Attribute.organization_id, organization.get_id());
+        put(Attribute.organization_id, organization.get_id());
     }
 
     /**
@@ -88,7 +89,7 @@ public class School extends BaseConstruct {
      */
     @NotNull
     public String name() {
-        Object o = get(constructs.schools.Attribute.name);
+        Object o = get(Attribute.name);
         return o == null ? Config.MISSING_NAME_SUBSTITUTION.get() : (String) o;
     }
 
@@ -130,7 +131,7 @@ public class School extends BaseConstruct {
      * @return The id of the match school in the SQL database, or -1 if there is no match.
      */
     public int findMatchingSchool() {
-        String myUrl = (String) get(constructs.schools.Attribute.website_url);
+        String myUrl = (String) get(Attribute.website_url);
         String myName = this.name();
 
         // Open a connection and search for a matching school
@@ -173,7 +174,7 @@ public class School extends BaseConstruct {
      * @throws SQLException If there is an error saving to the database.
      */
     public void saveToDatabase() throws SQLException {
-        logger.debug("Saving school " + get(constructs.schools.Attribute.name) + " to database.");
+        logger.info("Saving school " + get(Attribute.name) + " to database.");
 
         // Determine if there's already a school with the same name and URL
         int matchId = findMatchingSchool();
@@ -188,7 +189,7 @@ public class School extends BaseConstruct {
             StringBuilder columns = new StringBuilder();
             StringBuilder placeholders = new StringBuilder();
 
-            for (Attribute attribute : constructs.schools.Attribute.values()) {
+            for (Attribute attribute : Attribute.values()) {
                 columns.append(attribute.name()).append(", ");
                 placeholders.append("?, ");
             }
@@ -202,7 +203,7 @@ public class School extends BaseConstruct {
             // If there is a matching school, construct SQL statements for UPDATEing it
             StringBuilder conflicts = new StringBuilder();
 
-            for (Attribute attribute : constructs.schools.Attribute.values())
+            for (Attribute attribute : Attribute.values())
                 conflicts.append(attribute.name()).append(" = ?, ");
 
             conflicts.delete(conflicts.length() - 2, conflicts.length());
@@ -215,7 +216,7 @@ public class School extends BaseConstruct {
             PreparedStatement statement = connection.prepareStatement(sql);
 
             // Add values to the statement according to their type
-            Attribute[] values = constructs.schools.Attribute.values();
+            Attribute[] values = Attribute.values();
             for (int i = 0; i < values.length; i++)
                 values[i].addToStatement(statement, attributes.get(values[i]), i + 1);
 
@@ -226,8 +227,6 @@ public class School extends BaseConstruct {
             // Execute the finished statement
             statement.execute();
         }
-
-        logger.info("Saved school " + this.name() + " to database.");
     }
 
     @NotNull
