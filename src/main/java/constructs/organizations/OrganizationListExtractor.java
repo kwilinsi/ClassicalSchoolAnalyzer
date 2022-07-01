@@ -6,6 +6,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import constructs.schools.Attribute;
+import constructs.schools.ICESchool;
 import constructs.schools.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -211,8 +212,22 @@ public class OrganizationListExtractor {
                     continue;
                 }
 
+                // If the previous school has the same website and address, it is almost certainly the same school
+                // with a different name. Change the name of the previous school to this one, and then continue to
+                // avoid adding duplicates.
+                // There are many Great Hearts schools with the name "Archway Classical Academy - <City>" followed
+                // immediately in the list by "<City> Preparatory Academy". I intend to keep the latter name.
+                if (list.size() > 0) {
+                    School prevSchool = list.get(list.size() - 1);
+                    if (Objects.equals(prevSchool.get(Attribute.website_url), website) &&
+                        Objects.equals(prevSchool.get(Attribute.address), address)) {
+                        prevSchool.put(Attribute.name, name);
+                        continue;
+                    }
+                }
+
                 // Create a school instance from this information
-                School school = new School(OrganizationManager.ICE);
+                School school = new ICESchool();
                 school.put(Attribute.name, name);
                 school.put(Attribute.address, address);
                 school.put(Attribute.grades_offered, servingGrades);
@@ -221,6 +236,7 @@ public class OrganizationListExtractor {
                 school.put(Attribute.latitude, latitude);
                 school.put(Attribute.longitude, longitude);
                 school.put(Attribute.lat_long_accuracy, latLongAccuracy);
+
 
                 logger.debug("Added ICE school: " + school.name());
                 list.add(school);

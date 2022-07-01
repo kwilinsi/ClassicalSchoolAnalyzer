@@ -118,8 +118,8 @@ public class OrganizationManager {
      *
      * @return A list of selections.
      */
-    public static Prompt.Selection[] getAsSelections() {
-        Prompt.Selection[] selections = new Prompt.Selection[ORGANIZATIONS.length + 2];
+    public static Selection[] getAsSelections() {
+        Selection[] selections = new Selection[ORGANIZATIONS.length + 2];
         selections[0] = Selection.of("All organizations", 0);
         selections[ORGANIZATIONS.length + 1] = Selection.of("None", -1);
         for (int i = 0; i < ORGANIZATIONS.length; i++)

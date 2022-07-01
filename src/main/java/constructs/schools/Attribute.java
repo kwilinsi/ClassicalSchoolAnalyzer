@@ -4,12 +4,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.Config;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
+import java.util.Arrays;
 
 /**
  * This is the set of attributes that a school may have.
@@ -57,6 +59,12 @@ public enum Attribute {
     excluded_reason(String.class, null, 100);
 
     private static final Logger logger = LoggerFactory.getLogger(Attribute.class);
+
+    /**
+     * The longest name of any attribute. Used for proper formatting in print statements.
+     */
+    public static final int MAX_NAME_LENGTH =
+            Arrays.stream(values()).mapToInt(attribute -> attribute.name().length()).max().orElse(0);
 
     /**
      * The data type of the attribute.
@@ -150,6 +158,30 @@ public enum Attribute {
             statement.setDouble(position, (double) value);
         else
             throw new IllegalArgumentException("Unknown type: " + type);
-
     }
+
+    /**
+     * Determine whether some value is effectively null for this {@link Attribute}. Typically, this just means testing
+     * whether the passed <code>value</code> parameter is <code>null</code>, but for certain attributes the test is
+     * different.
+     *
+     * @param value The value to test.
+     *
+     * @return <code>True</code> if and only if the value is effectively null.
+     */
+    public boolean isEffectivelyNull(Object value) {
+        if (value == null)
+            return true;
+
+        if (type == String.class)
+            if (((String) value).isBlank() || value.equals("null"))
+                return true;
+
+        if (this.equals(Attribute.name))
+            return value.equals(Config.MISSING_NAME_SUBSTITUTION);
+
+        return false;
+    }
+
+
 }

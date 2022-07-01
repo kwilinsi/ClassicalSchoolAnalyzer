@@ -30,7 +30,8 @@ public enum Config {
     DATA_DIRECTORY(null),
     SCHOOL_LIST_FILE_NAME("school_list.html"),
     MAX_THREADS_ORGANIZATIONS(15),
-    MISSING_NAME_SUBSTITUTION("MISSING NAME");
+    MISSING_NAME_SUBSTITUTION("MISSING NAME"),
+    SCHOOL_MATCH_URL_MODE("APPEND");
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
     private static final String FILE_NAME = "config.properties";
