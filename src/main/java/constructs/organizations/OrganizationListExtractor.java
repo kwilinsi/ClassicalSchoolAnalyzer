@@ -5,12 +5,14 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
+import constructs.organizations.HillsdaleParse.Regex;
 import constructs.schools.Attribute;
 import constructs.schools.ICESchool;
 import constructs.schools.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -260,6 +262,39 @@ public class OrganizationListExtractor {
     public static School[] extract_Hillsdale(@NotNull Document doc) {
         List<School> list = new ArrayList<>();
         logger.debug("Running extract_Hillsdale()...");
+
+        // Get all the script tags, each of which contains a school
+        Elements scriptTags = doc.select("h2.page-title ~ script + script[type]");
+
+        logger.info("Identified " + scriptTags.size() + " possible Hillsdale schools.");
+
+        // Iterate through each script tag, extracting the attributes for each school
+        for (Element scriptTag : scriptTags) {
+            // Make a new school instance
+            School school = new School(OrganizationManager.HILLSDALE);
+            String text = scriptTag.outerHtml();
+
+            String level = HillsdaleParse.match(text, Regex.HILLSDALE_AFFILIATION_LEVEL);
+            // Ignore the school whose type is "". It's "Ryan's test school" — definitely not real.
+            if (level == null || level.isBlank())
+                continue;
+
+            school.put(Attribute.hillsdale_affiliation_level, level);
+            school.put(Attribute.latitude, HillsdaleParse.matchDouble(text, Regex.LATITUDE));
+            school.put(Attribute.longitude, HillsdaleParse.matchDouble(text, Regex.LONGITUDE));
+            school.put(Attribute.city, HillsdaleParse.match(text, Regex.CITY));
+            school.put(Attribute.state, HillsdaleParse.match(text, HillsdaleParse.Regex.STATE));
+            school.put(Attribute.name, HillsdaleParse.match(text, HillsdaleParse.Regex.NAME));
+            if (school.isEffectivelyNull(Attribute.name))
+                school.put(Attribute.name, Config.MISSING_NAME_SUBSTITUTION.get());
+            school.put(Attribute.website_url, HillsdaleParse.match(text, Regex.WEBSITE_URL));
+            school.put(Attribute.year_founded, HillsdaleParse.matchInt(text, Regex.FOUNDED_YEAR));
+            school.put(Attribute.enrollment, HillsdaleParse.matchInt(text, Regex.ENROLLMENT));
+            school.put(Attribute.grades_offered, HillsdaleParse.match(text, Regex.GRADES));
+            school.put(Attribute.projected_opening, HillsdaleParse.matchInt(text, Regex.PROJECTED_OPENING));
+
+            list.add(school);
+        }
 
         return list.toArray(new School[0]);
     }

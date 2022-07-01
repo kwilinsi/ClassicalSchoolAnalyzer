@@ -12,6 +12,8 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class OrganizationManager {
+    private static final Logger logger = LoggerFactory.getLogger(OrganizationManager.class);
+
     /**
      * <b>Name:</b> Association of Classical Christian Schools
      */
@@ -45,6 +47,17 @@ public class OrganizationManager {
     );
 
     /**
+     * <b>Name:</b> Hillsdale Classical Schools
+     */
+    public static final Organization HILLSDALE = new Organization(
+            3,
+            "Hillsdale Classical Schools",
+            "Hillsdale",
+            "https://k12.hillsdale.edu",
+            "https://k12.hillsdale.edu/Schools/Affiliate-Classical-Schools/"
+    );
+
+    /**
      * This is the complete list of all organizations supported by this program. It contains an {@link Organization}
      * object for each of the organizations. No other objects should be created for any organization at any time during
      * the program execution. These objects may be modified as more data is obtained for each organization, such as
@@ -53,13 +66,7 @@ public class OrganizationManager {
     public static final Organization[] ORGANIZATIONS = {
             ACCS,
             ICE,
-            new Organization(
-                    3,
-                    "Hillsdale Classical Schools",
-                    "Hillsdale",
-                    "https://k12.hillsdale.edu",
-                    "https://k12.hillsdale.edu/Schools/Affiliate-Classical-Schools/"
-            ),
+            HILLSDALE,
             new Organization(
                     4,
                     "Institute for Catholic Liberal Education",
@@ -81,7 +88,6 @@ public class OrganizationManager {
                     "http://www.ccle.org",
                     "http://www.ccle.org/directory/")
     };
-    private static final Logger logger = LoggerFactory.getLogger(OrganizationManager.class);
 
     /**
      * Add the {@link #ORGANIZATIONS} to the SQL database.

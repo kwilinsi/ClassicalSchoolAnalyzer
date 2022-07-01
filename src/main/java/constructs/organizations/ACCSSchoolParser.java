@@ -33,7 +33,7 @@ public class ACCSSchoolParser implements Callable<School> {
     /**
      * This is a list of strings that are mapped to <code>null</code> by {@link #extractStr(Document, String)}.
      */
-    private static final String[] NULL_STRINGS = {"", "N/A", "null", "not available", "not applicable", "none"};
+    public static final String[] NULL_STRINGS = {"", "N/A", "null", "not available", "not applicable", "none"};
 
     /**
      * This is a list of strings that are mapped to <code>null</code> by {@link #extractLink(Document, String)}.

@@ -26,6 +26,7 @@ public enum Attribute {
     phone(String.class, null, 20),
     address(String.class, null, 100),
     mailing_address(String.class, null, 100),
+    city(String.class, null, 50),
     state(String.class, null, 40),
     country(String.class, null, 30),
     website_url(String.class, null, 300),
@@ -38,6 +39,7 @@ public enum Attribute {
     year_founded(Integer.class, null),
     grades_offered(String.class, null, 100),
     membership_date(LocalDate.class, null),
+    enrollment(Integer.class, null),
     number_of_students_k_6(Integer.class, null),
     number_of_students_k_6_non_traditional(Integer.class, null),
     classroom_format(String.class, null, 100),
@@ -54,18 +56,18 @@ public enum Attribute {
     latitude(Double.class, null),
     longitude(Double.class, null),
     lat_long_accuracy(String.class, null, 25),
+    projected_opening(String.class, null, 20),
     accs_page_url(String.class, null, 300),
+    hillsdale_affiliation_level(String.class, null, 50),
     is_excluded(Boolean.TYPE, false),
     excluded_reason(String.class, null, 100);
-
-    private static final Logger logger = LoggerFactory.getLogger(Attribute.class);
 
     /**
      * The longest name of any attribute. Used for proper formatting in print statements.
      */
     public static final int MAX_NAME_LENGTH =
             Arrays.stream(values()).mapToInt(attribute -> attribute.name().length()).max().orElse(0);
-
+    private static final Logger logger = LoggerFactory.getLogger(Attribute.class);
     /**
      * The data type of the attribute.
      */
