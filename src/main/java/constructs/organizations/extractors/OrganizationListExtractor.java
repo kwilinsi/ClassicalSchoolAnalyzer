@@ -1,13 +1,16 @@
-package constructs.organizations;
+package constructs.organizations.extractors;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
-import constructs.organizations.HillsdaleParse.Regex;
+import constructs.organizations.Organization;
+import constructs.organizations.OrganizationManager;
+import constructs.organizations.extractors.HillsdaleParse.Regex;
 import constructs.schools.Attribute;
 import constructs.schools.ICESchool;
+import constructs.schools.ICLESchool;
 import constructs.schools.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -312,6 +315,52 @@ public class OrganizationListExtractor {
     public static School[] extract_ICLE(@NotNull Document doc) {
         List<School> list = new ArrayList<>();
         logger.debug("Running extract_ICLE()...");
+
+        // Prompt the user for the mode of extraction for individual school pages.
+        int choice = Prompt.run("Select a mode for loading ICLE school and school list pages:",
+                Selection.of("Use Cache", 1),
+                Selection.of("Force New Download", 2),
+                Selection.of("Test a sample (incl. cache)", 3)
+        );
+        boolean useCache = choice != 2;
+
+        // Get a list of all the pages that show schools
+        Integer pageCount = ExtUtils.extHtmlInt(doc, "div.aui-nav-links ul li:eq(4) a");
+        if (pageCount == null || pageCount < 1) {
+            logger.warn("Could not identify the number of ICLE school pages.");
+            return new School[0];
+        }
+        logger.info("Identified {} ICLE school list pages.", pageCount);
+
+        // Create parser threads
+        List<ICLEPageParser> parsers = new ArrayList<>();
+        for (int i = 1; i <= pageCount; i++) {
+            ICLEPageParser parser = new ICLEPageParser(i, useCache);
+            parsers.add(parser);
+        }
+
+        // Create thread pool and run the parsers
+        ExecutorService threadPool = Executors.newFixedThreadPool(Config.MAX_THREADS_ORGANIZATIONS.getInt());
+        List<Future<List<ICLESchool>>> futures = null;
+        try {
+            futures = threadPool.invokeAll(parsers);
+        } catch (InterruptedException e) {
+            logger.error("Interrupted while waiting for thread pool to process ICLE schools.", e);
+        }
+
+        // Combine the results from each parser
+        if (futures != null)
+            for (int i = 0; i < futures.size(); i++) {
+                Future<List<ICLESchool>> future = futures.get(i);
+                try {
+                    list.addAll(future.get());
+                } catch (InterruptedException | ExecutionException e) {
+                    // Any thread that encountered an error will log this to the console and be omitted from the
+                    // final returned list.
+                    logger.warn("An ICLE parsing thread encountered an error during execution: " +
+                                parsers.get(i).toString(), e);
+                }
+            }
 
         return list.toArray(new School[0]);
     }

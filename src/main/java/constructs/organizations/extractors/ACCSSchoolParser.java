@@ -1,22 +1,17 @@
-package constructs.organizations;
+package constructs.organizations.extractors;
 
+import constructs.organizations.OrganizationManager;
 import constructs.schools.ACCSSchool;
-import constructs.schools.Attribute;
 import constructs.schools.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import utils.Config;
 import utils.JsoupHandler;
 import utils.JsoupHandler.DownloadConfig;
 import utils.Pair;
-import utils.Utils;
 
 import java.io.IOException;
-import java.time.LocalDate;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,8 +21,6 @@ import java.util.regex.Pattern;
  * the ACCS website.
  */
 public class ACCSSchoolParser implements Callable<School> {
-    private static final Logger logger = LoggerFactory.getLogger(ACCSSchoolParser.class);
-
     private static final Pattern SCHOOL_NAME_PATTERN = Pattern.compile("^(.*?)(?:\\s\\((.*)\\))?$");
 
     /**
@@ -85,7 +78,8 @@ public class ACCSSchoolParser implements Callable<School> {
             document = download.a;
 
             // Get the name of the school
-            Pair<String, String> nameStatePair = parseACCSName(extractStr(document, "div#school-single h1"));
+            Pair<String, String> nameStatePair = parseACCSName(
+                    ExtUtils.extHtmlStr(document, "div#school-single h1"));
             school.put(constructs.schools.Attribute.name, nameStatePair.a);
             state = nameStatePair.b;
             if (school.get(constructs.schools.Attribute.name) == null)
@@ -114,7 +108,7 @@ public class ACCSSchoolParser implements Callable<School> {
         }
 
         // Get the school's website
-        school.put(constructs.schools.Attribute.website_url, extractLink(document,
+        school.put(constructs.schools.Attribute.website_url, ExtUtils.extHtmlLink(document,
                 "div#school-single h2 a[href]"));
 
         // If the website URL isn't null, we'll say they have a website for now
@@ -122,49 +116,49 @@ public class ACCSSchoolParser implements Callable<School> {
                 constructs.schools.Attribute.website_url) != null);
 
         // Extract other information from the ACCS page
-        school.put(constructs.schools.Attribute.phone, extractStr(document,
+        school.put(constructs.schools.Attribute.phone, ExtUtils.extHtmlStr(document,
                 "p:has(strong:contains(phone))"));
-        school.put(constructs.schools.Attribute.address, extractStr(document,
+        school.put(constructs.schools.Attribute.address, ExtUtils.extHtmlStr(document,
                 "p:has(strong:contains(address))"));
-        school.put(constructs.schools.Attribute.contact_name, extractStr(document,
+        school.put(constructs.schools.Attribute.contact_name, ExtUtils.extHtmlStr(document,
                 "div:contains(contact name) ~ div"));
-        school.put(constructs.schools.Attribute.accs_accredited, extractBool(document,
+        school.put(constructs.schools.Attribute.accs_accredited, ExtUtils.extHtmlBool(document,
                 "div:contains(accs accredited) ~ div"));
-        school.put(constructs.schools.Attribute.office_phone, extractStr(document,
+        school.put(constructs.schools.Attribute.office_phone, ExtUtils.extHtmlStr(document,
                 "div:contains(office phone) ~ div"));
-        school.put(constructs.schools.Attribute.date_accredited, extractDate(document,
+        school.put(constructs.schools.Attribute.date_accredited, ExtUtils.extHtmlDate(document,
                 "div:contains(date accredited) ~ div"));
-        school.put(constructs.schools.Attribute.year_founded, extractInt(document,
+        school.put(constructs.schools.Attribute.year_founded, ExtUtils.extHtmlInt(document,
                 "div:contains(year founded) ~ div"));
-        school.put(constructs.schools.Attribute.grades_offered, extractStr(document,
+        school.put(constructs.schools.Attribute.grades_offered, ExtUtils.extHtmlStr(document,
                 "div:contains(grades offered) ~ div"));
-        school.put(constructs.schools.Attribute.membership_date, extractDate(document,
+        school.put(constructs.schools.Attribute.membership_date, ExtUtils.extHtmlDate(document,
                 "div:contains(membership date) ~ div"));
-        school.put(constructs.schools.Attribute.number_of_students_k_6, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_students_k_6, ExtUtils.extHtmlInt(document,
                 "div:contains(number of students k-6) ~ div"));
-        school.put(constructs.schools.Attribute.number_of_students_k_6_non_traditional, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_students_k_6_non_traditional, ExtUtils.extHtmlInt(document,
                 "div:contains(number of students k-6 non-traditional) ~ div"));
-        school.put(constructs.schools.Attribute.classroom_format, extractStr(document,
+        school.put(constructs.schools.Attribute.classroom_format, ExtUtils.extHtmlStr(document,
                 "div:contains(classroom format) ~ div"));
-        school.put(constructs.schools.Attribute.number_of_students_7_12, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_students_7_12, ExtUtils.extHtmlInt(document,
                 "div:contains(number of students 7-12) ~ div"));
-        school.put(constructs.schools.Attribute.number_of_students_7_12_non_traditional, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_students_7_12_non_traditional, ExtUtils.extHtmlInt(document,
                 "div:contains(number of students 7-12 non-traditional) ~ div"));
-        school.put(constructs.schools.Attribute.number_of_teachers, extractInt(document,
+        school.put(constructs.schools.Attribute.number_of_teachers, ExtUtils.extHtmlInt(document,
                 "div:contains(number of teachers) ~ div"));
-        school.put(constructs.schools.Attribute.student_teacher_ratio, extractStr(document,
+        school.put(constructs.schools.Attribute.student_teacher_ratio, ExtUtils.extHtmlStr(document,
                 "div:contains(student teacher ratio) ~ div"));
-        school.put(constructs.schools.Attribute.international_student_program, extractBool(document,
+        school.put(constructs.schools.Attribute.international_student_program, ExtUtils.extHtmlBool(document,
                 "div:contains(international student program) ~ div"));
-        school.put(constructs.schools.Attribute.tuition_range, extractStr(document,
+        school.put(constructs.schools.Attribute.tuition_range, ExtUtils.extHtmlStr(document,
                 "div:contains(tuition range) ~ div"));
-        school.put(constructs.schools.Attribute.headmaster_name, extractStr(document,
+        school.put(constructs.schools.Attribute.headmaster_name, ExtUtils.extHtmlStr(document,
                 "div:contains(headmaster) ~ div"));
-        school.put(constructs.schools.Attribute.church_affiliated, extractBool(document,
+        school.put(constructs.schools.Attribute.church_affiliated, ExtUtils.extHtmlBool(document,
                 "div:contains(church affiliation) ~ div"));
-        school.put(constructs.schools.Attribute.chairman_name, extractStr(document,
+        school.put(constructs.schools.Attribute.chairman_name, ExtUtils.extHtmlStr(document,
                 "div:contains(chairman name) ~ div"));
-        school.put(constructs.schools.Attribute.accredited_other, extractStr(document,
+        school.put(constructs.schools.Attribute.accredited_other, ExtUtils.extHtmlStr(document,
                 "div:contains(accredited other) ~ div"));
 
         // Determine if a school should be excluded (i.e. no website or name)
@@ -191,111 +185,5 @@ public class ACCSSchoolParser implements Callable<School> {
             return new Pair<>(ExtUtils.validateName(matcher.group(1)), matcher.group(2));
 
         throw new IllegalArgumentException("Failed to parse ACCS name: " + name);
-    }
-
-    /**
-     * Extract an {@link Element} from the given {@link Document} using the given CSS selector. If the selector returns
-     * no matches, a warning is logged to the console.
-     *
-     * @param document The document to search.
-     * @param selector The selector to use.
-     *
-     * @return The element, or <code>null</code> if the element is not found.
-     */
-    @Nullable
-    private Element extract(Document document, String selector) {
-        Element element = document.select(selector).first();
-        if (element == null)
-            logger.warn("Failed to find element with selector '" + selector + "' for school: " + this.accs_page_url);
-        return element;
-    }
-
-    /**
-     * {@link #extract(Document, String) Extract} the {@link Element#ownText() contents} of an {@link Element} given its
-     * selector.
-     * <p>
-     * The result is passed through {@link ExtUtils#aliasNull(String)}, and thus it may become <code>null</code>.
-     *
-     * @param document The document to search.
-     * @param selector The selector to use.
-     *
-     * @return The contents of the element, or <code>null</code> if the element is not found.
-     */
-    @Nullable
-    private String extractStr(Document document, String selector) {
-        Element element = extract(document, selector);
-        if (element == null) return null;
-        return ExtUtils.aliasNull(element.ownText());
-    }
-
-    /**
-     * Convenience method for {@link #extractStr(Document, String)} that returns <code>true</code> if the text is "yes"
-     * or "true", and <code>false</code> otherwise.
-     *
-     * @param document The document to search.
-     * @param selector The selector to use.
-     *
-     * @return The text parsed to a boolean.
-     */
-    private boolean extractBool(Document document, String selector) {
-        String s = extractStr(document, selector);
-        if (s == null) return false;
-        return s.equalsIgnoreCase("yes") || s.equalsIgnoreCase("true");
-    }
-
-    /**
-     * Convenience method for {@link #extractStr(Document, String)} that returns the text parsed as an {@link Integer}.
-     * Note that this is not a primitive int, meaning <code>null</code> may be returned.
-     *
-     * @param document The document to search.
-     * @param selector The selector to use.
-     *
-     * @return The text parsed to an {@link Integer}.
-     */
-    @Nullable
-    private Integer extractInt(Document document, String selector) {
-        String s = extractStr(document, selector);
-        if (s == null) return null;
-        try {
-            return Integer.parseInt(s);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    /**
-     * Convenience method for {@link #extractStr(Document, String)} that returns the text {@link Utils#parseDate(String)
-     * parsed} as a {@link LocalDate}.
-     *
-     * @param document The document to search.
-     * @param selector The selector to use.
-     *
-     * @return The text parsed to a {@link LocalDate}.
-     */
-    @Nullable
-    private LocalDate extractDate(Document document, String selector) {
-        return Utils.parseDate(extractStr(document, selector));
-    }
-
-    /**
-     * Similar to {@link #extractStr(Document, String)}, this {@link #extract(Document, String) extracts} an element.
-     * But instead of returning the element's {@link Element#ownText() ownText()}, this returns the {@link
-     * Element#attr(String) attr()} for the <code>"href"</code> attribute. If the resulting link is an empty string,
-     * this will return <code>null</code>.
-     * <p>
-     * The result is passed through {@link ExtUtils#aliasNullLink(String)}, and thus it may become
-     * <code>null</code>.
-     *
-     * @param document The document to search.
-     * @param selector The selector to use.
-     *
-     * @return The link, or <code>null</code> if the link is not found.
-     */
-    @Nullable
-    private String extractLink(Document document, String selector) {
-        Element element = extract(document, selector);
-        if (element == null) return null;
-        // Get the link, and replace any null links with null
-        return ExtUtils.aliasNullLink(element.attr("href"));
     }
 }

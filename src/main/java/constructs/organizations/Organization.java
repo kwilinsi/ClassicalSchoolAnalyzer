@@ -1,6 +1,7 @@
 package constructs.organizations;
 
 import constructs.BaseConstruct;
+import constructs.organizations.extractors.OrganizationListExtractor;
 import constructs.schools.School;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;

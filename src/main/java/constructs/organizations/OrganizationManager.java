@@ -12,8 +12,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class OrganizationManager {
-    private static final Logger logger = LoggerFactory.getLogger(OrganizationManager.class);
-
     /**
      * <b>Name:</b> Association of Classical Christian Schools
      */
@@ -58,36 +56,46 @@ public class OrganizationManager {
     );
 
     /**
+     * <b>Name</b>: Institute for Catholic Liberal Education
+     */
+    public static final Organization ICLE = new Organization(
+            4,
+            "Institute for Catholic Liberal Education",
+            "ICLE",
+            "https://catholicliberaleducation.org",
+            "https://my.catholicliberaleducation.org/schools/"
+    );
+
+    /**
+     * <b>Name</b>: Anglican School Association
+     */
+    public static final Organization ASA = new Organization(
+            5,
+            "Anglican School Association",
+            "ASA",
+            "https://anglicanschools.org",
+            "https://anglicanschools.org/members/"
+    );
+
+    /**
+     * <b>Name</b>: Consortium for Classical Lutheran Education
+     */
+    public static final Organization CCLE = new Organization(
+            6,
+            "Consortium for Classical Lutheran Education",
+            "CCLE",
+            "http://www.ccle.org",
+            "http://www.ccle.org/directory/");
+
+    /**
      * This is the complete list of all organizations supported by this program. It contains an {@link Organization}
      * object for each of the organizations. No other objects should be created for any organization at any time during
      * the program execution. These objects may be modified as more data is obtained for each organization, such as
      * downloading the school_list_page_file.
      */
-    public static final Organization[] ORGANIZATIONS = {
-            ACCS,
-            ICE,
-            HILLSDALE,
-            new Organization(
-                    4,
-                    "Institute for Catholic Liberal Education",
-                    "ICLE",
-                    "https://catholicliberaleducation.org",
-                    "https://my.catholicliberaleducation.org/map-of-schools/"
-            ),
-            new Organization(
-                    5,
-                    "Anglican School Association",
-                    "ASA",
-                    "https://anglicanschools.org",
-                    "https://anglicanschools.org/members/"
-            ),
-            new Organization(
-                    6,
-                    "Consortium for Classical Lutheran Education",
-                    "CCLE",
-                    "http://www.ccle.org",
-                    "http://www.ccle.org/directory/")
-    };
+    public static final Organization[] ORGANIZATIONS = {ACCS, ICE, HILLSDALE, ICLE, ASA, CCLE};
+
+    private static final Logger logger = LoggerFactory.getLogger(OrganizationManager.class);
 
     /**
      * Add the {@link #ORGANIZATIONS} to the SQL database.

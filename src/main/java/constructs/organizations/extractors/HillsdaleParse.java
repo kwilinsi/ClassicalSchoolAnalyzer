@@ -1,4 +1,4 @@
-package constructs.organizations;
+package constructs.organizations.extractors;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

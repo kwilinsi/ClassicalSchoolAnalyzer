@@ -57,8 +57,11 @@ public enum Attribute {
     longitude(Double.class, null),
     lat_long_accuracy(String.class, null, 25),
     projected_opening(String.class, null, 20),
+    bio(String.class, null, 65535),
     accs_page_url(String.class, null, 300),
     hillsdale_affiliation_level(String.class, null, 50),
+    icle_page_url(String.class, null, 300),
+    icle_affiliation_level(String.class, null, 25),
     is_excluded(Boolean.TYPE, false),
     excluded_reason(String.class, null, 100);
 

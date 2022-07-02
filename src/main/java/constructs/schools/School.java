@@ -144,10 +144,10 @@ public class School extends BaseConstruct {
     }
 
     /**
-     * Get the name of this school with a <code>.html</code> file extension. The name is cleaned using {@link
-     * Utils#cleanFile(String, String)}. The name is followed by the {@link LocalTime#now() current} {@link
-     * LocalTime#toNanoOfDay() nanoseconds} today, to help ensure unique file names. This means that calling this method
-     * twice in a row will result in two different file names.
+     * Get the {@link #name() name} of this school with a <code>.html</code> file extension. The name is cleaned using
+     * {@link Utils#cleanFile(String, String) Utils.cleanFile()}. The name is followed by the {@link LocalTime#now()
+     * current} {@link LocalTime#toNanoOfDay() nanoseconds} today, to help ensure unique file names. This means that
+     * calling this method twice in a row will result in two different file names.
      *
      * @return The unique, cleaned file name.
      */
