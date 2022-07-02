@@ -78,6 +78,9 @@ public class ICLESchoolParser implements Callable<ICLESchool> {
                 ExtUtils.extHtmlLink(doc, "div.geodir-field-website a:containsOwn(Website)")
         );
 
+        school.checkHasWebsite();
+        school.checkExclude();
+
         return school;
     }
 }
