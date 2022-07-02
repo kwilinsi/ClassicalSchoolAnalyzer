@@ -160,6 +160,47 @@ public class School extends BaseConstruct {
     }
 
     /**
+     * Determine whether this {@link School} should be marked {@link Attribute#is_excluded excluded} in the SQL table,
+     * and save the result in the {@link #attributes} map accordingly.
+     * <p>
+     * A school can be automatically excluded for two reasons:
+     * <ol>
+     *     <li>The {@link Attribute#name name} is {@link #isEffectivelyNull(Attribute) effectively null}.
+     *     <li>{@link Attribute#has_website has_website} is <code>false</code>.
+     * </ol>
+     * <p>
+     * If either of these conditions are met (or both), the school is automatically excluded and the
+     * {@link Attribute#excluded_reason excluded_reason} attribute is set appropriately.
+     * <p>
+     * If neither condition is met, this does <b>not</b> change the {@link Attribute#is_excluded is_excluded} or
+     * {@link Attribute#excluded_reason excluded_reason} attributes. They are left as-is.
+     */
+    public void checkExclude() {
+        boolean noName = isEffectivelyNull(Attribute.name);
+        boolean noWebsite = !getBool(Attribute.has_website);
+
+        if (noName && noWebsite) {
+            put(Attribute.is_excluded, true);
+            put(Attribute.excluded_reason, "Name and website_url are missing.");
+        } else if (noName) {
+            put(Attribute.is_excluded, true);
+            put(Attribute.excluded_reason, "Name is missing.");
+        } else if (noWebsite) {
+            put(Attribute.is_excluded, true);
+            put(Attribute.excluded_reason, "Website URL is missing.");
+        }
+    }
+
+    /**
+     * Determine whether this {@link School} has a website. This is done by checking whether the {@link
+     * Attribute#website_url website_url} is {@link #isEffectivelyNull(Attribute) effectively null}. If it is, {@link
+     * Attribute#has_website has_website} is set to <code>false</code>; otherwise it's set to <code>true</code>.
+     */
+    public void checkHasWebsite() {
+        put(Attribute.has_website, !isEffectivelyNull(Attribute.website_url));
+    }
+
+    /**
      * Determine whether the SQL database already contains this {@link School}.
      * <h2>Approach</h2>
      * This method performs the following steps:

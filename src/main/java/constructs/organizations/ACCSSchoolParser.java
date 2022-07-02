@@ -168,16 +168,8 @@ public class ACCSSchoolParser implements Callable<School> {
                 "div:contains(accredited other) ~ div"));
 
         // Determine if a school should be excluded (i.e. no website or name)
-        boolean hasWebsite = school.getBool(constructs.schools.Attribute.has_website);
-        boolean hasName = !school.name().isBlank();
-        if (!hasName || !hasWebsite) {
-            school.put(constructs.schools.Attribute.is_excluded, true);
-            school.put(
-                    Attribute.excluded_reason,
-                    hasName ? "No website" : (hasWebsite ? "No name" : "No website or name")
-            );
-        }
-
+        school.checkHasWebsite();
+        school.checkExclude();
         return school;
     }
 

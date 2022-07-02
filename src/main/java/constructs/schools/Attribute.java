@@ -172,18 +172,14 @@ public enum Attribute {
      * @return <code>True</code> if and only if the value is effectively null.
      */
     public boolean isEffectivelyNull(Object value) {
-        if (value == null)
+        if (value == null) return true;
+
+        if (this.equals(Attribute.name) && Config.MISSING_NAME_SUBSTITUTION.get().equalsIgnoreCase((String) value))
             return true;
 
         if (type == String.class)
-            if (((String) value).isBlank() || value.equals("null"))
-                return true;
-
-        if (this.equals(Attribute.name))
-            return value.equals(Config.MISSING_NAME_SUBSTITUTION);
+            return ((String) value).isBlank() || value.equals("null");
 
         return false;
     }
-
-
 }

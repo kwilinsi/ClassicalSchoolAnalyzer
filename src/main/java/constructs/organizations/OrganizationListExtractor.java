@@ -238,6 +238,9 @@ public class OrganizationListExtractor {
                 school.put(Attribute.longitude, longitude);
                 school.put(Attribute.lat_long_accuracy, latLongAccuracy);
 
+                school.checkHasWebsite();
+                school.checkExclude();
+
                 logger.debug("Added ICE school: " + school.name());
                 list.add(school);
             } catch (IndexOutOfBoundsException | IllegalStateException | ClassCastException | NullPointerException e) {
@@ -288,6 +291,9 @@ public class OrganizationListExtractor {
             school.put(Attribute.enrollment, HillsdaleParse.matchInt(text, Regex.ENROLLMENT));
             school.put(Attribute.grades_offered, HillsdaleParse.match(text, Regex.GRADES));
             school.put(Attribute.projected_opening, HillsdaleParse.matchInt(text, Regex.PROJECTED_OPENING));
+
+            school.checkHasWebsite();
+            school.checkExclude();
 
             list.add(school);
         }
