@@ -31,16 +31,6 @@ public class ACCSSchoolParser implements Callable<School> {
     private static final Pattern SCHOOL_NAME_PATTERN = Pattern.compile("^(.*?)(?:\\s\\((.*)\\))?$");
 
     /**
-     * This is a list of strings that are mapped to <code>null</code> by {@link #extractStr(Document, String)}.
-     */
-    public static final String[] NULL_STRINGS = {"", "N/A", "null", "not available", "not applicable", "none"};
-
-    /**
-     * This is a list of strings that are mapped to <code>null</code> by {@link #extractLink(Document, String)}.
-     */
-    private static final String[] NULL_LINKS = {"", "N/A", "null", "http://", "https://"};
-
-    /**
      * This is the URL of the school's personalized page on the ACCS website.
      */
     private final String accs_page_url;
@@ -177,7 +167,6 @@ public class ACCSSchoolParser implements Callable<School> {
         school.put(constructs.schools.Attribute.accredited_other, extractStr(document,
                 "div:contains(accredited other) ~ div"));
 
-
         // Determine if a school should be excluded (i.e. no website or name)
         boolean hasWebsite = school.getBool(constructs.schools.Attribute.has_website);
         boolean hasName = !school.name().isBlank();
@@ -203,15 +192,13 @@ public class ACCSSchoolParser implements Callable<School> {
      */
     @NotNull
     private Pair<String, String> parseACCSName(@Nullable String name) throws IllegalArgumentException {
-        if (name == null)
-            return new Pair<>(Config.MISSING_NAME_SUBSTITUTION.get(), null);
+        if (name == null) return new Pair<>(Config.MISSING_NAME_SUBSTITUTION.get(), null);
 
         Matcher matcher = SCHOOL_NAME_PATTERN.matcher(name);
-
         if (matcher.find())
-            return new Pair<>(matcher.group(1), matcher.group(2));
-        else
-            throw new IllegalArgumentException("Failed to parse ACCS name: " + name);
+            return new Pair<>(ExtUtils.validateName(matcher.group(1)), matcher.group(2));
+
+        throw new IllegalArgumentException("Failed to parse ACCS name: " + name);
     }
 
     /**
@@ -235,7 +222,7 @@ public class ACCSSchoolParser implements Callable<School> {
      * {@link #extract(Document, String) Extract} the {@link Element#ownText() contents} of an {@link Element} given its
      * selector.
      * <p>
-     * If the text is any of the {@link #NULL_STRINGS}, it will be replaced with <code>null</code>.
+     * The result is passed through {@link ExtUtils#aliasNull(String)}, and thus it may become <code>null</code>.
      *
      * @param document The document to search.
      * @param selector The selector to use.
@@ -246,15 +233,7 @@ public class ACCSSchoolParser implements Callable<School> {
     private String extractStr(Document document, String selector) {
         Element element = extract(document, selector);
         if (element == null) return null;
-
-        String text = element.ownText();
-
-        // Check for null
-        for (String n : NULL_STRINGS)
-            if (text.equalsIgnoreCase(n)) return null;
-
-        // Since not null, return text
-        return text;
+        return ExtUtils.aliasNull(element.ownText());
     }
 
     /**
@@ -310,10 +289,10 @@ public class ACCSSchoolParser implements Callable<School> {
      * Similar to {@link #extractStr(Document, String)}, this {@link #extract(Document, String) extracts} an element.
      * But instead of returning the element's {@link Element#ownText() ownText()}, this returns the {@link
      * Element#attr(String) attr()} for the <code>"href"</code> attribute. If the resulting link is an empty string,
-     * this will return
-     * <code>null</code>.
+     * this will return <code>null</code>.
      * <p>
-     * If the link text is found in the list of {@link #NULL_LINKS}, <code>null</code> is returned.
+     * The result is passed through {@link ExtUtils#aliasNullLink(String)}, and thus it may become
+     * <code>null</code>.
      *
      * @param document The document to search.
      * @param selector The selector to use.
@@ -324,13 +303,7 @@ public class ACCSSchoolParser implements Callable<School> {
     private String extractLink(Document document, String selector) {
         Element element = extract(document, selector);
         if (element == null) return null;
-
         // Get the link, and replace any null links with null
-        String link = element.attr("href");
-
-        for (String n : NULL_LINKS)
-            if (link.equalsIgnoreCase(n)) return null;
-
-        return link;
+        return ExtUtils.aliasNullLink(element.attr("href"));
     }
 }

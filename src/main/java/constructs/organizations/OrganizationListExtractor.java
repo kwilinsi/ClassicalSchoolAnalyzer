@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import utils.Config;
 import utils.Prompt;
 import utils.Prompt.Selection;
-import utils.Utils;
 
 import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
@@ -187,19 +186,19 @@ public class OrganizationListExtractor {
                 JsonObject schoolObj = jsonSchoolMap.get(i).getAsJsonObject();
 
                 // Extract values from the school's array
-                String name = Utils.extractJson(schoolArr, 0);
-                String address = Utils.extractJson(schoolArr, 1);
-                String servingGrades = Utils.extractJson(schoolArr, 2);
-                String website = Utils.extractJson(schoolArr, 3);
+                String name = ExtUtils.extractJson(schoolArr, 0);
+                String address = ExtUtils.extractJson(schoolArr, 1);
+                String servingGrades = ExtUtils.extractJson(schoolArr, 2);
+                String website = ExtUtils.extractJson(schoolArr, 3);
 
                 // Extract values from the school's object
-                String name2 = Utils.extractJson(schoolObj, "t");
-                String address2 = Utils.extractJson(schoolObj, "a");
-                String servingGrades2 = Utils.extractJson(schoolObj, "g");
-                String mailingAddress = Utils.extractJson(schoolObj, "u");
+                String name2 = ExtUtils.extractJson(schoolObj, "t");
+                String address2 = ExtUtils.extractJson(schoolObj, "a");
+                String servingGrades2 = ExtUtils.extractJson(schoolObj, "g");
+                String mailingAddress = ExtUtils.extractJson(schoolObj, "u");
                 double latitude = schoolObj.get("lt").getAsDouble();
                 double longitude = schoolObj.get("ln").getAsDouble();
-                String latLongAccuracy = Utils.extractJson(schoolObj, "accuracy");
+                String latLongAccuracy = ExtUtils.extractJson(schoolObj, "accuracy");
 
                 // Make sure these values correspond. If they don't, log a warning and skip this school
                 if (!Objects.equals(name, name2)) {
@@ -230,15 +229,14 @@ public class OrganizationListExtractor {
 
                 // Create a school instance from this information
                 School school = new ICESchool();
-                school.put(Attribute.name, name);
+                school.put(Attribute.name, ExtUtils.validateName(name));
                 school.put(Attribute.address, address);
                 school.put(Attribute.grades_offered, servingGrades);
-                school.put(Attribute.website_url, website);
+                school.put(Attribute.website_url, ExtUtils.aliasNullLink(website));
                 school.put(Attribute.mailing_address, mailingAddress);
                 school.put(Attribute.latitude, latitude);
                 school.put(Attribute.longitude, longitude);
                 school.put(Attribute.lat_long_accuracy, latLongAccuracy);
-
 
                 logger.debug("Added ICE school: " + school.name());
                 list.add(school);
@@ -284,10 +282,8 @@ public class OrganizationListExtractor {
             school.put(Attribute.longitude, HillsdaleParse.matchDouble(text, Regex.LONGITUDE));
             school.put(Attribute.city, HillsdaleParse.match(text, Regex.CITY));
             school.put(Attribute.state, HillsdaleParse.match(text, HillsdaleParse.Regex.STATE));
-            school.put(Attribute.name, HillsdaleParse.match(text, HillsdaleParse.Regex.NAME));
-            if (school.isEffectivelyNull(Attribute.name))
-                school.put(Attribute.name, Config.MISSING_NAME_SUBSTITUTION.get());
-            school.put(Attribute.website_url, HillsdaleParse.match(text, Regex.WEBSITE_URL));
+            school.put(Attribute.name, ExtUtils.validateName(HillsdaleParse.match(text, HillsdaleParse.Regex.NAME)));
+            school.put(Attribute.website_url, ExtUtils.aliasNullLink(HillsdaleParse.match(text, Regex.WEBSITE_URL)));
             school.put(Attribute.year_founded, HillsdaleParse.matchInt(text, Regex.FOUNDED_YEAR));
             school.put(Attribute.enrollment, HillsdaleParse.matchInt(text, Regex.ENROLLMENT));
             school.put(Attribute.grades_offered, HillsdaleParse.match(text, Regex.GRADES));

@@ -11,8 +11,8 @@ public class HillsdaleParse {
      * Match the provided {@link Regex Regex} {@link Pattern} against the given text. If the pattern matches, the first
      * group is returned. Otherwise, <code>null</code> is returned.
      * <p>
-     * If the string is exactly one of the {@link ACCSSchoolParser#NULL_STRINGS NULL_STRINGS}, then <code>null</code> is
-     * returned.
+     * Note that the result is passed through {@link ExtUtils#aliasNull(String)} to check for <code>nulls</code> before
+     * being returned.
      *
      * @param text    The text to match against.
      * @param pattern The pattern to match.
@@ -23,13 +23,10 @@ public class HillsdaleParse {
     public static String match(@Nullable String text, @NotNull Regex pattern) {
         if (text == null) return null;
         Matcher m = pattern.pattern.matcher(text);
-        if (m.find()) {
-            String s = m.group(1);
-            for (String n : ACCSSchoolParser.NULL_STRINGS)
-                if (s.equals(n)) return null;
-            return s;
-        }
-        return null;
+        if (m.find())
+            return ExtUtils.aliasNull(m.group(1));
+        else
+            return null;
     }
 
     /**
