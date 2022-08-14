@@ -1,7 +1,5 @@
 package constructs;
 
-import constructs.organizations.Organization;
-import constructs.schools.School;
 import utils.Config;
 
 import java.nio.file.Path;

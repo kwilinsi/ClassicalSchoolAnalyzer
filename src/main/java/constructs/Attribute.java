@@ -1,17 +1,21 @@
-package constructs.schools;
+package constructs;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
+import utils.URLUtils;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
-import java.util.Arrays;
+import java.time.chrono.ChronoLocalDate;
+import java.util.Objects;
 
 /**
  * This is the set of attributes that a school may have.
@@ -22,15 +26,14 @@ import java.util.Arrays;
  */
 public enum Attribute {
     name(String.class, null, 100),
-    organization_id(Integer.TYPE, -1),
     phone(String.class, null, 20),
     address(String.class, null, 100),
     mailing_address(String.class, null, 100),
     city(String.class, null, 50),
     state(String.class, null, 40),
     country(String.class, null, 30),
-    website_url(String.class, null, 300),
-    website_url_redirect(String.class, null, 300),
+    website_url(URL.class, null, 300),
+    website_url_redirect(URL.class, null, 300),
     has_website(Boolean.TYPE, false),
     contact_name(String.class, null, 100),
     accs_accredited(Boolean.class, null),
@@ -58,19 +61,15 @@ public enum Attribute {
     lat_long_accuracy(String.class, null, 25),
     projected_opening(String.class, null, 20),
     bio(String.class, null, 65535),
-    accs_page_url(String.class, null, 300),
+    accs_page_url(URL.class, null, 300),
     hillsdale_affiliation_level(String.class, null, 50),
-    icle_page_url(String.class, null, 300),
+    icle_page_url(URL.class, null, 300),
     icle_affiliation_level(String.class, null, 25),
     is_excluded(Boolean.TYPE, false),
     excluded_reason(String.class, null, 100);
 
-    /**
-     * The longest name of any attribute. Used for proper formatting in print statements.
-     */
-    public static final int MAX_NAME_LENGTH =
-            Arrays.stream(values()).mapToInt(attribute -> attribute.name().length()).max().orElse(0);
     private static final Logger logger = LoggerFactory.getLogger(Attribute.class);
+
     /**
      * The data type of the attribute.
      */
@@ -111,30 +110,30 @@ public enum Attribute {
         if (input == null) return null;
 
         // If this attribute is a string and the input is a string and the input is too long, truncate it
-        if (type == String.class && input instanceof String s && s.length() > maxLength) {
-            logger.warn("Trimmed {} for school {} to max {} characters.", name(), school.name(), maxLength);
-            return s.substring(0, maxLength);
-        }
+        if (type == String.class || type == URL.class)
+            if (input instanceof String s && s.length() > maxLength) {
+                logger.warn("Trimmed {} for school {} to max {} characters.", name(), school.name(), maxLength);
+                return s.substring(0, maxLength);
+            }
 
         return input;
     }
 
     /**
-     * Add some value to a {@link PreparedStatement} based on the {@link #type} of this {@link
-     * constructs.schools.Attribute Attribute}.
+     * Add some value to a {@link PreparedStatement} based on the {@link #type} of this {@link Attribute Attribute}.
      *
      * @param statement The statement to add the value to.
      * @param value     The value to add.
      * @param position  The position to add the value to.
      *
      * @throws SQLException             If there is an error adding the value to the statement.
-     * @throws IllegalArgumentException If this {@link constructs.schools.Attribute Attribute's} type isn't recognized.
+     * @throws IllegalArgumentException If this {@link Attribute Attribute's} type isn't recognized.
      */
     public void addToStatement(PreparedStatement statement, Object value, int position) throws SQLException {
         // Handle null values
         if (value == null) {
             int sqlType;
-            if (type == String.class)
+            if (type == String.class || type == URL.class)
                 sqlType = Types.VARCHAR;
             else if (type == Integer.class)
                 sqlType = Types.INTEGER;
@@ -151,7 +150,7 @@ public enum Attribute {
         }
 
         // Handle non-null values
-        if (type == String.class)
+        if (type == String.class || type == URL.class)
             statement.setString(position, (String) value);
         else if (type == Integer.class || type == Integer.TYPE)
             statement.setInt(position, (int) value);
@@ -174,15 +173,64 @@ public enum Attribute {
      *
      * @return <code>True</code> if and only if the value is effectively null.
      */
-    public boolean isEffectivelyNull(Object value) {
+    public boolean isEffectivelyNull(@Nullable Object value) {
         if (value == null) return true;
 
         if (this.equals(Attribute.name) && Config.MISSING_NAME_SUBSTITUTION.get().equalsIgnoreCase((String) value))
             return true;
 
-        if (type == String.class)
-            return ((String) value).isBlank() || value.equals("null");
+        if (type == String.class || type == URL.class)
+            return ((String) value).isBlank() || ((String) value).trim().equals("null");
 
         return false;
+    }
+
+    /**
+     * Determine whether two {@link School Schools} have the same value for this attribute.
+     * <p>
+     * The values for attributes are compared via {@link Objects#equals(Object, Object)}. However, some attributes use
+     * different comparison rules based on their data type:
+     * <ul>
+     *     <li>{@link URL URLs} are compared via {@link URLUtils#equals(URL, URL) URLUtils.equals()}.
+     *     <li>{@link LocalDate LocalDates} are compared via
+     *     {@link LocalDate#isEqual(ChronoLocalDate) LocalDate.isEqual()}.
+     *     <li>{@link Double Doubles} are compared up to a precision of 0.00001.
+     * </ul>
+     *
+     * @param schoolA The first school.
+     * @param schoolB The second school.
+     *
+     * @return <code>True</code> if and only if the two schools have the same value for this attribute;
+     *         <code>false</code> otherwise.
+     */
+    public boolean matches(@NotNull School schoolA, @NotNull School schoolB) {
+        Object valA = schoolA.get(this);
+        Object valB = schoolB.get(this);
+
+        // If they're both null, they match
+        if (isEffectivelyNull(valA) && isEffectivelyNull(valB)) return true;
+        // Otherwise, if one is null, they don't match
+        if (valA == null || valB == null) return false;
+
+        //
+        // Run separate comparisons for certain data types
+        //
+
+        if (type == URL.class)
+            try {
+                return URLUtils.equals(new URL((String) valA), new URL((String) valB));
+            } catch (MalformedURLException | NullPointerException e) {
+                logger.warn(String.format("Failed to parse URLs %s and %s.", valA, valB), e);
+                return false;
+            }
+
+        if (type == LocalDate.class)
+            return ((LocalDate) valA).isEqual((LocalDate) valB);
+
+        if (type == Double.class || type == Double.TYPE)
+            return Math.abs((Double) valA - (Double) valB) <= 0.00001;
+
+        // Generic match for all other attributes
+        return Objects.equals(valA, valB);
     }
 }

@@ -1,8 +1,8 @@
-package constructs.organizations.extractors;
+package schoolListGeneration.extractors;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import constructs.schools.School;
+import constructs.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
@@ -44,9 +44,9 @@ public class ExtUtils {
     }
 
     /**
-     * This is an extension of {@link #aliasNull(String)} that also handles URLs. The input is first passed to {@link
-     * #aliasNull(String) aliasNull()}. If the result is not null, it is checked against the strings in {@link
-     * #NULL_LINKS} (case-insensitive). If it matches any of them, <code>null</code> is returned.
+     * This is an extension of {@link #aliasNull(String)} that also handles URLs. The input is first passed to
+     * {@link #aliasNull(String) aliasNull()}. If the result is not null, it is checked against the strings in
+     * {@link #NULL_LINKS} (case-insensitive). If it matches any of them, <code>null</code> is returned.
      *
      * @param input The input.
      *
@@ -63,13 +63,14 @@ public class ExtUtils {
     }
 
     /**
-     * Take some text that is expected to be the name of a {@link School}. This will run it through {@link
-     * #aliasNull(String)}, which may flag it <code>null</code>. In this case, it will be replaced with {@link
-     * Config#MISSING_NAME_SUBSTITUTION}, to not violate the <code>NOT NULL</code> constraint in the Schools table.
+     * Take some text that is expected to be the name of a {@link School}. This will run it through
+     * {@link #aliasNull(String)}, which may flag it <code>null</code>. In this case, it will be replaced with
+     * {@link Config#MISSING_NAME_SUBSTITUTION}, to not violate the <code>NOT NULL</code> constraint in the Schools
+     * table.
      *
      * @param name The input name.
      *
-     * @return The input unmodified, or the missing name substitution if the name would otherwise resolev to
+     * @return The input unmodified, or the missing name substitution if the name would otherwise resolve to
      *         <code>null</code>.
      */
     @NotNull
@@ -80,8 +81,8 @@ public class ExtUtils {
     }
 
     /**
-     * Extract an element from an {@link JsonArray} as a string. This string is passed through {@link
-     * ExtUtils#aliasNull(String)}, and the result is returned.
+     * Extract an element from an {@link JsonArray} as a string. This string is passed through
+     * {@link ExtUtils#aliasNull(String)}, and the result is returned.
      *
      * @param arr   The JSON array to extract from.
      * @param index The index of the element to extract.
@@ -111,7 +112,8 @@ public class ExtUtils {
      * Extract an {@link Element} from the given {@link Element} (often a {@link Document Document}) using the given CSS
      * selector. If the selector returns no matches, <code>null</code> is returned.
      * <p>
-     * Additionally, if either the provided <code>element</code> or the <code>selector</code> is <code>null</code>, then
+     * Additionally, if either the provided <code>element</code> or the <code>selector</code> is <code>null</code>,
+     * then
      * <code>null</code> is returned.
      *
      * @param element  The element to search.
@@ -144,8 +146,8 @@ public class ExtUtils {
     }
 
     /**
-     * This is identical to {@link #extHtmlStr(Element, String)}, except that the element's entire {@link Element#text()
-     * text} is returned, rather than only its {@link Element#ownText() ownText}.
+     * This is identical to {@link #extHtmlStr(Element, String)}, except that the element's entire
+     * {@link Element#text() text} is returned, rather than only its {@link Element#ownText() ownText}.
      *
      * @param element  The element to search.
      * @param selector The selector to use.
@@ -195,8 +197,8 @@ public class ExtUtils {
     }
 
     /**
-     * Convenience method for {@link #extHtmlStr(Element, String)} that returns the text {@link Utils#parseDate(String)
-     * parsed} as a {@link LocalDate}.
+     * Convenience method for {@link #extHtmlStr(Element, String)} that returns the text
+     * {@link Utils#parseDate(String) parsed} as a {@link LocalDate}.
      *
      * @param element  The element to search.
      * @param selector The selector to use.
@@ -210,9 +212,9 @@ public class ExtUtils {
 
     /**
      * Similar to {@link #extHtmlStr(Element, String)}, this {@link #extHtml(Element, String) extracts} an element. But
-     * instead of returning the element's {@link Element#ownText() ownText()}, this returns the {@link
-     * Element#attr(String) attr()} for the <code>"href"</code> attribute. If the resulting link is an empty string,
-     * this will return <code>null</code>.
+     * instead of returning the element's {@link Element#ownText() ownText()}, this returns the
+     * {@link Element#attr(String) attr()} for the <code>"href"</code> attribute. If the resulting link is an empty
+     * string, this will return <code>null</code>.
      * <p>
      * The result is passed through {@link ExtUtils#aliasNullLink(String)}, and thus it may become
      * <code>null</code>.

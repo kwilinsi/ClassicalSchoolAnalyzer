@@ -1,8 +1,6 @@
 package main;
 
-import constructs.organizations.Organization;
-import constructs.organizations.OrganizationManager;
-import constructs.schools.School;
+import constructs.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
@@ -17,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.Comparator;
+import java.util.List;
 
 public class Actions {
     private static final Logger logger = LoggerFactory.getLogger(Actions.class);
@@ -49,15 +48,29 @@ public class Actions {
                 OrganizationManager.ORGANIZATIONS :
                 new Organization[]{OrganizationManager.getById(orgChoice)};
 
+        // Download all existing schools from the database to create a cache. This will be used for identifying
+        // duplicate schools when saving them to the database.
+        List<School> schoolsCache;
+        try {
+            schoolsCache = SchoolManager.getSchoolsFromDatabase();
+        } catch (SQLException e) {
+            logger.error("Failed to retrieve schools from database. Aborting download.", e);
+            return;
+        }
+
         // Download schools from each organization
         for (Organization organization : orgs) {
             try {
-                School[] schools = organization.getSchools(cacheChoice == 1);
-                for (School school : schools)
+                CreatedSchool[] schools = organization.retrieveSchools(cacheChoice == 1);
+
+                // Validate each school and save it to the database. Then add it to the cache for checking the next
+                // school.
+                for (CreatedSchool school : schools)
                     try {
-                        school.saveToDatabase();
+                        school.validate();
+                        school.saveToDatabase(schoolsCache);
                     } catch (SQLException e) {
-                        logger.error("Failed to save school " + school.name() + " to database", e);
+                        logger.error("Failed to save school " + school.name() + " to database.", e);
                     }
             } catch (IOException e) {
                 logger.error("Failed to load school list.", e);

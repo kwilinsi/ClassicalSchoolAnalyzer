@@ -14,7 +14,7 @@
             <onMatch>DENY</onMatch>
         </filter>
         <encoder>
-            <pattern>%d{HH:mm:ss.S} %boldCyan(%-16.-16thread) %boldGreen(%-15.-15logger{0}) %highlight(%-5level) %msg%n</pattern>
+            <pattern>%d{mm:ss} %boldCyan(%-14.-14thread) %boldGreen(%-12.-12logger{0}) %highlight(%-5level) %msg%n</pattern>
         </encoder>
     </appender>
 

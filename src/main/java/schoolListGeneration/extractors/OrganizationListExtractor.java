@@ -1,17 +1,14 @@
-package constructs.organizations.extractors;
+package schoolListGeneration.extractors;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
-import constructs.organizations.Organization;
-import constructs.organizations.OrganizationManager;
-import constructs.organizations.extractors.HillsdaleParse.Regex;
-import constructs.schools.Attribute;
-import constructs.schools.ICESchool;
-import constructs.schools.ICLESchool;
-import constructs.schools.School;
+import constructs.Attribute;
+import constructs.CreatedSchool;
+import constructs.Organization;
+import constructs.SchoolManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
@@ -38,8 +35,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * This class contains the functions for extracting {@link School Schools} from the school list pages of each {@link
- * Organization}. This is done through {@link org.jsoup.Jsoup Jsoup} processing the HTML.
+ * This class contains the functions for extracting {@link CreatedSchool CreatedSchools} from the school list pages of
+ * each {@link Organization}. This is done through {@link org.jsoup.Jsoup Jsoup} processing the HTML.
  */
 @SuppressWarnings("unused")
 public class OrganizationListExtractor {
@@ -53,7 +50,7 @@ public class OrganizationListExtractor {
      * @return The function for extracting the school list from that organization's school list page.
      */
     @Nullable
-    public static Function<Document, School[]> getExtractor(@NotNull String organizationAbbreviation) {
+    public static Function<Document, CreatedSchool[]> getExtractor(@NotNull String organizationAbbreviation) {
         Method[] methods = OrganizationListExtractor.class.getDeclaredMethods();
         String name = "extract_" + organizationAbbreviation;
         for (Method method : methods) {
@@ -65,8 +62,8 @@ public class OrganizationListExtractor {
     }
 
     /**
-     * This is a utility function for converting a method in this class to a functional interface, namely a {@link
-     * Function} that accepts a document and returns a list of {@link School Schools}.
+     * This is a utility function for converting a method in this class to a functional interface, namely a
+     * {@link Function} that accepts a document and returns a list of {@link CreatedSchool CreatedSchools}.
      * <p>
      * For more information, see
      * <a href="https://stackoverflow.com/questions/56884190/cast-java-lang-reflect-method-to-a-functional-interface">
@@ -77,10 +74,10 @@ public class OrganizationListExtractor {
      * @return The function.
      */
     @NotNull
-    public static Function<Document, School[]> toFunction(Method m) {
+    public static Function<Document, CreatedSchool[]> toFunction(Method m) {
         return document -> {
             try {
-                return (School[]) m.invoke(OrganizationListExtractor.class, document);
+                return (CreatedSchool[]) m.invoke(OrganizationListExtractor.class, document);
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             }
@@ -92,11 +89,11 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return A list of schools.
+     * @return A list of created schools.
      */
     @NotNull
-    public static School[] extract_ACCS(@NotNull Document doc) {
-        List<School> list = new ArrayList<>();
+    public static CreatedSchool[] extract_ACCS(@NotNull Document doc) {
+        List<CreatedSchool> list = new ArrayList<>();
         logger.debug("Running extract_ACCS()...");
 
         int choice = Prompt.run("Select a mode for loading ACCS school pages:",
@@ -125,7 +122,7 @@ public class OrganizationListExtractor {
         // Iterate through each school, going to its "more info" page and scraping the information there.
         // This is done with a thread pool to improve performance
         ExecutorService threadPool = Executors.newFixedThreadPool(Config.MAX_THREADS_ORGANIZATIONS.getInt());
-        List<Future<School>> futures = null;
+        List<Future<CreatedSchool>> futures = null;
         try {
             futures = threadPool.invokeAll(parsers);
         } catch (InterruptedException e) {
@@ -135,7 +132,7 @@ public class OrganizationListExtractor {
         // Add the resulting Schools to the list
         if (futures != null)
             for (int i = 0; i < futures.size(); i++) {
-                Future<School> future = futures.get(i);
+                Future<CreatedSchool> future = futures.get(i);
                 try {
                     list.add(future.get());
                 } catch (InterruptedException | ExecutionException e) {
@@ -148,19 +145,19 @@ public class OrganizationListExtractor {
 
         // Return the final assembled list of ACCS schools.
         logger.info("Extracted " + list.size() + " ACCS schools.");
-        return list.toArray(new School[0]);
+        return list.toArray(new CreatedSchool[0]);
     }
 
     /**
-     * Extract schools from the Institute for Classical Education website.
+     * Extract schools from the Great Hearts Institute website.
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return An array of schools.
+     * @return An array of created schools.
      */
     @NotNull
-    public static School[] extract_ICE(@NotNull Document doc) {
-        List<School> list = new ArrayList<>();
+    public static CreatedSchool[] extract_GHI(@NotNull Document doc) {
+        List<CreatedSchool> list = new ArrayList<>();
         logger.debug("Running extract_ICE()...");
 
         JsonArray jsonSchools;
@@ -179,7 +176,7 @@ public class OrganizationListExtractor {
             jsonSchoolMap = rootObj.getAsJsonArray("mapRS");
         } catch (IndexOutOfBoundsException | JsonParseException | IllegalStateException e) {
             logger.error("Failed to extract ICE schools.", e);
-            return new School[0];
+            return new CreatedSchool[0];
         }
 
         // Iterate through each school, extracting the information from the JSON structures.
@@ -222,7 +219,7 @@ public class OrganizationListExtractor {
                 // There are many Great Hearts schools with the name "Archway Classical Academy - <City>" followed
                 // immediately in the list by "<City> Preparatory Academy". I intend to keep the latter name.
                 if (list.size() > 0) {
-                    School prevSchool = list.get(list.size() - 1);
+                    CreatedSchool prevSchool = list.get(list.size() - 1);
                     if (Objects.equals(prevSchool.get(Attribute.website_url), website) &&
                         Objects.equals(prevSchool.get(Attribute.address), address)) {
                         prevSchool.put(Attribute.name, name);
@@ -231,7 +228,7 @@ public class OrganizationListExtractor {
                 }
 
                 // Create a school instance from this information
-                School school = new ICESchool();
+                CreatedSchool school = SchoolManager.newGHI();
                 school.put(Attribute.name, ExtUtils.validateName(name));
                 school.put(Attribute.address, address);
                 school.put(Attribute.grades_offered, servingGrades);
@@ -241,9 +238,6 @@ public class OrganizationListExtractor {
                 school.put(Attribute.longitude, longitude);
                 school.put(Attribute.lat_long_accuracy, latLongAccuracy);
 
-                school.checkHasWebsite();
-                school.checkExclude();
-
                 logger.debug("Added ICE school: " + school.name());
                 list.add(school);
             } catch (IndexOutOfBoundsException | IllegalStateException | ClassCastException | NullPointerException e) {
@@ -252,7 +246,7 @@ public class OrganizationListExtractor {
         }
 
         logger.info("Extracted " + list.size() + " ICE schools.");
-        return list.toArray(new School[0]);
+        return list.toArray(new CreatedSchool[0]);
     }
 
     /**
@@ -260,11 +254,11 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return An array of schools.
+     * @return An array of created schools.
      */
     @NotNull
-    public static School[] extract_Hillsdale(@NotNull Document doc) {
-        List<School> list = new ArrayList<>();
+    public static CreatedSchool[] extract_Hillsdale(@NotNull Document doc) {
+        List<CreatedSchool> list = new ArrayList<>();
         logger.debug("Running extract_Hillsdale()...");
 
         // Get all the script tags, each of which contains a school
@@ -275,33 +269,32 @@ public class OrganizationListExtractor {
         // Iterate through each script tag, extracting the attributes for each school
         for (Element scriptTag : scriptTags) {
             // Make a new school instance
-            School school = new School(OrganizationManager.HILLSDALE);
+            CreatedSchool school = SchoolManager.newHillsdale();
             String text = scriptTag.outerHtml();
 
-            String level = HillsdaleParse.match(text, Regex.HILLSDALE_AFFILIATION_LEVEL);
+            String level = HillsdaleParse.match(text, HillsdaleParse.Regex.HILLSDALE_AFFILIATION_LEVEL);
             // Ignore the school whose type is "". It's "Ryan's test school" — definitely not real.
             if (level == null || level.isBlank())
                 continue;
 
             school.put(Attribute.hillsdale_affiliation_level, level);
-            school.put(Attribute.latitude, HillsdaleParse.matchDouble(text, Regex.LATITUDE));
-            school.put(Attribute.longitude, HillsdaleParse.matchDouble(text, Regex.LONGITUDE));
-            school.put(Attribute.city, HillsdaleParse.match(text, Regex.CITY));
+            school.put(Attribute.latitude, HillsdaleParse.matchDouble(text, HillsdaleParse.Regex.LATITUDE));
+            school.put(Attribute.longitude, HillsdaleParse.matchDouble(text, HillsdaleParse.Regex.LONGITUDE));
+            school.put(Attribute.city, HillsdaleParse.match(text, HillsdaleParse.Regex.CITY));
             school.put(Attribute.state, HillsdaleParse.match(text, HillsdaleParse.Regex.STATE));
             school.put(Attribute.name, ExtUtils.validateName(HillsdaleParse.match(text, HillsdaleParse.Regex.NAME)));
-            school.put(Attribute.website_url, ExtUtils.aliasNullLink(HillsdaleParse.match(text, Regex.WEBSITE_URL)));
-            school.put(Attribute.year_founded, HillsdaleParse.matchInt(text, Regex.FOUNDED_YEAR));
-            school.put(Attribute.enrollment, HillsdaleParse.matchInt(text, Regex.ENROLLMENT));
-            school.put(Attribute.grades_offered, HillsdaleParse.match(text, Regex.GRADES));
-            school.put(Attribute.projected_opening, HillsdaleParse.matchInt(text, Regex.PROJECTED_OPENING));
-
-            school.checkHasWebsite();
-            school.checkExclude();
+            school.put(Attribute.website_url,
+                    ExtUtils.aliasNullLink(HillsdaleParse.match(text, HillsdaleParse.Regex.WEBSITE_URL)));
+            school.put(Attribute.year_founded, HillsdaleParse.matchInt(text, HillsdaleParse.Regex.FOUNDED_YEAR));
+            school.put(Attribute.enrollment, HillsdaleParse.matchInt(text, HillsdaleParse.Regex.ENROLLMENT));
+            school.put(Attribute.grades_offered, HillsdaleParse.match(text, HillsdaleParse.Regex.GRADES));
+            school.put(Attribute.projected_opening,
+                    HillsdaleParse.matchInt(text, HillsdaleParse.Regex.PROJECTED_OPENING));
 
             list.add(school);
         }
 
-        return list.toArray(new School[0]);
+        return list.toArray(new CreatedSchool[0]);
     }
 
     /**
@@ -309,11 +302,11 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return An array of schools.
+     * @return An array of created schools.
      */
     @NotNull
-    public static School[] extract_ICLE(@NotNull Document doc) {
-        List<School> list = new ArrayList<>();
+    public static CreatedSchool[] extract_ICLE(@NotNull Document doc) {
+        List<CreatedSchool> list = new ArrayList<>();
         logger.debug("Running extract_ICLE()...");
 
         // Prompt the user for the mode of extraction for individual school pages.
@@ -328,7 +321,7 @@ public class OrganizationListExtractor {
         Integer pageCount = ExtUtils.extHtmlInt(doc, "div.aui-nav-links ul li:eq(4) a");
         if (pageCount == null || pageCount < 1) {
             logger.warn("Could not identify the number of ICLE school pages.");
-            return new School[0];
+            return new CreatedSchool[0];
         }
         logger.info("Identified {} ICLE school list pages.", pageCount);
 
@@ -341,7 +334,7 @@ public class OrganizationListExtractor {
 
         // Create thread pool and run the parsers
         ExecutorService threadPool = Executors.newFixedThreadPool(Config.MAX_THREADS_ORGANIZATIONS.getInt());
-        List<Future<List<ICLESchool>>> futures = null;
+        List<Future<List<CreatedSchool>>> futures = null;
         try {
             futures = threadPool.invokeAll(parsers);
         } catch (InterruptedException e) {
@@ -351,7 +344,7 @@ public class OrganizationListExtractor {
         // Combine the results from each parser
         if (futures != null)
             for (int i = 0; i < futures.size(); i++) {
-                Future<List<ICLESchool>> future = futures.get(i);
+                Future<List<CreatedSchool>> future = futures.get(i);
                 try {
                     list.addAll(future.get());
                 } catch (InterruptedException | ExecutionException e) {
@@ -362,7 +355,7 @@ public class OrganizationListExtractor {
                 }
             }
 
-        return list.toArray(new School[0]);
+        return list.toArray(new CreatedSchool[0]);
     }
 
     /**
@@ -370,14 +363,14 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return An array of schools.
+     * @return An array of created schools.
      */
     @NotNull
-    public static School[] extract_ASA(@NotNull Document doc) {
-        List<School> list = new ArrayList<>();
+    public static CreatedSchool[] extract_ASA(@NotNull Document doc) {
+        List<CreatedSchool> list = new ArrayList<>();
         logger.debug("Running extract_ASA()...");
 
-        return list.toArray(new School[0]);
+        return list.toArray(new CreatedSchool[0]);
     }
 
     /**
@@ -385,13 +378,28 @@ public class OrganizationListExtractor {
      *
      * @param doc The HTML document from which to extract the list.
      *
-     * @return An array of schools.
+     * @return An array of created schools.
      */
     @NotNull
-    public static School[] extract_CCLE(@NotNull Document doc) {
-        List<School> list = new ArrayList<>();
+    public static CreatedSchool[] extract_CCLE(@NotNull Document doc) {
+        List<CreatedSchool> list = new ArrayList<>();
         logger.debug("Running extract_CCLE()...");
 
-        return list.toArray(new School[0]);
+        return list.toArray(new CreatedSchool[0]);
+    }
+
+    /**
+     * Extract schools from the Orthodox Christian School Association website.
+     *
+     * @param doc The HTML document from which to extract the list.
+     *
+     * @return An array of created schools.
+     */
+    @NotNull
+    public static CreatedSchool[] extract_OCSA(@NotNull Document doc) {
+        List<CreatedSchool> list = new ArrayList<>();
+        logger.debug("Running extract_OCSA()...");
+
+        return list.toArray(new CreatedSchool[0]);
     }
 }

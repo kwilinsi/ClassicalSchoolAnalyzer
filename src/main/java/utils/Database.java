@@ -89,6 +89,8 @@ public class Database {
             statement.addBatch("DROP TABLE IF EXISTS Links");
             statement.addBatch("DROP TABLE IF EXISTS Pages");
             statement.addBatch("DROP TABLE IF EXISTS Schools");
+            statement.addBatch("DROP TABLE IF EXISTS DistrictOrganizations");
+            statement.addBatch("DROP TABLE IF EXISTS Districts");
             statement.addBatch("DROP TABLE IF EXISTS Organizations");
             statement.addBatch("DROP TABLE IF EXISTS Cache");
             statement.executeBatch();
@@ -98,8 +100,8 @@ public class Database {
     }
 
     /**
-     * Get a connection to the SQL database. If the {@link #dataSource} has not been configured yet, it will be {@link
-     * #load() loaded} here.
+     * Get a connection to the SQL database. If the {@link #dataSource} has not been configured yet, it will be
+     * {@link #load() loaded} here.
      * <p>
      * If there is an error creating the connection, the exception is {@link #logger logged} and then thrown. Therefore,
      * when catching exceptions caused by this method, they need not be logged to the console.

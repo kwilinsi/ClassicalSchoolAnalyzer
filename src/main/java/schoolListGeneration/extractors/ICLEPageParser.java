@@ -1,9 +1,6 @@
-package constructs.organizations.extractors;
+package schoolListGeneration.extractors;
 
-import constructs.organizations.Organization;
-import constructs.organizations.OrganizationManager;
-import constructs.schools.Attribute;
-import constructs.schools.ICLESchool;
+import constructs.*;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -20,12 +17,12 @@ import java.util.concurrent.Callable;
  * Each {@link ICLEPageParser} instance manages a single page of the ICLE's school list. It delegates a separate set of
  * {@link ICLESchoolParser ICLESchoolParser} instances to download a page for each school from the ICLE website.
  */
-public class ICLEPageParser implements Callable<List<ICLESchool>> {
+public class ICLEPageParser implements Callable<List<CreatedSchool>> {
     private static final Logger logger = LoggerFactory.getLogger(ICLEPageParser.class);
 
     /**
-     * This is the number of the page to download from the school list. This will be appended to the {@link
-     * OrganizationManager#ICLE ICLE's} base {@link Organization#get_school_list_url() school_list_url}.
+     * This is the number of the page to download from the school list. This will be appended to the
+     * {@link OrganizationManager#ICLE ICLE's} base {@link Organization#getSchoolListUrl() school_list_url}.
      */
     private final int pageNum;
 
@@ -57,17 +54,17 @@ public class ICLEPageParser implements Callable<List<ICLESchool>> {
     }
 
     /**
-     * Execute this parser thread, returning a list of {@link ICLESchool} objects.
+     * Execute this parser thread, returning a list of {@link CreatedSchool} objects.
      *
-     * @return The list of {@link ICLESchool Schools}.
+     * @return The list of {@link CreatedSchool CreatedSchools}.
      * @throws Exception If there is an error.
      */
     @Override
-    public List<ICLESchool> call() throws Exception {
+    public List<CreatedSchool> call() throws Exception {
         logger.debug("Downloading ICLE school list page {}.", pageNum);
 
         // Download the appropriate page number
-        String url = String.format("%spage/%d/", OrganizationManager.ICLE.get_school_list_url(), pageNum);
+        String url = String.format("%spage/%d/", OrganizationManager.ICLE.getSchoolListUrl(), pageNum);
         Document doc = JsoupHandler.downloadAndSave(
                 url,
                 useCache ? DownloadConfig.CACHE_ONLY : DownloadConfig.DEFAULT,
@@ -79,11 +76,11 @@ public class ICLEPageParser implements Callable<List<ICLESchool>> {
 
         logger.debug("Identified {} schools on page {}.", schoolElements.size(), pageNum);
 
-        List<ICLESchool> schools = new ArrayList<>();
+        List<CreatedSchool> schools = new ArrayList<>();
 
         for (Element schoolElement : schoolElements) {
             // Set initial parameters for a new school from this element
-            ICLESchool school = new ICLESchool();
+            CreatedSchool school = SchoolManager.newICLE();
 
             school.put(Attribute.name, ExtUtils.extHtmlStr(schoolElement, "h2 a"));
             String ICLEUrl = ExtUtils.extHtmlLink(schoolElement, "h2 a");

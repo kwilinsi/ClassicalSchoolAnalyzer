@@ -1,4 +1,4 @@
-package constructs.organizations.extractors;
+package schoolListGeneration.extractors;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

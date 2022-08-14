@@ -1,8 +1,8 @@
-package constructs.organizations.extractors;
+package schoolListGeneration.extractors;
 
-import constructs.organizations.OrganizationManager;
-import constructs.schools.Attribute;
-import constructs.schools.ICLESchool;
+import constructs.CreatedSchool;
+import constructs.OrganizationManager;
+import constructs.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.nodes.Document;
 import utils.JsoupHandler;
@@ -14,19 +14,20 @@ import java.util.concurrent.Callable;
  * The {@link OrganizationManager#ICLE ICLE}, in similar fashion to the {@link OrganizationManager#ACCS ACCS}, has a
  * separate page on their website for each school, accessible via a master list of schools.
  * <p>
- * Each {@link ICLESchoolParser} is assigned a single {@link #school} from this list, along with the {@link #pageUrl
- * url} to the page for that school. It then downloads the page and parses it for the school's information.
+ * Each {@link ICLESchoolParser} is assigned a single {@link #school} from this list, along with the
+ * {@link #pageUrl url} to the page for that school. It then downloads the page and parses it for the school's
+ * information.
  */
-public class ICLESchoolParser implements Callable<ICLESchool> {
+public class ICLESchoolParser implements Callable<CreatedSchool> {
     /**
-     * This is the {@link ICLESchool} assigned to this {@link ICLESchoolParser}.
+     * This is the ICLE {@link CreatedSchool} assigned to this {@link ICLESchoolParser}.
      * <p>
-     * This should already have some {@link Attribute Attributes} set when passed to this parser—namely the {@link
-     * Attribute#name name}, {@link Attribute#city city}, {@link Attribute#state state}, and {@link
-     * Attribute#icle_affiliation_level icle_affiliation_level}.
+     * This should already have some {@link Attribute Attributes} set when passed to this parser—namely the
+     * {@link Attribute#name name}, {@link Attribute#city city}, {@link Attribute#state state}, and
+     * {@link Attribute#icle_affiliation_level icle_affiliation_level}.
      */
     @NotNull
-    private final ICLESchool school;
+    private final CreatedSchool school;
 
     /**
      * The link to the {@link OrganizationManager#ICLE ICLE} page with information about this {@link #school}.
@@ -41,13 +42,13 @@ public class ICLESchoolParser implements Callable<ICLESchool> {
     private final boolean useCache;
 
     /**
-     * Initialize a new parser instance by assigning it to an {@link ICLESchool}.
+     * Initialize a new parser instance by assigning it to a {@link CreatedSchool}.
      *
      * @param school   The {@link #school}.
      * @param pageUrl  The {@link #pageUrl}.
      * @param useCache See {@link #useCache}.
      */
-    public ICLESchoolParser(@NotNull ICLESchool school, @NotNull String pageUrl, boolean useCache) {
+    public ICLESchoolParser(@NotNull CreatedSchool school, @NotNull String pageUrl, boolean useCache) {
         this.school = school;
         this.pageUrl = pageUrl;
         this.useCache = useCache;
@@ -61,12 +62,12 @@ public class ICLESchoolParser implements Callable<ICLESchool> {
      * @throws Exception If an error occurs.
      */
     @Override
-    public ICLESchool call() throws Exception {
+    public CreatedSchool call() throws Exception {
         // Download the school page
         Document doc = JsoupHandler.downloadAndSave(
                 pageUrl,
                 useCache ? DownloadConfig.CACHE_ONLY : DownloadConfig.DEFAULT,
-                OrganizationManager.ICLE.getFilePath("school_pages").resolve(school.getHtmlFile())
+                OrganizationManager.ICLE.getFilePath("school_pages").resolve(school.generateHtmlFileName())
         );
 
         // Parse the school page for additional attributes
@@ -77,9 +78,6 @@ public class ICLESchoolParser implements Callable<ICLESchool> {
         school.put(Attribute.website_url,
                 ExtUtils.extHtmlLink(doc, "div.geodir-field-website a:containsOwn(Website)")
         );
-
-        school.checkHasWebsite();
-        school.checkExclude();
 
         return school;
     }

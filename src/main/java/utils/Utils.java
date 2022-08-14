@@ -1,7 +1,5 @@
 package utils;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -79,17 +77,18 @@ public class Utils {
      * @throws IOException  If there is an error locating or reading the script file.
      * @throws SQLException If there is an error running the script.
      */
-    public static void runSqlScript(String fileName, java.sql.Connection connection) throws
-            IOException, SQLException {
-        InputStream fileStream = Utils.class.getResourceAsStream("/sql/" + fileName);
-        if (fileStream == null)
-            throw new IOException("Failed to find SQL script " + fileName + ".");
-        byte[] encoded = fileStream.readAllBytes();
-        String[] sql = new String(encoded, StandardCharsets.UTF_8).split(";");
-        Statement statement = connection.createStatement();
-        for (String s : sql)
-            statement.addBatch(s);
-        statement.executeBatch();
+    public static void runSqlScript(String fileName, java.sql.Connection connection)
+            throws IOException, SQLException {
+        try (InputStream fileStream = Utils.class.getResourceAsStream("/sql/" + fileName)) {
+            if (fileStream == null)
+                throw new IOException("Failed to find SQL script " + fileName + ".");
+            byte[] encoded = fileStream.readAllBytes();
+            String[] sql = new String(encoded, StandardCharsets.UTF_8).split(";");
+            Statement statement = connection.createStatement();
+            for (String s : sql)
+                statement.addBatch(s);
+            statement.executeBatch();
+        }
     }
 
     /**
@@ -135,4 +134,5 @@ public class Utils {
             return clean + "." + extension;
         return clean;
     }
+
 }

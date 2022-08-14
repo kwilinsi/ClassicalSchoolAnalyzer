@@ -17,11 +17,30 @@ CREATE TABLE IF NOT EXISTS Organizations
     PRIMARY KEY (id)
 );
 
+CREATE TABLE IF NOT EXISTS Districts
+(
+    id          INTEGER      NOT NULL AUTO_INCREMENT,
+    name        VARCHAR(100) NOT NULL,
+    website_url VARCHAR(300),
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS DistrictOrganizations
+(
+    id              INTEGER NOT NULL AUTO_INCREMENT,
+    organization_id INTEGER NOT NULL,
+    district_id     INTEGER NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (organization_id) REFERENCES Organizations (id),
+    FOREIGN KEY (district_id) REFERENCES Districts (id),
+    UNIQUE (organization_id, district_id)
+);
+
 CREATE TABLE IF NOT EXISTS Schools
 (
     id                                      INTEGER      NOT NULL AUTO_INCREMENT,
+    district_id                             INTEGER      NOT NULL,
     name                                    VARCHAR(100) NOT NULL,
-    organization_id                         INTEGER      NOT NULL,
     phone                                   VARCHAR(20),
     address                                 VARCHAR(100),
     mailing_address                         VARCHAR(100),
@@ -52,8 +71,8 @@ CREATE TABLE IF NOT EXISTS Schools
     church_affiliated                       BOOL,
     chairman_name                           VARCHAR(100),
     accredited_other                        VARCHAR(300),
-    latitude                                FLOAT(10, 6),
-    longitude                               FLOAT(10, 6),
+    latitude                                FLOAT(12, 8),
+    longitude                               FLOAT(12, 8),
     lat_long_accuracy                       VARCHAR(25),
     projected_opening                       VARCHAR(20),
     bio                                     TEXT,
@@ -64,7 +83,7 @@ CREATE TABLE IF NOT EXISTS Schools
     is_excluded                             BOOL         NOT NULL,
     excluded_reason                         VARCHAR(100),
     PRIMARY KEY (id),
-    FOREIGN KEY (organization_id) REFERENCES Organizations (id)
+    FOREIGN KEY (district_id) REFERENCES Districts (id)
 );
 
 CREATE TABLE IF NOT EXISTS Pages
