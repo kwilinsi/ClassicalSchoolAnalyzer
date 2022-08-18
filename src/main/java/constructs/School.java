@@ -14,7 +14,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class School extends BaseConstruct {
     /**
@@ -109,55 +108,6 @@ public class School extends BaseConstruct {
         }
 
         throw new SQLException("No District found with id " + district_id + ".");
-    }
-
-    /**
-     * Get the values for an array of {@link Attribute Attributes}, expressed as a string with each attribute on its own
-     * line.
-     * <p>
-     * For example, calling this function with the list <code>[{@link Attribute#name}, {@link Attribute#website_url},
-     * {@link Attribute#address}]</code> might yield the following string:
-     * <p>
-     * <code>name: Virtue Academy<br>website_url: virtue-academy.com<br>address: 1234 Plato Blvd., St., U.S.</code>
-     * <p>
-     * The <code>includeId</code> parameter can also be used to add the {@link #id} to the string as the first
-     * attribute.
-     *
-     * @param attributes       An array of zero or more attributes to include in the result. Note that <code>Null</code>
-     *                         attributes are ignored, and duplicate attributes will be listed twice.
-     * @param markedAttributes Any of the attributes in the main <code>attributes</code> array that are also present in
-     *                         this one will be marked with an asterisk (*) before the name of the attribute. Attributes
-     *                         present in this array but not in the main one are ignored.
-     * @param includeId        Whether to include the {@link #id} in the result.
-     *
-     * @return A string with the values for the given attributes. If no attributes are given, the string will be empty.
-     */
-    public String getAttributeStr(Attribute[] attributes, Attribute[] markedAttributes, boolean includeId) {
-        if (attributes == null || attributes.length == 0) return "";
-        List<Attribute> marked = markedAttributes == null ? new ArrayList<>() : Arrays.asList(markedAttributes);
-
-        // Generate each line of the result.
-        List<String> lines = new ArrayList<>();
-
-        if (includeId) lines.add("id: " + id);
-
-        for (Attribute a : attributes)
-            if (a != null)
-                lines.add(String.format("%s%s: %s",
-                        marked.contains(a) ? "* " : "",
-                        a.name(),
-                        get(a)
-                ));
-
-        // Determine the length of the longest line
-        int longestLine = lines.stream()
-                .mapToInt(String::length)
-                .max().orElse(0);
-
-        // Join the lines together with newlines. Pad each line to the length of the longest one.
-        return lines.stream()
-                .map(line -> String.format("%" + longestLine + "s", line))
-                .collect(Collectors.joining("\n"));
     }
 
     /**

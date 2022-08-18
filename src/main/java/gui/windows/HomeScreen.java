@@ -4,7 +4,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.graphics.SimpleTheme;
-import com.googlecode.lanterna.graphics.Theme;
 import com.googlecode.lanterna.gui2.*;
 import gui.utils.GUILogAppender;
 import gui.utils.GUIUtils;

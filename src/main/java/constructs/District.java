@@ -112,17 +112,6 @@ public class District extends BaseConstruct {
     }
 
     /**
-     * Get the information for this district in a string. The result is formatted as follows:
-     * <p>
-     * <code>id: 12<br>name: Platonic Schools<br>website_url: platonic-schools.org</code>
-     *
-     * @return The string representation of this district.
-     */
-    public String getAttrString() {
-        return String.format("id: %d\nname: %s\nwebsite_url: %s", id, name, website_url);
-    }
-
-    /**
      * Determine whether this district is equivalent to another provided one. Two {@link District Districts} are equal
      * if and only if they have exactly the same {@link #id}, {@link #name}, and {@link #website_url}.
      *
