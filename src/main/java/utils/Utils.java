@@ -135,4 +135,25 @@ public class Utils {
         return clean;
     }
 
+    /**
+     * I couldn't figure out how to do this in one line with {@link String#format(String, Object...)}, so I've written a
+     * custom method to do it.
+     * <p>
+     * This takes some input string and forces it to be exactly <code>length</code> characters long. If the input is too
+     * short, it is padded with spaces on the right (left-aligned). If it is too long, excess characters are taken off
+     * the end.
+     *
+     * @param input  The input string to format.
+     * @param length The length of the desired output.
+     *
+     * @return The formatted string.
+     */
+    @NotNull
+    public static String padTrimString(@NotNull String input, int length) {
+        if (input.length() > length)
+            return input.substring(0, length);
+        else
+            return String.format("%-" + length + "s", input);
+    }
+
 }

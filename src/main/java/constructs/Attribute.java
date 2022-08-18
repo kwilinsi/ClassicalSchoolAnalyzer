@@ -233,4 +233,35 @@ public enum Attribute {
         // Generic match for all other attributes
         return Objects.equals(valA, valB);
     }
+
+    /**
+     * This is a particular implementation of {@link #matches(School, School) matches()} that is designed specifically
+     * for matching the {@link Organization#getMatchIndicatorAttributes() matchIndicatorAttributes} associated with each
+     * {@link Organization}.
+     * <p>
+     * Match detection in this method exhibits the following behavior:
+     * <ul>
+     *     <li>If the value of this attribute is {@link #isEffectivelyNull(Object) effectively null} for either
+     *     school, the match returns <code>false</code>.
+     *     <li>Exclusively for the {@link #website_url} attribute, {@link URLUtils#domainEquals(String, String)
+     *     URLUtils.domainEquals()} is used to determine a match.
+     *     <li>For all other attributes, the standard {@link #matches(School, School) matches()} method is used.
+     * </ul>
+     *
+     * @param schoolA The first school.
+     * @param schoolB The second school.
+     *
+     * @return <code>True</code> if and only if the value of this attribute for both schools is determined to match
+     *         according to the above procedure.
+     */
+    public boolean schoolIndicatorMatches(@NotNull School schoolA, @NotNull School schoolB) {
+        if (isEffectivelyNull(schoolA.get(this))) return false;
+
+        // TODO implement better matching for grades_offered, and maybe even addresses
+
+        if (this == website_url)
+            return URLUtils.domainEquals(schoolA.getStr(this), schoolB.getStr(this));
+
+        return matches(schoolA, schoolB);
+    }
 }

@@ -1,15 +1,17 @@
 package constructs;
 
+import gui.windows.prompt.Option;
+import gui.windows.prompt.Prompt;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Database;
-import utils.Prompt;
-import utils.Prompt.Selection;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Stream;
 
 public class OrganizationManager {
@@ -156,8 +158,8 @@ public class OrganizationManager {
     }
 
     /**
-     * Get the list of {@link #ORGANIZATIONS} as {@link Selection Selections} for the user to choose between in a
-     * {@link Prompt}. Each selection will be assigned a value corresponding to the {@link Organization Organization 's}
+     * Get the list of {@link #ORGANIZATIONS} as {@link Option Options} for the user to choose between in a
+     * {@link Prompt}. Each selection is assigned a value corresponding to the {@link Organization Organization's}
      * {@link Organization#getId() id}.
      * <p>
      * The first selection option is "All", which returns the value 0, and the last option is "None", which returns the
@@ -165,16 +167,16 @@ public class OrganizationManager {
      *
      * @return A list of selections.
      */
-    public static Selection[] getAsSelections() {
-        Selection[] selections = new Selection[ORGANIZATIONS.length + 2];
-        selections[0] = Selection.of("All organizations", 0);
-        selections[ORGANIZATIONS.length + 1] = Selection.of("None", -1);
-        for (int i = 0; i < ORGANIZATIONS.length; i++)
-            selections[i + 1] = Selection.of(
-                    ORGANIZATIONS[i].getNameAbbr() + " - " + ORGANIZATIONS[i].getName(),
-                    ORGANIZATIONS[i].getId()
-            );
-        return selections;
+    public static List<Option<Integer>> getAsSelections() {
+        List<Option<Integer>> options = new ArrayList<>();
+        options.add(Option.of("All organizations", 0));
+        options.add(Option.of("None", -1));
+        for (Organization organization : ORGANIZATIONS)
+            options.add(Option.of(
+                    organization.getNameAbbr() + " - " + organization.getName(),
+                    organization.getId()
+            ));
+        return options;
     }
 
     /**

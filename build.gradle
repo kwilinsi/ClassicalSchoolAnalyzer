@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 group 'org.example'
@@ -24,6 +25,13 @@ dependencies {
 
     // gson - JSON parsing
     implementation 'com.google.code.gson:gson:2.9.0'
+
+    // Lanterna - terminal UI
+    implementation 'com.googlecode.lanterna:lanterna:3.1.1'
+}
+
+application {
+    mainClass.set("main.Main")
 }
 
 test {

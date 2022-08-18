@@ -1,12 +1,13 @@
 package main;
 
 import constructs.*;
+import gui.windows.prompt.Option;
+import gui.windows.prompt.Prompt;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
 import utils.Database;
-import utils.Prompt;
-import utils.Prompt.Selection;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,28 +21,48 @@ import java.util.List;
 public class Actions {
     private static final Logger logger = LoggerFactory.getLogger(Actions.class);
 
-    public static void notImplemented() {
+    public enum Action {
+        DOWNLOAD_SCHOOL_LIST,
+        DOWNLOAD_SCHOOL_WEBSITES,
+        PERFORM_ANALYSIS,
+        SETUP_DATABASE,
+        CLEAR_DATA_DIRECTORY
+    }
+
+    public static void run(@NotNull Action action) {
+        switch (action) {
+            case DOWNLOAD_SCHOOL_LIST -> downloadSchoolList();
+            case DOWNLOAD_SCHOOL_WEBSITES -> downloadSchoolWebsites();
+            case PERFORM_ANALYSIS -> performAnalysis();
+            case SETUP_DATABASE -> setupDatabase();
+            case CLEAR_DATA_DIRECTORY -> clearDataDirectory();
+        }
+    }
+
+    private static void notImplemented() {
         logger.error("Sorry, this feature is not yet implemented.");
     }
 
-    public static void downloadSchoolList() {
+    private static void downloadSchoolList() {
         logger.info("Downloading school list.");
 
-        int orgChoice = Prompt.run(
+        int orgChoice = Main.GUI.showPrompt(Prompt.of(
+                "Organizations",
                 "Select the organization(s) to download:",
                 OrganizationManager.getAsSelections()
-        );
+        ));
 
         if (orgChoice == -1) {
             logger.info("Aborting download.");
             return;
         }
 
-        int cacheChoice = Prompt.run(
+        boolean useCache = Main.GUI.showPrompt(Prompt.of(
+                "Cache",
                 "Select a download mode for the organization " + (orgChoice == 0 ? "page:" : "pages:"),
-                Selection.of("Use Cache", 1),
-                Selection.of("Force New Download", 2)
-        );
+                Option.of("Use Cache", true),
+                Option.of("Force New Download", false)
+        ));
 
         // Get the organizations to use, either one of them or all
         Organization[] orgs = orgChoice == 0 ?
@@ -61,7 +82,7 @@ public class Actions {
         // Download schools from each organization
         for (Organization organization : orgs) {
             try {
-                CreatedSchool[] schools = organization.retrieveSchools(cacheChoice == 1);
+                CreatedSchool[] schools = organization.retrieveSchools(useCache);
 
                 // Validate each school and save it to the database. Then add it to the cache for checking the next
                 // school.
@@ -78,17 +99,17 @@ public class Actions {
         }
     }
 
-    public static void downloadSchoolWebsites() {
+    private static void downloadSchoolWebsites() {
         logger.info("Downloading school websites.");
         notImplemented();
     }
 
-    public static void performAnalysis() {
+    private static void performAnalysis() {
         logger.info("Performing analysis on classical schools.");
         notImplemented();
     }
 
-    public static void setupDatabase() {
+    private static void setupDatabase() {
         logger.info("Setting up SQL database.");
         Database.deleteTables();
         Database.createTables();
@@ -102,7 +123,7 @@ public class Actions {
      * <a href="https://stackoverflow.com/questions/779519/delete-directories-recursively-in-java">this
      * question</a> on StackOverflow.
      */
-    public static void clearDataDirectory() {
+    private static void clearDataDirectory() {
         logger.info("Clearing data directory.");
 
         String p;

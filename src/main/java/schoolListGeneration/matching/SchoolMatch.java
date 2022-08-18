@@ -2,12 +2,13 @@ package schoolListGeneration.matching;
 
 import constructs.Attribute;
 import constructs.CreatedSchool;
+import constructs.Organization;
 import constructs.School;
 import org.jetbrains.annotations.NotNull;
-import utils.URLUtils;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * This is a record of an attempted match between some incoming school and an existing school in the database. It is
@@ -15,88 +16,108 @@ import java.util.List;
  */
 public class SchoolMatch {
     /**
-     * This is the {@link School} unique to this {@link SchoolMatch} instance. During a single run of
-     * {@link MatchIdentifier#determineMatch(CreatedSchool, List)}, multiple instances of this class may be created,
-     * each with their own value for this school field.
+     * This is the already existing {@link School} that is unique to this {@link SchoolMatch} instance. During a single
+     * run of {@link MatchIdentifier#determineMatch(CreatedSchool, List)}, multiple instances of this class may be
+     * created, each with their own value for this school field.
      */
-    private final School school;
+    private final School existingSchool;
 
     /**
-     * This is a list of every {@link Attribute} that is found to {@link Attribute#matches(School, School) match}
-     * between this {@link #school} and some <code>incomingSchool</code>. It includes attributes that are null for both
-     * schools.
+     * This is the new {@link CreatedSchool} that is being matched against the {@link #existingSchool}.
      */
-    private final List<Attribute> matchingAttributes = new ArrayList<>();
+    private final CreatedSchool incomingSchool;
 
     /**
-     * This is the number of attributes that {@link Attribute#matches(School, School) match} between this
-     * {@link #school} and some <code>incomingSchool</code> and are not
-     * {@link School#isEffectivelyNull(Attribute) null}. This is always less than or equal to the size of
-     * {@link #matchingAttributes}, always starting at 0 until matches are identified.
+     * This map records which of the {@link Attribute Attributes} are found to match between the {@link #incomingSchool}
+     * and the {@link #existingSchool}, and the {@link MatchLevel Level} of the match.
+     * <p>
+     * This map contains as its keys {@link Attribute#values() every} {@link Attribute}.
+     */
+    private final Map<Attribute, MatchLevel> matchingAttributes = new HashMap<>();
+
+    /**
+     * This is the number of attributes in {@link #matchingAttributes} that are not
+     * {@link Attribute#isEffectivelyNull(Object) null} for either school.
+     * <p>
+     * This is used for assessing the <i>strength</i> of the match (e.g., how closely two schools match overall).
      */
     private int nonNullMatchCount = 0;
 
     /**
-     * This becomes <code>true</code> if this {@link #school} is determined to match the <code>incomingSchool</code>. In
-     * other words, {@link #matchingAttributes} is just a list of every attribute.
+     * This is used to ensure that {@link #processAllAttributes()} is only called once. When this match object is
+     * processed, this becomes <code>true</code>. At that point, calling {@link #processAllAttributes()} again will have
+     * no effect.
      */
-    private boolean isExactMatch = false;
+    private boolean isProcessed = false;
 
     /**
-     * This becomes <code>true</code> if at least one of the
-     * {@link constructs.Organization#getMatchIndicatorAttributes() matchIndicatorAttributes} are found to
-     * {@link Attribute#matches(School, School) match} (and not be null) between this {@link #school} and the
-     * <code>incomingSchool</code>.
-     */
-    private boolean isPartialMatch = false;
-
-    /**
-     * Create a new {@link SchoolMatch} attached to a particular {@link School}.
+     * Create a new {@link SchoolMatch} attached to a particular {@link School}. Set the existing and incoming schools
+     * and the {@link #matchingAttributes}.
      *
-     * @param school The {@link #school} considered by this match.
+     * @param existingSchool The {@link #existingSchool}.
+     * @param incomingSchool The {@link #incomingSchool}.
      */
-    private SchoolMatch(School school) {
-        this.school = school;
+    public SchoolMatch(@NotNull School existingSchool, @NotNull CreatedSchool incomingSchool) {
+        this.existingSchool = existingSchool;
+        this.incomingSchool = incomingSchool;
+
+        Stream.of(Attribute.values()).forEach(a -> matchingAttributes.put(a, MatchLevel.NONE));
     }
 
     /**
      * Return the {@link School} around which this {@link SchoolMatch} is constructed.
      *
-     * @return The {@link #school}.
+     * @return The {@link #existingSchool}.
      */
-    public School getSchool() {
-        return school;
+    public School getExistingSchool() {
+        return existingSchool;
     }
 
     /**
-     * Return the matching attributes between this {@link #school} and some <code>incomingSchool</code>.
+     * Return the {@link #matchingAttributes} that match at or above the given {@link MatchLevel}.
      *
-     * @return The {@link #matchingAttributes}.
+     * @return A list of attributes.
      */
-    public List<Attribute> getMatchingAttributes() {
-        return matchingAttributes;
+    public List<Attribute> getMatchingAttributes(@NotNull MatchLevel level) {
+        return matchingAttributes.entrySet().stream()
+                .filter(e -> e.getValue().isAtLeast(level))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
     }
 
     /**
-     * Return whether this {@link #school} is an exact match with some <code>incomingSchool</code>.
+     * Return whether the {@link #existingSchool} exactly matches the {@link #incomingSchool}.
+     * <p>
+     * This is defined as the {@link #matchingAttributes} map containing an {@link MatchLevel#EXACT EXACT} match for
+     * <i>every</i> attribute <i>except</i> for {@link Attribute#is_excluded is_excluded} and
+     * {@link Attribute#excluded_reason excluded_reason}, which are ignored.
      *
-     * @return {@link #isExactMatch}
+     * @return <code>True</code> if and only if the schools are an exact match.
+     * @see #isPartialMatch()
      */
     public boolean isExactMatch() {
-        return isExactMatch;
+        return matchingAttributes.entrySet().stream()
+                .filter(e -> e.getKey() != Attribute.is_excluded && e.getKey() != Attribute.excluded_reason)
+                .allMatch(e -> e.getValue() == MatchLevel.EXACT);
     }
 
     /**
-     * Return whether this {@link #school} is a partial match with some <code>incomingSchool</code>.
+     * Return whether the {@link #existingSchool} and {@link #incomingSchool} are at least a partial match.
+     * <p>
+     * This is defined as one or more of the {@link Organization#getMatchIndicatorAttributes() matchIndicatorAttributes}
+     * having at least an {@link MatchLevel#INDICATOR INDICATOR} match level.
      *
-     * @return {@link #isPartialMatch}
+     * @return <code>True</code> if and only if the schools are at least a partial match.
+     * @see #processIndicatorAttributes()
+     * @see #isExactMatch()
      */
     public boolean isPartialMatch() {
-        return isPartialMatch;
+        return Arrays.stream(incomingSchool.getOrganization().getMatchIndicatorAttributes())
+                .anyMatch(a -> matchingAttributes.get(a).isAtLeast(MatchLevel.INDICATOR));
     }
 
     /**
-     * Return the number of non-null {@link #matchingAttributes} between this {@link #school} and some
+     * Return the number of non-null {@link #matchingAttributes} between this {@link #existingSchool} and some
      * <code>incomingSchool</code>.
      *
      * @return {@link #nonNullMatchCount}
@@ -106,54 +127,78 @@ public class SchoolMatch {
     }
 
     /**
-     * Create a new {@link SchoolMatch} with the given {@link School school} being matched against some
-     * <code>incomingSchool</code>. Determine any {@link #matchingAttributes} between the schools, and record whether
-     * it's an {@link #isExactMatch exact} or {@link #isPartialMatch partial} match (or neither).
+     * Attempt to {@link Attribute#schoolIndicatorMatches(School, School) match} each of the
+     * {@link Organization#getMatchIndicatorAttributes() matchIndicatorAttributes} between the {@link #existingSchool}
+     * and the {@link #incomingSchool}, assigning the {@link MatchLevel#INDICATOR INDICATOR} match level to matching
+     * attributes.
      *
-     * @param school         This is the school considered exclusively in this {@link SchoolMatch} instance. There will
-     *                       be many SchoolMatch instances created, each with a different {@link #school}.
-     * @param incomingSchool This is the incoming school that is being matched against the {@link #school}. It will be
-     *                       the same for all newly created SchoolMatch instances.
+     * @see #processAllAttributes()
      */
-    @NotNull
-    public static SchoolMatch create(@NotNull School school, @NotNull CreatedSchool incomingSchool) {
-        SchoolMatch match = new SchoolMatch(school);
-
-        // Get a list of every matching attribute
-        for (Attribute a : Attribute.values()) {
-            boolean isMatch;
-
-            // Check whether the values match for this attribute. Use a.matches(), except for the website_url attribute
-            if (a == Attribute.website_url)
-                isMatch = URLUtils.domainEquals(school.getStr(a), incomingSchool.getStr(a));
-            else
-                isMatch = a.matches(incomingSchool, school);
-
-            // If the values match, add the attribute to the list of matching attributes. If it's non-null, increment
-            // the appropriate counter.
-            if (isMatch) {
-                match.matchingAttributes.add(a);
-                if (!incomingSchool.isEffectivelyNull(a))
-                    match.nonNullMatchCount++;
-            }
-        }
-
-        // Determine whether this school is an exact match
-        if (match.matchingAttributes.size() == Attribute.values().length) {
-            match.isExactMatch = true;
-            // Return here to skip unnecessary work looking for partial matches or districts
-            return match;
-        }
-
-        // Determine whether this school is a partial match
+    public void processIndicatorAttributes() {
         for (Attribute a : incomingSchool.getOrganization().getMatchIndicatorAttributes())
-            if (match.matchingAttributes.contains(a) && !incomingSchool.isEffectivelyNull(a)) {
-                match.isPartialMatch = true;
-                break;
-            }
-
-        return match;
+            if (a.schoolIndicatorMatches(existingSchool, incomingSchool))
+                // Only overwrite the match level if it's NONE; never change EXACT to INDICATOR.
+                if (matchingAttributes.get(a) == MatchLevel.NONE)
+                    matchingAttributes.put(a, MatchLevel.INDICATOR);
     }
 
+    /**
+     * Run the complete process of determining whether (and to what {@link MatchLevel Level}) the
+     * {@link #existingSchool} and {@link #incomingSchool} match.
+     * <p>
+     * This traverses every attribute in the {@link #matchingAttributes} map, calling
+     * {@link Attribute#matches(School, School) Attribute.matches()} to check whether the existing and incoming schools
+     * match for that attribute. If they do, the match level {@link MatchLevel#EXACT EXACT} is mapped to the attribute.
+     *
+     * @see #processIndicatorAttributes()
+     */
+    public void processAllAttributes() {
+        if (isProcessed) return;
 
+        for (Attribute a : matchingAttributes.keySet())
+            if (a.matches(existingSchool, incomingSchool)) {
+                matchingAttributes.put(a, MatchLevel.EXACT);
+                // If the attribute is not null for either school, update the counter
+                if (!incomingSchool.isEffectivelyNull(a))
+                    nonNullMatchCount++;
+            }
+
+        isProcessed = true;
+    }
+
+    /**
+     * Get a list of {@link Attribute Attributes} that may be useful for manually comparing the {@link #existingSchool}
+     * and {@link #incomingSchool}.
+     * <p>
+     * Attributes are included in the list from the following sources:
+     * <ul>
+     *     <li>Every {@link Organization#getMatchIndicatorAttributes() match indicator} attribute for the
+     *     {@link #incomingSchool}
+     *     <li>Every {@link Organization#getMatchRelevantAttributes() match relevant} attribute for the
+     *     {@link #incomingSchool}
+     *     <li>Every discrepancy attribute, <i>if and only if</i> there are no more than 5 of these (not counting the
+     *     ones that are already a part of the indicator/relevant attributes). This is defined as an attribute with
+     *     match level {@link MatchLevel#NONE NONE}, indicating different values.
+     * </ul>
+     *
+     * @return A list of {@link Attribute Attributes}.
+     */
+    public List<Attribute> getRelevantDisplayAttributes() {
+        List<Attribute> indicator = List.of(incomingSchool.getOrganization().getMatchIndicatorAttributes());
+        List<Attribute> relevant = List.of(incomingSchool.getOrganization().getMatchRelevantAttributes());
+
+        // Identify differing attributes. If there's more than 5, don't include any of them.
+        List<Attribute> discrepancy = matchingAttributes.entrySet().stream()
+                .filter(e -> e.getValue() == MatchLevel.NONE)
+                .filter(e -> !indicator.contains(e.getKey()) && !relevant.contains(e.getKey()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+        discrepancy = discrepancy.size() <= 5 ? discrepancy : Collections.emptyList();
+
+        // Combine all attribute sources into a single list
+        return Stream.of(indicator, relevant, discrepancy)
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
+    }
 }

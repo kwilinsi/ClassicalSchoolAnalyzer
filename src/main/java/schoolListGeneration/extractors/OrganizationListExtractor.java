@@ -9,6 +9,9 @@ import constructs.Attribute;
 import constructs.CreatedSchool;
 import constructs.Organization;
 import constructs.SchoolManager;
+import gui.windows.prompt.Option;
+import gui.windows.prompt.Prompt;
+import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
@@ -17,8 +20,6 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
-import utils.Prompt;
-import utils.Prompt.Selection;
 
 import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
@@ -96,11 +97,13 @@ public class OrganizationListExtractor {
         List<CreatedSchool> list = new ArrayList<>();
         logger.debug("Running extract_ACCS()...");
 
-        int choice = Prompt.run("Select a mode for loading ACCS school pages:",
-                Selection.of("Use Cache", 1),
-                Selection.of("Force New Download", 2),
-                Selection.of("Test a sample (incl. cache)", 3)
-        );
+        int choice = Main.GUI.showPrompt(Prompt.of(
+                "ACCS - Cache",
+                "Select a mode for loading ACCS school pages:",
+                Option.of("Use Cache", 1),
+                Option.of("Force New Download", 2),
+                Option.of("Test a sample (incl. cache)", 3)
+        ));
         boolean useCache = choice != 2;
 
         // Look for links in the form <a style="display: inline-block ......">
@@ -310,11 +313,14 @@ public class OrganizationListExtractor {
         logger.debug("Running extract_ICLE()...");
 
         // Prompt the user for the mode of extraction for individual school pages.
-        int choice = Prompt.run("Select a mode for loading ICLE school and school list pages:",
-                Selection.of("Use Cache", 1),
-                Selection.of("Force New Download", 2),
-                Selection.of("Test a sample (incl. cache)", 3)
-        );
+        int choice = Main.GUI.showPrompt(Prompt.of(
+                "ICLE - Cache",
+                "Select a mode for loading ICLE school and school list pages:",
+                Option.of("Use Cache", 1),
+                Option.of("Force New Download", 2),
+                Option.of("Test a sample (incl. cache)", 3)
+        ));
+
         boolean useCache = choice != 2;
 
         // Get a list of all the pages that show schools

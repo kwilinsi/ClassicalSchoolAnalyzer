@@ -103,6 +103,15 @@ public class District extends BaseConstruct {
     }
 
     /**
+     * Get the website URL of this district.
+     *
+     * @return The {@link #website_url}.
+     */
+    public String getWebsiteURL() {
+        return website_url;
+    }
+
+    /**
      * Get the information for this district in a string. The result is formatted as follows:
      * <p>
      * <code>id: 12<br>name: Platonic Schools<br>website_url: platonic-schools.org</code>
