@@ -16,6 +16,10 @@ import org.jetbrains.annotations.NotNull;
  * </ul>
  */
 public enum MatchLevel {
+    // TODO consider adding an element for near exact matches, or something like that. For example, URLs have
+    //  slightly lenient matching rules to still be called EXACT, and this could be refined. But it's not as simple
+    //  as Objects.equals(), because dates should still be compared by their actual value, not the object reference.
+
     /**
      * The values for an attribute match according to {@link Attribute#matches(School, School) Attribute.matches()}.
      */

@@ -3,6 +3,8 @@ package schoolListGeneration.matching;
 import com.googlecode.lanterna.gui2.*;
 import constructs.*;
 import gui.utils.GUIUtils;
+import gui.windows.prompt.attribute.AttributeOption;
+import gui.windows.prompt.attribute.AttributePrompt;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
 import main.Main;
@@ -138,6 +140,7 @@ public class MatchIdentifier {
         if (choice == MatchResultType.OMIT) return choice.of();
 
         // Otherwise the choice must be type OVERWRITE or APPEND.
+        // Determine which school the user is talking about and which of its attributes they want to change.
 
         SchoolMatch match;
 
@@ -162,28 +165,31 @@ public class MatchIdentifier {
             return MatchResultType.OMIT.of();
         }
 
-        // If the user chose to overwrite, give them a prompt asking exactly which attributes to overwrite
+        // If the user chose to OVERWRITE, give them a prompt asking exactly which attributes to overwrite.
+        // If they chose to APPEND instead, use the attributes that differ and are not null for the incoming school
+        if (choice == MatchResultType.OVERWRITE)
+            match.setAttributesToUpdate(Main.GUI.showPrompt(
+                    AttributePrompt.of(
+                            "Select the attributes to overwrite:",
+                            match.getDifferingAttributes().stream()
+                                    .map(a -> AttributeOption.of(
+                                            a,
+                                            incomingSchool.get(a),
+                                            match.getExistingSchool().get(a)
+                                    ))
+                                    .collect(Collectors.toList()),
+                            incomingSchool,
+                            match.getExistingSchool()
+                    )
+            ));
+        else
+            match.setAttributesToUpdate(
+                    match.getDifferingAttributes().stream()
+                            .filter(a -> incomingSchool.get(a) != null)
+                            .collect(Collectors.toList())
+            );
 
         return choice.of(match);
-    }
-
-    /**
-     * Present the user with a prompt that asks them to select which attributes to overwrite. It shows a list of every
-     * {@link Attribute} that is <i>different</i> between the schools, along with the current values of those attributes
-     * for both the <code>incomingSchool</code> and the {@link SchoolMatch#getExistingSchool() existingSchool}.
-     * <p>
-     * The user is also given hotkeys to select all attributes, none of the attributes, or only those attributes that
-     * are non-null for the incoming school.
-     *
-     * @param incomingSchool The {@link CreatedSchool} that will overwrite, in whole or in part, the existing school.
-     * @param schoolMatch    The {@link SchoolMatch} instance containing both the incoming and existing schools and
-     *                       their shared attributes.
-     *
-     * @return A list of attributes that the user chose to overwrite.
-     */
-    private static List<Attribute> promptOverwriteAttributes(@NotNull CreatedSchool incomingSchool,
-                                                             @NotNull SchoolMatch schoolMatch) {
-        return new ArrayList<>();
     }
 
     /**
@@ -225,9 +231,9 @@ public class MatchIdentifier {
     }
 
     /**
-     * Create the {@link Panel} that wil become the <code>contentPanel</code> in a {@link SelectionPrompt}. This consists of a
-     * list of {@link Attribute Attributes} and their corresponding values for the <code>incomingSchool</code>, the
-     * {@link District}, and each of the district's member {@link School Schools}.
+     * Create the {@link Panel} that wil become the <code>contentPanel</code> in a {@link SelectionPrompt}. This
+     * consists of a list of {@link Attribute Attributes} and their corresponding values for the
+     * <code>incomingSchool</code>, the {@link District}, and each of the district's member {@link School Schools}.
      * <p>
      * Note that this does not include the list of {@link Option Options} that are shown to the user. This is only the
      * message asking the user to choose one of those options.

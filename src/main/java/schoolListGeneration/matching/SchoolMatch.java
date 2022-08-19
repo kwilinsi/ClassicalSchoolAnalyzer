@@ -20,11 +20,13 @@ public class SchoolMatch {
      * run of {@link MatchIdentifier#determineMatch(CreatedSchool, List)}, multiple instances of this class may be
      * created, each with their own value for this school field.
      */
+    @NotNull
     private final School existingSchool;
 
     /**
      * This is the new {@link CreatedSchool} that is being matched against the {@link #existingSchool}.
      */
+    @NotNull
     private final CreatedSchool incomingSchool;
 
     /**
@@ -33,6 +35,7 @@ public class SchoolMatch {
      * <p>
      * This map contains as its keys {@link Attribute#values() every} {@link Attribute}.
      */
+    @NotNull
     private final Map<Attribute, MatchLevel> matchingAttributes = new HashMap<>();
 
     /**
@@ -49,6 +52,20 @@ public class SchoolMatch {
      * no effect.
      */
     private boolean isProcessed = false;
+
+    /**
+     * In some cases, the user will choose to update some {@link Attribute Attributes} of the {@link #existingSchool}
+     * with their values from the {@link #incomingSchool}. This is the list of attributes that the user chose to
+     * update.
+     * <p>
+     * More specifically, this is {@link #setAttributesToUpdate(List) populated} immediately before returning a
+     * {@link MatchResult} of {@link MatchResultType Type} {@link MatchResultType#APPEND APPEND} or
+     * {@link MatchResultType#OVERWRITE OVERWRITE}.
+     * <p>
+     * By default, this is an empty {@link ArrayList}. It will never be <code>null</code>.
+     */
+    @NotNull
+    private List<Attribute> attributesToUpdate = new ArrayList<>();
 
     /**
      * Create a new {@link SchoolMatch} attached to a particular {@link School}. Set the existing and incoming schools
@@ -69,8 +86,32 @@ public class SchoolMatch {
      *
      * @return The {@link #existingSchool}.
      */
+    @NotNull
     public School getExistingSchool() {
         return existingSchool;
+    }
+
+
+    /**
+     * Get the list of {@link Attribute Attributes} that the user chose to update for the {@link #existingSchool}. Note
+     * that this will never be <code>null</code>. By default, it is an empty list.
+     *
+     * @return The {@link #attributesToUpdate}.
+     */
+    @NotNull
+    public List<Attribute> getAttributesToUpdate() {
+        return attributesToUpdate;
+    }
+
+    /**
+     * Set a list of {@link Attribute Attributes} that the user chose to update, in the event that they choose to
+     * {@link MatchResultType#OVERWRITE OVERWRITE} or {@link MatchResultType#APPEND APPEND} the
+     * {@link #existingSchool}.
+     *
+     * @param attributesToUpdate The list of {@link #attributesToUpdate}.
+     */
+    public void setAttributesToUpdate(@NotNull List<Attribute> attributesToUpdate) {
+        this.attributesToUpdate = attributesToUpdate;
     }
 
     /**
@@ -78,9 +119,24 @@ public class SchoolMatch {
      *
      * @return A list of attributes.
      */
+    @NotNull
     public List<Attribute> getMatchingAttributes(@NotNull MatchLevel level) {
         return matchingAttributes.entrySet().stream()
                 .filter(e -> e.getValue().isAtLeast(level))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Return every {@link #matchingAttributes matchingAttribute} whose {@link MatchLevel} is anything less than
+     * {@link MatchLevel#EXACT EXACT}, meaning the values aren't a perfect match.
+     *
+     * @return A list of attributes.
+     */
+    @NotNull
+    public List<Attribute> getDifferingAttributes() {
+        return matchingAttributes.entrySet().stream()
+                .filter(e -> e.getValue() != MatchLevel.EXACT)
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
@@ -191,6 +247,7 @@ public class SchoolMatch {
      *
      * @return A list of {@link Attribute Attributes}.
      */
+    @NotNull
     public List<Attribute> getRelevantDisplayAttributes() {
         List<Attribute> indicator = List.of(incomingSchool.getOrganization().getMatchIndicatorAttributes());
         List<Attribute> relevant = List.of(incomingSchool.getOrganization().getMatchRelevantAttributes());
