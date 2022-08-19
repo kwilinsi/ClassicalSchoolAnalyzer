@@ -136,7 +136,7 @@ public class MatchIdentifier {
         ));
 
         if (choice == null) return null;
-        if (choice == MatchResultType.ADD_TO_DISTRICT) return choice.of(district);
+        if (choice == MatchResultType.ADD_TO_DISTRICT) return choice.of(districtSchools.get(0));
         if (choice == MatchResultType.OMIT) return choice.of();
 
         // Otherwise the choice must be type OVERWRITE or APPEND.

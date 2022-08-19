@@ -84,7 +84,7 @@ public class CreatedSchool extends School {
         School argSchool = null;
 
         if (matchType == MatchResultType.APPEND || matchType == MatchResultType.OVERWRITE)
-            if (matchResult.getArg() instanceof School s) {
+            if (matchResult.getMatch() instanceof School s) {
                 argSchool = s;
             } else {
                 logger.error("Unreachable state: Match result arg not a school for type {}.", matchType.name());
@@ -92,7 +92,7 @@ public class CreatedSchool extends School {
             }
 
         if (matchType == MatchResultType.ADD_TO_DISTRICT)
-            if (matchResult.getArg() instanceof District d) {
+            if (matchResult.getMatch() instanceof District d) {
                 argDistrict = d;
             } else {
                 logger.error("Unreachable state: Match result arg not a district for type {}.", matchType.name());

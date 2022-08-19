@@ -90,8 +90,7 @@ public class SchoolMatch {
     public School getExistingSchool() {
         return existingSchool;
     }
-
-
+    
     /**
      * Get the list of {@link Attribute Attributes} that the user chose to update for the {@link #existingSchool}. Note
      * that this will never be <code>null</code>. By default, it is an empty list.

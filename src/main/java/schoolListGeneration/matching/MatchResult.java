@@ -1,6 +1,5 @@
 package schoolListGeneration.matching;
 
-import constructs.District;
 import constructs.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -13,32 +12,51 @@ public class MatchResult {
     private final MatchResultType type;
 
     /**
-     * Some additional argument that is relevant to the result {@link #type} and will be needed for processing later.
-     * <p>
-     * This contains the following data based on the {@link #type}:
-     * <ul>
-     *     <li>{@link MatchResultType#NEW_DISTRICT NEW_DISTRICT}: <code>null</code>
-     *     <li>{@link MatchResultType#OMIT OMIT}: <code>null</code>
-     *     <li>{@link MatchResultType#ADD_TO_DISTRICT ADD_TO_DISTRICT}: the {@link District} to which the school
-     *     should be added.
-     *     <li>{@link MatchResultType#APPEND APPEND}: the {@link School} to which the parameters should be appended.
-     *     <li>{@link MatchResultType#OVERWRITE OVERWRITE}: the {@link School} to overwrite.
-     * </ul>
+     * This is an optional {@link SchoolMatch} that may contain extra relevant information about the match. It is only
+     * included for {@link MatchResultType#ADD_TO_DISTRICT ADD_TO_DISTRICT}, {@link MatchResultType#APPEND APPEND}, and
+     * {@link MatchResultType#OVERWRITE OVERWRITE} {@link #type types}. For
+     * {@link MatchResultType#NEW_DISTRICT NEW_DISTRICT}, {@link MatchResultType#OMIT OMIT}, and
+     * {@link MatchResultType#DUPLICATE DUPLICATE}, it is <code>null</code>.
      */
     @Nullable
-    private final Object arg;
+    private final SchoolMatch match;
 
-    MatchResult(@NotNull MatchResultType type, @Nullable Object arg) {
+    /**
+     * Create a {@link MatchResult} from the given {@link MatchResultType} and (optional) {@link SchoolMatch}. If the
+     * school match is missing when it should be provided, or provided when it should be
+     * <code>null</code>, an {@link IllegalArgumentException} is thrown.
+     *
+     * @param type  the {@link #type}.
+     * @param match the {@link #match}.
+     *
+     * @throws IllegalArgumentException If the <code>match</code> doesn't fit the match <code>type</code>.
+     * @see #MatchResult(MatchResultType)
+     */
+    MatchResult(@NotNull MatchResultType type, @Nullable SchoolMatch match) throws IllegalArgumentException {
         this.type = type;
-        this.arg = arg;
+        this.match = match;
+
+        switch (type) {
+            case NEW_DISTRICT, OMIT, DUPLICATE -> {
+                if (match != null)
+                    throw new IllegalArgumentException("MatchResultType " + type + " should not include a match.");
+            }
+            case ADD_TO_DISTRICT, APPEND, OVERWRITE -> {
+                if (match == null)
+                    throw new IllegalArgumentException("MatchResultType " + type + " missing SchoolMatch instance.");
+            }
+        }
     }
 
     /**
-     * Create a {@link MatchResult} instance with the {@link #arg} parameter set to <code>null</code>.
+     * Create a {@link MatchResult} instance with the {@link #match} parameter set to <code>null</code>.
      *
      * @param type The {@link #type} of result.
+     *
+     * @throws IllegalArgumentException If the result type mandates a non-null {@link SchoolMatch}.
+     * @see #MatchResult(MatchResultType, SchoolMatch)
      */
-    MatchResult(@NotNull MatchResultType type) {
+    MatchResult(@NotNull MatchResultType type) throws IllegalArgumentException {
         this(type, null);
     }
 
@@ -53,13 +71,14 @@ public class MatchResult {
     }
 
     /**
-     * Get the optional argument included with some {@link MatchResultType MatchResultTypes}.
+     * Get the {@link SchoolMatch} instance associated with some match {@link #type types}. This will only be
+     * <code>null</code> if it should be according to that type.
      *
-     * @return The {@link #arg}.
+     * @return The {@link #match}.
      */
     @Nullable
-    public Object getArg() {
-        return arg;
+    public SchoolMatch getMatch() {
+        return match;
     }
 
     /**
@@ -84,7 +103,7 @@ public class MatchResult {
      * <code>true</code>, because they update attributes for an existing school. Everything else will return
      * <code>false</code>.
      * <p>
-     * Note that for types where this is <code>true</code>, the {@link #arg} parameter must contain a {@link School}.
+     * Note that for types where this is <code>true</code>, the {@link #match} parameter must contain a {@link School}.
      *
      * @return Whether a SQL <code>UPDATE</code> statement is required based on this match type.
      */
