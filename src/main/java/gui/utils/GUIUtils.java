@@ -127,20 +127,20 @@ public class GUIUtils {
         logEntry.addComponent(time);
 
         // Add the thread
-        Label thread = new Label(Utils.padTrimString(event.getThreadName(), 14));
+        Label thread = new Label(Utils.padTrimString(event.getThreadName(), 14, false));
         thread.setForegroundColor(TextColor.ANSI.CYAN_BRIGHT);
         logEntry.addComponent(thread);
 
         // Add the logger name (e.g. the class name)
         String[] name = event.getLoggerName().split("\\.");
-        Label logger = new Label(Utils.padTrimString(name[name.length - 1], 12));
+        Label logger = new Label(Utils.padTrimString(name[name.length - 1], 12, false));
         logger.setForegroundColor(TextColor.ANSI.GREEN_BRIGHT);
         logger.addStyle(SGR.BOLD);
         logEntry.addComponent(logger);
 
         // Add the log level
         String level = event.getLevel().toString();
-        Label levelLbl = new Label(Utils.padTrimString(level, 5));
+        Label levelLbl = new Label(Utils.padTrimString(level, 5, false));
         switch (level) {
             case "ERROR" -> levelLbl.setForegroundColor(TextColor.ANSI.RED);
             case "WARN" -> levelLbl.setForegroundColor(TextColor.ANSI.YELLOW);

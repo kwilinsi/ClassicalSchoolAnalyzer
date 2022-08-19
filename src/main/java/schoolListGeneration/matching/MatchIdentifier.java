@@ -3,8 +3,8 @@ package schoolListGeneration.matching;
 import com.googlecode.lanterna.gui2.*;
 import constructs.*;
 import gui.utils.GUIUtils;
-import gui.windows.prompt.Option;
-import gui.windows.prompt.Prompt;
+import gui.windows.prompt.selection.Option;
+import gui.windows.prompt.selection.SelectionPrompt;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,10 +30,10 @@ public class MatchIdentifier {
      * This function performs the following steps in order:
      * <ol>
      *     <li>Search the database (using the <code>schoolsCache</code>) for any schools that might match this one.
-     *     <li>Check for any perfect matches (duplicate schools). If a duplicate is found, immediately exit and
-     *     {@link MatchResultType#OMIT OMIT} this school.
+     *     <li>While searching, if any {@link SchoolMatch#isExactMatch() exact} matches are found (duplicate schools),
+     *     immediately exit, marking this school as a {@link MatchResultType#DUPLICATE DUPLICATE}.
      *     <li>Identify a list of districts from all of the partially matching schools.
-     *     <li>Check each district for a possible match by providing summary information on schools in the district
+     *     <li>Check each district for a possible match by providing summary information on the schools in the district
      *     and prompting the user for a verdict.
      *     <li>Return a {@link MatchResult} corresponding to the user's decision.
      * </ol>
@@ -60,12 +60,9 @@ public class MatchIdentifier {
             // If there is a partial match, run additional processing to check every attribute. If this reveals an
             // exact match, exit immediately
             if (m.isPartialMatch()) {
-                if (incomingSchool.name().equals("Grand County Christian Academy"))
-                    System.out.println();
-
                 matches.add(m);
                 m.processAllAttributes();
-                if (m.isExactMatch()) return new MatchResult(MatchResultType.DUPLICATE, m);
+                if (m.isExactMatch()) return MatchResultType.DUPLICATE.of();
             }
         }
 
@@ -79,8 +76,9 @@ public class MatchIdentifier {
         // Get a list of districts corresponding to the partial matches
         LinkedHashMap<District, List<SchoolMatch>> districtMatches = extractDistricts(matches, allSchoolMatches);
 
-        logger.info("Found {} school matches in {} districts for incoming school {}.", matches.size(),
-                districtMatches.size(), incomingSchool.name());
+        logger.info("Found {} school matches in {} districts for incoming school {}.",
+                matches.size(), districtMatches.size(), incomingSchool
+        );
 
         // Process each of the districts in turn
         for (District district : districtMatches.keySet()) {
@@ -119,18 +117,17 @@ public class MatchIdentifier {
         Panel promptPanel = createDistrictMatchGUIPanel(incomingSchool, district, districtSchools);
 
         // Construct and execute the prompt
-        MatchResultType choice = Main.GUI.showPrompt(Prompt.of(
+        MatchResultType choice = Main.GUI.showPrompt(SelectionPrompt.of(
                 "Match Resolution",
                 promptPanel,
                 Option.of("This is not a match. Ignore it.", null),
                 Option.of("Add this school to this district.", MatchResultType.ADD_TO_DISTRICT),
                 Option.of(
-                        "This school matches one of the schools in this district. " +
-                        "Overwrite its existing values.",
+                        "This school matches one of the schools in this district. Overwrite its existing values.",
                         MatchResultType.OVERWRITE
                 ),
-                Option.of("This school matches one of the schools in this district. " +
-                          "Fill any existing null values.",
+                Option.of(
+                        "This school matches one of the schools in this district. Fill any existing null values.",
                         MatchResultType.APPEND
                 ),
                 Option.of("Omit this school entirely. Don't check for other matches.", MatchResultType.OMIT)
@@ -148,7 +145,7 @@ public class MatchIdentifier {
             match = districtSchools.get(0);
         } else {
             // Put the schools in a list of options to choose from
-            match = Main.GUI.showPrompt(Prompt.of(
+            match = Main.GUI.showPrompt(SelectionPrompt.of(
                     "School Selection",
                     "Select the school to " + (choice == MatchResultType.OVERWRITE ? "overwrite." : "append to."),
                     districtSchools.stream()
@@ -165,7 +162,28 @@ public class MatchIdentifier {
             return MatchResultType.OMIT.of();
         }
 
+        // If the user chose to overwrite, give them a prompt asking exactly which attributes to overwrite
+
         return choice.of(match);
+    }
+
+    /**
+     * Present the user with a prompt that asks them to select which attributes to overwrite. It shows a list of every
+     * {@link Attribute} that is <i>different</i> between the schools, along with the current values of those attributes
+     * for both the <code>incomingSchool</code> and the {@link SchoolMatch#getExistingSchool() existingSchool}.
+     * <p>
+     * The user is also given hotkeys to select all attributes, none of the attributes, or only those attributes that
+     * are non-null for the incoming school.
+     *
+     * @param incomingSchool The {@link CreatedSchool} that will overwrite, in whole or in part, the existing school.
+     * @param schoolMatch    The {@link SchoolMatch} instance containing both the incoming and existing schools and
+     *                       their shared attributes.
+     *
+     * @return A list of attributes that the user chose to overwrite.
+     */
+    private static List<Attribute> promptOverwriteAttributes(@NotNull CreatedSchool incomingSchool,
+                                                             @NotNull SchoolMatch schoolMatch) {
+        return new ArrayList<>();
     }
 
     /**
@@ -207,7 +225,7 @@ public class MatchIdentifier {
     }
 
     /**
-     * Create the {@link Panel} that wil become the <code>contentPanel</code> in a {@link Prompt}. This consists of a
+     * Create the {@link Panel} that wil become the <code>contentPanel</code> in a {@link SelectionPrompt}. This consists of a
      * list of {@link Attribute Attributes} and their corresponding values for the <code>incomingSchool</code>, the
      * {@link District}, and each of the district's member {@link School Schools}.
      * <p>

@@ -18,11 +18,17 @@ import java.time.chrono.ChronoLocalDate;
 import java.util.Objects;
 
 /**
- * This is the set of attributes that a school may have.
+ * This is the set of attributes for {@link School Schools}. Each school has a map relating each attribute to its value
+ * for that school.
+ * <p>
+ * This system is effectively an alternative to creating extensive data members with corresponding getters and setters
+ * for the School class. Instead, all the attributes are consolidated to a single {@link java.util.LinkedHashMap Map}.
+ * This allows them to be processed more easily, as well as allowing generic functions such as
+ * {@link #matches(School, School) matches()} to operate on all attributes.
  * <p>
  * <b>Note:</b> These attributes have a one-to-one correspondence with the columns of the Schools table in the
  * database, as specified by the setup script. The only exception is that there is no enumerated attribute for the
- * school's id. All other attributes are spelled and ordered exactly as they appear in the database.
+ * school's id. All other attributes are spelled, capitalized, and ordered exactly as they appear in the database.
  */
 public enum Attribute {
     name(String.class, null, 100),
@@ -186,7 +192,20 @@ public enum Attribute {
     }
 
     /**
-     * Determine whether two {@link School Schools} have the same value for this attribute.
+     * Determine whether two schools share the same value for this attribute. This is done via a call to
+     * {@link #matches(Object, Object)} with the values of this attribute for each school.
+     *
+     * @param schoolA The first school.
+     * @param schoolB The second school.
+     *
+     * @return <code>True</code> if and only if the schools match for this attribute.
+     */
+    public boolean matches(@NotNull School schoolA, @NotNull School schoolB) {
+        return matches(schoolA.get(this), schoolB.get(this));
+    }
+
+    /**
+     * Determine whether two values match for this attribute.
      * <p>
      * The values for attributes are compared via {@link Objects#equals(Object, Object)}. However, some attributes use
      * different comparison rules based on their data type:
@@ -197,16 +216,12 @@ public enum Attribute {
      *     <li>{@link Double Doubles} are compared up to a precision of 0.00001.
      * </ul>
      *
-     * @param schoolA The first school.
-     * @param schoolB The second school.
+     * @param valA The value of the first school.
+     * @param valB The value of the second school.
      *
-     * @return <code>True</code> if and only if the two schools have the same value for this attribute;
-     *         <code>false</code> otherwise.
+     * @return <code>True</code> if and only if the values match.
      */
-    public boolean matches(@NotNull School schoolA, @NotNull School schoolB) {
-        Object valA = schoolA.get(this);
-        Object valB = schoolB.get(this);
-
+    public boolean matches(@Nullable Object valA, @Nullable Object valB) {
         // If they're both null, they match
         if (isEffectivelyNull(valA) && isEffectivelyNull(valB)) return true;
         // Otherwise, if one is null, they don't match

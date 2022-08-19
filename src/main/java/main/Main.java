@@ -2,8 +2,8 @@ package main;
 
 import main.Actions.Action;
 import gui.GUI;
-import gui.windows.prompt.Option;
-import gui.windows.prompt.Prompt;
+import gui.windows.prompt.selection.Option;
+import gui.windows.prompt.selection.SelectionPrompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,10 +21,10 @@ public class Main {
         guiThread.start();
 
         while (true) {
-            Prompt<Action> prompt = Prompt.of(
-                    "Control Panel",
-                    "Please select an action to perform:\n",
-                    Option.of("Download school list", Action.DOWNLOAD_SCHOOL_LIST),
+            SelectionPrompt<Action> prompt = SelectionPrompt.of(
+                    "Main Menu",
+                    "Please select an action to perform:",
+                    Option.of("Download school list", Action.UPDATE_SCHOOL_LIST),
                     Option.of("Download school websites", Action.DOWNLOAD_SCHOOL_WEBSITES),
                     Option.of("Perform analysis", Action.PERFORM_ANALYSIS),
                     Option.of("Setup database", Action.SETUP_DATABASE,
@@ -33,6 +33,7 @@ public class Main {
                     Option.of("Clear data directory", Action.CLEAR_DATA_DIRECTORY,
                             "This will delete all downloaded files in the data directory.\n" +
                             "Are you sure you wish to continue?"),
+                    Option.of("Test script", Action.TEST),
                     Option.of("Exit", null, "Are you sure you wish to exit " +
                                             "Classical School Analyzer?")
             );

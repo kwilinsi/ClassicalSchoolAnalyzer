@@ -25,14 +25,19 @@ public class School extends BaseConstruct {
      */
     protected int district_id = -1;
 
+    /**
+     * This is the set of {@link Attribute Attributes} and their values for this school.
+     */
     @NotNull
     protected final Map<Attribute, Object> attributes;
 
     /**
      * The unique <code>id</code> for this school that was provided by MySQL through the AUTO_INCREMENT id column. This
      * is typically only set for {@link School Schools} created from a {@link ResultSet}.
+     * <p>
+     * By default, this is set to <code>-1</code> to indicate no assigned id.
      */
-    protected int id;
+    protected int id = -1;
 
     public School() {
         // Add all the Attributes to the attributes map.
@@ -196,5 +201,23 @@ public class School extends BaseConstruct {
                 String.format("%s - %d", name(), LocalTime.now().toNanoOfDay()),
                 "html"
         );
+    }
+
+    /**
+     * Get a quick string representation of this school. This will take one of the following forms:
+     * <ul>
+     *     <li>If the {@link Attribute#name name} and {@link #id} are set, the string <code>"[name] ([id])"</code> is
+     *     returned.
+     *     <li>If the id is not set, the result of calling {@link #name()} is returned.
+     * </ul>
+     *
+     * @return A string representation of this school.
+     */
+    @Override
+    public String toString() {
+        if (id != -1)
+            return String.format("%s (%d)", name(), id);
+        else
+            return name();
     }
 }

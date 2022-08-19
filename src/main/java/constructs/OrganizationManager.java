@@ -1,7 +1,7 @@
 package constructs;
 
-import gui.windows.prompt.Option;
-import gui.windows.prompt.Prompt;
+import gui.windows.prompt.selection.Option;
+import gui.windows.prompt.selection.SelectionPrompt;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -159,7 +159,7 @@ public class OrganizationManager {
 
     /**
      * Get the list of {@link #ORGANIZATIONS} as {@link Option Options} for the user to choose between in a
-     * {@link Prompt}. Each selection is assigned a value corresponding to the {@link Organization Organization's}
+     * {@link SelectionPrompt}. Each selection is assigned a value corresponding to the {@link Organization Organization's}
      * {@link Organization#getId() id}.
      * <p>
      * The first selection option is "All", which returns the value 0, and the last option is "None", which returns the

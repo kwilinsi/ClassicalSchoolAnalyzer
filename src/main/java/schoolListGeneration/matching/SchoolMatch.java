@@ -88,9 +88,14 @@ public class SchoolMatch {
     /**
      * Return whether the {@link #existingSchool} exactly matches the {@link #incomingSchool}.
      * <p>
-     * This is defined as the {@link #matchingAttributes} map containing an {@link MatchLevel#EXACT EXACT} match for
-     * <i>every</i> attribute <i>except</i> for {@link Attribute#is_excluded is_excluded} and
-     * {@link Attribute#excluded_reason excluded_reason}, which are ignored.
+     * For this to be true, <i>one</i> of the following conditions must be met for <i>every</i> attribute, except for
+     * {@link Attribute#is_excluded is_excluded} and {@link Attribute#excluded_reason excluded_reason}:
+     * <ul>
+     *     <li>The {@link #matchingAttributes} map records the attribute as an {@link MatchLevel#EXACT EXACT} match.
+     *     <li>The attribute is {@link Attribute#isEffectivelyNull(Object) null} for the {@link #incomingSchool} but
+     *     not for the {@link #existingSchool}. (This indicates that less information is provided by the new school,
+     *     thereby rendering it an irrelevant duplicate).
+     * </ul>
      *
      * @return <code>True</code> if and only if the schools are an exact match.
      * @see #isPartialMatch()
@@ -98,7 +103,10 @@ public class SchoolMatch {
     public boolean isExactMatch() {
         return matchingAttributes.entrySet().stream()
                 .filter(e -> e.getKey() != Attribute.is_excluded && e.getKey() != Attribute.excluded_reason)
-                .allMatch(e -> e.getValue() == MatchLevel.EXACT);
+                .allMatch(e -> e.getValue() == MatchLevel.EXACT ||
+                               (incomingSchool.isEffectivelyNull(e.getKey()) &&
+                                !existingSchool.isEffectivelyNull(e.getKey()))
+                );
     }
 
     /**

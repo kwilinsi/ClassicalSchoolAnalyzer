@@ -1,8 +1,10 @@
 package main;
 
 import constructs.*;
-import gui.windows.prompt.Option;
-import gui.windows.prompt.Prompt;
+import gui.windows.prompt.attribute.AttributeOption;
+import gui.windows.prompt.attribute.AttributePrompt;
+import gui.windows.prompt.selection.Option;
+import gui.windows.prompt.selection.SelectionPrompt;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,28 +16,33 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class Actions {
     private static final Logger logger = LoggerFactory.getLogger(Actions.class);
 
     public enum Action {
-        DOWNLOAD_SCHOOL_LIST,
+        UPDATE_SCHOOL_LIST,
         DOWNLOAD_SCHOOL_WEBSITES,
         PERFORM_ANALYSIS,
         SETUP_DATABASE,
-        CLEAR_DATA_DIRECTORY
+        CLEAR_DATA_DIRECTORY,
+
+        TEST
     }
 
     public static void run(@NotNull Action action) {
         switch (action) {
-            case DOWNLOAD_SCHOOL_LIST -> downloadSchoolList();
+            case UPDATE_SCHOOL_LIST -> UpdateSchoolList();
             case DOWNLOAD_SCHOOL_WEBSITES -> downloadSchoolWebsites();
             case PERFORM_ANALYSIS -> performAnalysis();
             case SETUP_DATABASE -> setupDatabase();
             case CLEAR_DATA_DIRECTORY -> clearDataDirectory();
+            case TEST -> test();
         }
     }
 
@@ -43,10 +50,10 @@ public class Actions {
         logger.error("Sorry, this feature is not yet implemented.");
     }
 
-    private static void downloadSchoolList() {
-        logger.info("Downloading school list.");
+    private static void UpdateSchoolList() {
+        logger.info("Updating school list.");
 
-        int orgChoice = Main.GUI.showPrompt(Prompt.of(
+        int orgChoice = Main.GUI.showPrompt(SelectionPrompt.of(
                 "Organizations",
                 "Select the organization(s) to download:",
                 OrganizationManager.getAsSelections()
@@ -57,7 +64,7 @@ public class Actions {
             return;
         }
 
-        boolean useCache = Main.GUI.showPrompt(Prompt.of(
+        boolean useCache = Main.GUI.showPrompt(SelectionPrompt.of(
                 "Cache",
                 "Select a download mode for the organization " + (orgChoice == 0 ? "page:" : "pages:"),
                 Option.of("Use Cache", true),
@@ -164,5 +171,51 @@ public class Actions {
             logger.warn("Encountered a security exception while attempting to recreate data directory root folder " +
                         p + ".", e);
         }
+    }
+
+    private static void test() {
+        logger.info("Running test script.");
+
+        School schoolA, schoolB;
+
+        // Get two schools at random
+        try (Connection connection = Database.getConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("SELECT * FROM Schools ORDER BY RAND() LIMIT 1");
+
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            schoolA = new School(resultSet);
+
+            resultSet = stmt.executeQuery();
+            resultSet.next();
+            schoolB = new School(resultSet);
+        } catch (SQLException e) {
+            logger.error("", e);
+            return;
+        }
+
+        // Randomly select 10 attributes to compare
+        List<Attribute> attributes = Arrays.asList(Attribute.values());
+        Collections.shuffle(attributes);
+        attributes = attributes.subList(0, 10);
+
+        // Get a list of attribute options
+        List<AttributeOption> options = attributes.stream()
+                .map(a -> AttributeOption.of(a, schoolA.get(a), schoolB.get(a)))
+                .toList();
+
+        // Prompt the user
+        AttributePrompt prompt = AttributePrompt.of(
+                "Select the attributes to overwrite:",
+                options,
+                schoolA,
+                schoolB
+        );
+
+        List<Attribute> selection = Main.GUI.showPrompt(prompt);
+
+        System.out.println("Selection:");
+        for (Attribute attribute : selection)
+            System.out.println(attribute.name());
     }
 }

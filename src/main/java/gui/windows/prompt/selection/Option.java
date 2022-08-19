@@ -1,4 +1,4 @@
-package gui.windows.prompt;
+package gui.windows.prompt.selection;
 
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogBuilder;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
@@ -7,9 +7,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * This represents a single option listed in the {@link Prompt} window.
+ * This represents a single option listed in the {@link SelectionPrompt} window.
  *
- * @see Prompt
+ * @see SelectionPrompt
  */
 public class Option<T> {
     /**

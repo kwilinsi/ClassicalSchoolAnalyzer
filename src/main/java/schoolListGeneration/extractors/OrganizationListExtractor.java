@@ -9,8 +9,8 @@ import constructs.Attribute;
 import constructs.CreatedSchool;
 import constructs.Organization;
 import constructs.SchoolManager;
-import gui.windows.prompt.Option;
-import gui.windows.prompt.Prompt;
+import gui.windows.prompt.selection.Option;
+import gui.windows.prompt.selection.SelectionPrompt;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -97,7 +97,7 @@ public class OrganizationListExtractor {
         List<CreatedSchool> list = new ArrayList<>();
         logger.debug("Running extract_ACCS()...");
 
-        int choice = Main.GUI.showPrompt(Prompt.of(
+        int choice = Main.GUI.showPrompt(SelectionPrompt.of(
                 "ACCS - Cache",
                 "Select a mode for loading ACCS school pages:",
                 Option.of("Use Cache", 1),
@@ -313,7 +313,7 @@ public class OrganizationListExtractor {
         logger.debug("Running extract_ICLE()...");
 
         // Prompt the user for the mode of extraction for individual school pages.
-        int choice = Main.GUI.showPrompt(Prompt.of(
+        int choice = Main.GUI.showPrompt(SelectionPrompt.of(
                 "ICLE - Cache",
                 "Select a mode for loading ICLE school and school list pages:",
                 Option.of("Use Cache", 1),

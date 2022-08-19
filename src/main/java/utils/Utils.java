@@ -140,20 +140,23 @@ public class Utils {
      * custom method to do it.
      * <p>
      * This takes some input string and forces it to be exactly <code>length</code> characters long. If the input is too
-     * short, it is padded with spaces on the right (left-aligned). If it is too long, excess characters are taken off
-     * the end.
+     * short, it is padded with spaces on the right (left-aligned).
+     * <p>
+     * If the string is too long, excess characters are taken off the end. If the <code>ellipsis</code> parameter is
+     * <code>true</code>, an extra character is removed and replaced with an ellipsis, to indicate to the user that the
+     * string was truncated.
      *
-     * @param input  The input string to format.
-     * @param length The length of the desired output.
+     * @param input    The input string to format.
+     * @param length   The length of the desired output.
+     * @param ellipsis Whether to add an ellipsis to the end of the string if it is too long.
      *
      * @return The formatted string.
      */
     @NotNull
-    public static String padTrimString(@NotNull String input, int length) {
+    public static String padTrimString(@NotNull String input, int length, boolean ellipsis) {
         if (input.length() > length)
-            return input.substring(0, length);
+            return input.substring(0, length - (ellipsis ? 1 : 0)) + (ellipsis ? "\u2026" : "");
         else
             return String.format("%-" + length + "s", input);
     }
-
 }

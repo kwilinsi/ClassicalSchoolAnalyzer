@@ -7,8 +7,8 @@ import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
 import gui.utils.GUILogAppender;
 import gui.windows.HomeScreen;
-import gui.windows.prompt.Option;
 import gui.windows.prompt.Prompt;
+import gui.windows.prompt.selection.SelectionPrompt;
 import main.Main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,11 +62,11 @@ public class GUI implements Runnable {
     }
 
     /**
-     * Add a {@link Prompt} window to the GUI and return the user's selection.
+     * Add a {@link SelectionPrompt} window to the GUI and return the user's
+     * {@link SelectionPrompt#getChoice() choice}.
      *
      * @param prompt The prompt to add to the GUI.
-     * @param <T>    The type of the {@link Option#getValue() value} that the prompt
-     *               {@link Prompt#getSelection() returns}.
+     * @param <T>    The type of value that the prompt returns.
      *
      * @return The user's selection.
      */
@@ -74,7 +74,7 @@ public class GUI implements Runnable {
         windowGUI.addWindow(prompt);
         update();
         prompt.waitUntilClosed();
-        return prompt.getSelection();
+        return prompt.getChoice();
     }
 
     /**
