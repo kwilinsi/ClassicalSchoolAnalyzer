@@ -13,7 +13,8 @@ public class CCLEExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(CCLEExtractor.class);
 
     /**
-     * Extract schools from the Consortium for Classical Lutheran Education website.
+     * Extract schools from the {@link constructs.OrganizationManager#CCLE Consortium for Classical Lutheran Education}
+     * website.
      *
      * @param document The HTML document from which to extract the list.
      *

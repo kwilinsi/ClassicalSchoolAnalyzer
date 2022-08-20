@@ -25,7 +25,8 @@ public class ACCSExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(ACCSExtractor.class);
 
     /**
-     * Extract schools from the Association of Classical Christian Schools website.
+     * Extract schools from the {@link constructs.OrganizationManager#ACCS Association of Classical Christian Schools}
+     * website.
      *
      * @param document The HTML document from which to extract the list.
      *

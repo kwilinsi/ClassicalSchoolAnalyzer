@@ -23,7 +23,7 @@ public class GHIExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(GHIExtractor.class);
 
     /**
-     * Extract schools from the Great Hearts Institute website.
+     * Extract schools from the {@link constructs.OrganizationManager#GHI Great Hearts Institute} website.
      *
      * @param document The HTML document from which to extract the list.
      *

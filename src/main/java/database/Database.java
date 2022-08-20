@@ -7,12 +7,9 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
-import utils.Utils;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 public class Database {
     private static final Logger logger = LoggerFactory.getLogger(Database.class);
@@ -26,7 +23,7 @@ public class Database {
     /**
      * Load the settings for HikariCP and create a connection to the database.
      */
-    private static void load() {
+    static void load() {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(
                 String.format("jdbc:mysql://%s:%d/%s",
@@ -58,46 +55,6 @@ public class Database {
         } catch (HikariPool.PoolInitializationException e) {
             logger.error("Failed to initialize HikariCP. Was the 'classical' database created?", e);
             System.exit(1);
-        }
-    }
-
-    /**
-     * Make sure all the tables in the database are present. Create any missing tables.
-     */
-    public static void createTables() {
-        if (dataSource == null) load();
-        logger.info("Creating SQL tables from setup.sql.");
-
-        try (Connection connection = dataSource.getConnection()) {
-            Utils.runSqlScript("setup.sql", connection);
-        } catch (IOException e) {
-            logger.error("Failed to load setup.sql script.", e);
-        } catch (SQLException e) {
-            logger.error("Failed to create tables.", e);
-        }
-    }
-
-    /**
-     * Delete all the tables in the 'classical' database.
-     */
-    public static void deleteTables() {
-        if (dataSource == null) load();
-        logger.info("Deleting all SQL tables");
-
-        try (Connection connection = dataSource.getConnection()) {
-            Statement statement = connection.createStatement();
-            statement.addBatch("DROP TABLE IF EXISTS PageWords");
-            statement.addBatch("DROP TABLE IF EXISTS PageTexts");
-            statement.addBatch("DROP TABLE IF EXISTS Links");
-            statement.addBatch("DROP TABLE IF EXISTS Pages");
-            statement.addBatch("DROP TABLE IF EXISTS Schools");
-            statement.addBatch("DROP TABLE IF EXISTS DistrictOrganizations");
-            statement.addBatch("DROP TABLE IF EXISTS Districts");
-            statement.addBatch("DROP TABLE IF EXISTS Organizations");
-            statement.addBatch("DROP TABLE IF EXISTS Cache");
-            statement.executeBatch();
-        } catch (SQLException e) {
-            logger.error("Failed to recreate database.", e);
         }
     }
 

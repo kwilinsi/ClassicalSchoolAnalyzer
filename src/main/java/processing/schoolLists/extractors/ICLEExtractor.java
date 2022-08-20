@@ -23,7 +23,8 @@ public class ICLEExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(ICLEExtractor.class);
 
     /**
-     * Extract schools from the Institute for Catholic Liberal Education website.
+     * Extract schools from the {@link constructs.OrganizationManager#ICLE Institute for Catholic Liberal Education}
+     * website.
      *
      * @param document The HTML document from which to extract the list.
      *

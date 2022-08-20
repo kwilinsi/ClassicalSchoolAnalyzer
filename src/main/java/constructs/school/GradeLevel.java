@@ -97,6 +97,8 @@ public enum GradeLevel {
                 continue;
             }
 
+            // TODO treat the word "through" as a hyphen
+
             // See if this is a range of grades, by looking for a hyphen or other dash
             String[] bounds = str.split("[—–-]+");
             if (bounds.length == 1) continue;

@@ -19,7 +19,7 @@ public class HillsdaleExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(HillsdaleExtractor.class);
 
     /**
-     * Extract schools from the Hillsdale K-12 Education website.
+     * Extract schools from the {@link constructs.OrganizationManager#HILLSDALE Hillsdale K-12 Education} website.
      *
      * @param document The HTML document from which to extract the list.
      *

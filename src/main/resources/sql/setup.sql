@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS Schools
     website_url_redirect                    VARCHAR(300),
     has_website                             BOOL         NOT NULL,
     contact_name                            VARCHAR(100),
+    email                                   VARCHAR(100),
     accs_accredited                         BOOL,
     office_phone                            VARCHAR(20),
     date_accredited                         DATE,

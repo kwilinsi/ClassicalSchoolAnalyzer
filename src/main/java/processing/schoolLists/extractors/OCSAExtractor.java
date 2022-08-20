@@ -13,7 +13,8 @@ public class OCSAExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(OCSAExtractor.class);
 
     /**
-     * Extract schools from the Orthodox Christian School Association website.
+     * Extract schools from the {@link constructs.OrganizationManager#OCSA Orthodox Christian School Association}
+     * website.
      *
      * @param document The HTML document from which to extract the list.
      *

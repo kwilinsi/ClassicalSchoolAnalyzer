@@ -43,6 +43,7 @@ public enum Attribute {
     website_url_redirect(URL.class, null, 300),
     has_website(Boolean.TYPE, false),
     contact_name(String.class, null, 100),
+    email(String.class, null, 100),
     accs_accredited(Boolean.class, null),
     office_phone(String.class, null, 20),
     date_accredited(LocalDate.class, null),

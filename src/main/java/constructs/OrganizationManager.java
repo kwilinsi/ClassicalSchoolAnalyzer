@@ -19,6 +19,11 @@ import java.util.stream.Stream;
 public class OrganizationManager {
     /**
      * <b>Name:</b> Association of Classical Christian Schools
+     * <br><b>Name Abbreviation:</b> ACCS
+     * <br><b>Homepage URL:</b> <a href="https://classicalchristian.org">website</a>
+     * <br><b>School List URL:</b> <a href="https://classicalchristian.org/find-a-school/">school list</a>
+     * <br><b>Additional Indirect Matching Attributes:</b> {@link Attribute#accs_page_url accs_page_url}
+     * <br><b>Additional Relevant Matching Attributes:</b> <i>N/A</i>
      */
     public static final Organization ACCS = new Organization(
             1,
@@ -33,7 +38,15 @@ public class OrganizationManager {
 
     /**
      * <b>Name:</b> Great Hearts Institute
-     * <p>
+     * <br><b>Name Abbreviation:</b> GHI
+     * <br><b>Homepage URL:</b> <a href="https://greathearts.institute">website</a>
+     * <br><b>School List URL:</b>
+     * <a href="https://static.batchgeo.com/map/json/f0a726285be76dc6dc336e561b0726e6/1654008594?_=1660413403330">
+     * school list</a>
+     * <br><b>Additional Indirect Matching Attributes:</b> {@link Attribute#latitude latitute} and
+     * {@link Attribute#longitude longitude}
+     * <br><b>Additional Relevant Matching Attributes:</b> <i>N/A</i>
+     * <p><br>
      * <b>Notes:</b> This organization was formerly known as the "Institute for Classical Education". During the
      * development of this project, they rebranded to the Great Hearts Institute.
      * <p>
@@ -60,6 +73,12 @@ public class OrganizationManager {
 
     /**
      * <b>Name:</b> Hillsdale Classical Schools
+     * <br><b>Name Abbreviation:</b> HILLSDALE
+     * <br><b>Homepage URL:</b> <a href="https://k12.hillsdale.edu">website</a>
+     * <br><b>School List URL:</b>
+     * <a href="https://k12.hillsdale.edu/Schools/Affiliate-Classical-Schools/">school list</a>
+     * <br><b>Additional Indirect Matching Attributes:</b> <i>N/A</i>
+     * <br><b>Additional Relevant Matching Attributes:</b> <i>N/A</i>
      */
     public static final Organization HILLSDALE = new Organization(
             3,
@@ -74,6 +93,11 @@ public class OrganizationManager {
 
     /**
      * <b>Name</b>: Institute for Catholic Liberal Education
+     * <br><b>Name Abbreviation:</b> ICLE
+     * <br><b>Homepage URL:</b> <a href="https://catholicliberaleducation.org">website</a>
+     * <br><b>School List URL:</b> <a href="org">school list</a>
+     * <br><b>Additional Indirect Matching Attributes:</b> {@link Attribute#icle_page_url icle_page_url}
+     * <br><b>Additional Relevant Matching Attributes:</b> <i>N/A</i>
      */
     public static final Organization ICLE = new Organization(
             4,
@@ -88,6 +112,11 @@ public class OrganizationManager {
 
     /**
      * <b>Name</b>: Anglican School Association
+     * <br><b>Name Abbreviation:</b> ASA
+     * <br><b>Homepage URL:</b> <a href="https://anglicanschools.org">website</a>
+     * <br><b>School List URL:</b> <a href="https://anglicanschools.org/members/">school list</a>
+     * <br><b>Additional Indirect Matching Attributes:</b> <i>N/A</i>
+     * <br><b>Additional Relevant Matching Attributes:</b> <i>N/A</i>
      */
     public static final Organization ASA = new Organization(
             5,
@@ -102,6 +131,11 @@ public class OrganizationManager {
 
     /**
      * <b>Name</b>: Consortium for Classical Lutheran Education
+     * <br><b>Name Abbreviation:</b> CCLE
+     * <br><b>Homepage URL:</b> <a href="http://www.ccle.org">website</a>
+     * <br><b>School List URL:</b> <a href="http://www.ccle.org/directory/">school list</a>
+     * <br><b>Additional Indirect Matching Attributes:</b> <i>N/A</i>
+     * <br><b>Additional Relevant Matching Attributes:</b> <i>N/A</i>
      */
     public static final Organization CCLE = new Organization(
             6,
@@ -116,7 +150,12 @@ public class OrganizationManager {
 
     /**
      * <b>Name</b>: Orthodox Christian School Association
-     * <p>
+     * <br><b>Name Abbreviation:</b> OCSA
+     * <br><b>Homepage URL:</b> <a href="https://www.orthodoxschools.org">website</a>
+     * <br><b>School List URL:</b> <a href="https://www.orthodoxschools.org/directory-of-schools/">school list</a>
+     * <br><b>Additional Indirect Matching Attributes:</b> <i>N/A</i>
+     * <br><b>Additional Relevant Matching Attributes:</b> <i>N/A</i>
+     * <p><br>
      * <b>Notes:</b> This organization is not explicitly classical. However, it's hard to conceive of a truly
      * Orthodox school that is not at least somewhat classical; thus, it is included here.
      */
