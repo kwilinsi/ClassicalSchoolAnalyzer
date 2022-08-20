@@ -15,6 +15,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.chrono.ChronoLocalDate;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -317,9 +318,11 @@ public enum Attribute {
      * This is done differently based on the {@link #type} of this {@link Attribute}. In all cases, it's assumed that
      * neither value is <code>null</code> or {@link #isEffectivelyNull(Object) effectively null}.
      * <ul>
-     *     <li> For {@link URL} types, the values are treated as {@link String Strings}, converted to {@link URL URLs},
+     *     <li>For {@link URL} types, the values are treated as {@link String Strings}, converted to {@link URL URLs},
      *     and compared via {@link URLUtils#equals(URL, URL) URLUtils.equals()}.
-     *     <li>{@link #grades_offered} and {@link #address}: <i>To be implemented</i>.
+     *     <li>For {@link #grades_offered}, the values are passed to {@link GradeLevel#identifyGrades(String)
+     *     GradeLevel.identifyGrades()} and the resulting lists are {@link GradeLevel#rangesEqual(List, List) compared}.
+     *     <li>{@link #address}: <i>To be implemented</i>.
      * </ul>
      *
      * @param valA The first value.
@@ -339,7 +342,13 @@ public enum Attribute {
                 return false;
             }
 
-        // TODO implement better matching for grades_offered, and maybe even addresses
+        if (this == grades_offered)
+            return GradeLevel.rangesEqual(
+                    GradeLevel.identifyGrades(valA.toString()),
+                    GradeLevel.identifyGrades(valB.toString())
+            );
+
+        // TODO add better address handling
         return false;
     }
 
@@ -352,7 +361,7 @@ public enum Attribute {
      *     <li> For {@link #website_url} attribute only, the values are compared via
      *     {@link URLUtils#hostEquals(String, String) URLUtils.hostEquals()}. Thus, only the hosts of the URLs must
      *     be the same for this to be a possible match.
-     * <ul>
+     * </ul>
      *
      * @param valA The first value.
      * @param valB The second value.
