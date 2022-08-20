@@ -29,7 +29,7 @@ public class MatchIdentifier {
      * Determine whether the database contains a match for the given {@link CreatedSchool}.
      * <p>
      * <h2>Process</h2>
-     * This function performs the following steps in order:
+     * This function (using its helper functions in this class) performs the following steps in order:
      * <ol>
      *     <li>Search the database (using the <code>schoolsCache</code>) for any schools that might match this one.
      *     <li>While searching, if any {@link SchoolMatch#isExactMatch() exact} matches are found (duplicate schools),
@@ -166,12 +166,11 @@ public class MatchIdentifier {
         }
 
         // If the user chose to OVERWRITE, give them a prompt asking exactly which attributes to overwrite.
-        // If they chose to APPEND instead, use the attributes that differ and are not null for the incoming school
         if (choice == MatchResultType.OVERWRITE)
             match.setAttributesToUpdate(Main.GUI.showPrompt(
                     AttributePrompt.of(
                             "Select the attributes to overwrite:",
-                            match.getDifferingAttributes().stream()
+                            match.getDifferingAttributes(true).stream()
                                     .map(a -> AttributeOption.of(
                                             a,
                                             incomingSchool.get(a),
@@ -182,10 +181,13 @@ public class MatchIdentifier {
                             match.getExistingSchool()
                     )
             ));
-        else
+
+        // If they chose to APPEND instead, use the attributes that differ, aren't effectively null for the incoming
+        // school, and aren't exclusionRelated.
+        if (choice == MatchResultType.APPEND)
             match.setAttributesToUpdate(
-                    match.getDifferingAttributes().stream()
-                            .filter(a -> incomingSchool.get(a) != null)
+                    match.getDifferingAttributes(false).stream()
+                            .filter(a -> !incomingSchool.isEffectivelyNull(a))
                             .collect(Collectors.toList())
             );
 
@@ -283,7 +285,7 @@ public class MatchIdentifier {
             panel.addComponent(GUIUtils.formatSchoolAttributes(
                     match.getExistingSchool(),
                     match.getRelevantDisplayAttributes(),
-                    match.getMatchingAttributes(MatchLevel.INDICATOR),
+                    match.getMatchingAttributes(MatchLevel.INDICATOR, true),
                     true
             ));
             panel.addComponent(new EmptySpace());

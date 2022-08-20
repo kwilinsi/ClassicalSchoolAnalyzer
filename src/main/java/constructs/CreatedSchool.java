@@ -1,20 +1,21 @@
 package constructs;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import schoolListGeneration.matching.MatchIdentifier;
 import schoolListGeneration.matching.MatchResult;
 import schoolListGeneration.matching.MatchResultType;
+import schoolListGeneration.matching.SchoolMatch;
 import utils.Database;
 import utils.URLUtils;
+import utils.Utils;
 
 import java.net.URL;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * This extension of the {@link School} class is used for creating new schools from the content of school list pages on
@@ -71,68 +72,11 @@ public class CreatedSchool extends School {
             return;
         }
 
-        // TODO don't OVERWRITE the exclude fields
-
-        //
-        // ---------- Validate the type of the arg parameter ----------
-        //
-
-        // These arguments are only present for certain match types
-        @Nullable
-        District argDistrict = null;
-        @Nullable
-        School argSchool = null;
-
-        if (matchType == MatchResultType.APPEND || matchType == MatchResultType.OVERWRITE)
-            if (matchResult.getMatch() instanceof School s) {
-                argSchool = s;
-            } else {
-                logger.error("Unreachable state: Match result arg not a school for type {}.", matchType.name());
-                return;
-            }
-
-        if (matchType == MatchResultType.ADD_TO_DISTRICT)
-            if (matchResult.getMatch() instanceof District d) {
-                argDistrict = d;
-            } else {
-                logger.error("Unreachable state: Match result arg not a district for type {}.", matchType.name());
-                return;
-            }
-
-
-        // ---------- ---------- ---------- ---------- ----------
-        // Generate a SQL statement
-        // ---------- ---------- ---------- ---------- ----------
-
-        logger.debug("Generating SQL statement for school {}.", name());
-        String sql = "";
-
-        //
-        // ---------- Obtain a list of attributes to put in the SQL statement ----------
-        //
-
-        List<Attribute> attributes = new ArrayList<>();
-
-        // On ADD_TO_DISTRICT or NEW_DISTRICT (types that use SQL INSERT), add all attributes
-        if (matchResult.usesInsertStmt())
-            attributes.addAll(this.attributes.keySet());
-
-        // On APPEND, add only the attributes that are null for the original school but not for this one
-        if (matchType == MatchResultType.APPEND)
-            for (Attribute a : this.attributes.keySet())
-                if (argSchool.isEffectivelyNull(a) && !isEffectivelyNull(a))
-                    attributes.add(a);
-
-        // On OVERWRITE, add all attributes except is_excluded, excluded_reason, and anything null for this school
-        if (matchType == MatchResultType.OVERWRITE)
-            for (Attribute a : this.attributes.keySet())
-                if (!a.equals(Attribute.is_excluded) &&
-                    !a.equals(Attribute.excluded_reason) &&
-                    !isEffectivelyNull(a))
-                    attributes.add(a);
-
-        // If there aren't any attributes, clearly there's nothing to do. Exit the method.
-        if (attributes.size() == 0) return;
+        boolean useInsertStmt = matchResult.usesInsertStmt();
+        SchoolMatch schoolMatch = matchResult.getMatch();
+        // I know this is true, but IntelliJ doesn't believe me. So assert it explicitly
+        assert (useInsertStmt || schoolMatch != null) &&
+               (matchType == MatchResultType.NEW_DISTRICT || schoolMatch != null);
 
         //
         // ---------- Determine the district_id, if applicable ----------
@@ -143,37 +87,48 @@ public class CreatedSchool extends School {
             District district = new District(name(), getStr(Attribute.website_url));
             district.saveToDatabase();
             this.district_id = district.getId();
+        } else {
+            // Otherwise copy the district_id from matching school
+            this.district_id = schoolMatch.getExistingSchool().getDistrictId();
         }
 
-        // If adding a new school to an existing district, set the district_id attribute.
-        if (matchType == MatchResultType.ADD_TO_DISTRICT)
-            this.district_id = argDistrict.getId();
-
-        //
-        // ---------- Generate the SQL string ----------
-        //
-
-        // These match types require a new school record to be created via INSERT.
-        if (matchResult.usesInsertStmt()) {
-            StringBuilder columns = new StringBuilder();
-            StringBuilder placeholders = new StringBuilder();
-            for (Attribute attribute : attributes) {
-                columns.append(attribute.name()).append(", ");
-                placeholders.append("?, ");
-            }
-            columns.append("district_id");
-            placeholders.append("?");
-            sql = String.format("INSERT INTO Schools (%s) VALUES (%s)", columns, placeholders);
+        // If this is a duplicate, just add an organization relation and exit
+        if (matchType == MatchResultType.DUPLICATE) {
+            addDistrictOrganizationRelation();
+            return;
         }
 
-        // These match types update an existing school via UPDATE.
-        if (matchResult.usesUpdateStmt()) {
-            StringBuilder update = new StringBuilder();
-            for (Attribute attribute : attributes)
-                update.append(attribute.name()).append(" = ?, ");
-            update.delete(update.length() - 2, update.length());
-            sql = String.format("UPDATE Schools SET %s WHERE id = ?", update);
+        // ---------- ---------- ---------- ---------- ----------
+        // Generate a SQL statement
+        // ---------- ---------- ---------- ---------- ----------
+
+
+        String sql;
+        List<Attribute> attributes;
+
+        // Set the list of attributes to be used in the SQL statement.
+        if (useInsertStmt)
+            attributes = new ArrayList<>(this.attributes.keySet());
+        else
+            attributes = schoolMatch.getAttributesToUpdate();
+
+        // If there aren't any attributes, clearly there's nothing to do. Exit the method.
+        if (attributes.size() == 0) {
+            logger.debug("No attributes to update for school {}.", name());
+            return;
         }
+
+        // Get the names of the attributes for use in the SQL statement
+        List<String> attributeNames = attributes.stream().map(Attribute::name).collect(Collectors.toList());
+
+        // For an insert statement, add the district_id
+        if (useInsertStmt) attributeNames.add("district_id");
+
+        // Create the SQL statement based on the appropriate statement type and the attributes to include
+        if (useInsertStmt)
+            sql = "INSERT INTO Schools %s;".formatted(Utils.generateSQLStmtArgs(attributeNames, true));
+        else
+            sql = "UPDATE Schools %s WHERE id = ?;".formatted(Utils.generateSQLStmtArgs(attributeNames, false));
 
 
         // ---------- ---------- ---------- ---------- ----------
@@ -189,63 +144,59 @@ public class CreatedSchool extends School {
             for (int i = 0; i < attributes.size(); i++)
                 attributes.get(i).addToStatement(statement, get(attributes.get(i)), i + 1);
 
-            // For an INSERT statement, set the district_id value
-            if (matchResult.usesInsertStmt())
+            // Add the district_id / school id, depending on the statement type
+            if (useInsertStmt)
                 statement.setInt(attributes.size() + 1, this.district_id);
-
-            // For an UPDATE statement, add the school ID to the statement
-            if (matchResult.usesUpdateStmt())
-                statement.setInt(attributes.size() + 1, Objects.requireNonNull(argSchool).getId());
+            else
+                statement.setInt(1, schoolMatch.getExistingSchool().getId());
 
             // Execute the finished statement
             statement.execute();
 
             // If an INSERT statement was used to add a new school, get the new id assigned by the database.
-            if (matchResult.usesInsertStmt()) {
+            if (useInsertStmt) {
                 Statement stmt = connection.createStatement();
                 ResultSet result = stmt.executeQuery("SELECT LAST_INSERT_ID();");
                 if (result.next())
                     this.id = result.getInt(1);
                 else
-                    logger.error("Failed to get auto-generated id of newly created school.");
+                    logger.error("Failed to get auto-generated id of newly created school {}.", name());
             } else {
-                // Otherwise, get the id by copying the one from the updated school
-                this.id = Objects.requireNonNull(argSchool).getId();
-            }
-        }
-
-
-        // ---------- ---------- ---------- ---------- ----------
-        // Add a DistrictOrganization relation
-        // ---------- ---------- ---------- ---------- ----------
-
-        // If the district_id is missing, get it
-        if (this.district_id == -1) {
-            try (Connection connection = Database.getConnection()) {
-                PreparedStatement statement = connection.prepareStatement(
-                        "SELECT district_id FROM Schools WHERE id = ?;"
-                );
-                statement.setInt(1, this.id);
-                ResultSet result = statement.executeQuery();
-                if (result.next())
-                    this.district_id = result.getInt(1);
-                else {
-                    logger.error("Failed to get district_id of school {}.", this.id);
-                    return;
-                }
+                // Otherwise, get the school and district ids by copying the one from the updated school
+                this.id = schoolMatch.getExistingSchool().getId();
             }
         }
 
         // Add a relation between the parent district of this school and the organization from which this school was
         // created.
-        try {
-            new District(this.district_id, null, null).addOrganizationRelation(organization);
-        } catch (SQLException e) {
-            throw new SQLException("Failed to add organization relation to district " + this.district_id + ".", e);
-        }
+        addDistrictOrganizationRelation();
 
         // Finally, add this new school to the cache
         schoolsCache.add(this);
+    }
+
+    /**
+     * Add a relation between this school's parent {@link District} and the {@link #organization} from which it comes.
+     * <p>
+     * This is done via a call to {@link District#addOrganizationRelation(Organization)}.
+     * <p>
+     * Note: This requires that the {@link #district_id} has been set. If it has not, an
+     * {@link IllegalArgumentException} is thrown.
+     *
+     * @throws IllegalArgumentException If the {@link #district_id} has not been set.
+     * @throws SQLException             If there is an error adding the relation.
+     * @see District#addOrganizationRelation(Organization)
+     */
+    public void addDistrictOrganizationRelation() throws SQLException, IllegalArgumentException {
+        try {
+            if (this.district_id == -1) throw new IllegalArgumentException();
+            new District(this.district_id, null, null).addOrganizationRelation(organization);
+        } catch (SQLException e) {
+            throw new SQLException("Failed to add organization relation to district " + this.district_id + ".", e);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to add district organization relation for school " +
+                                               name() + ". District id not set.", e);
+        }
     }
 
     /**

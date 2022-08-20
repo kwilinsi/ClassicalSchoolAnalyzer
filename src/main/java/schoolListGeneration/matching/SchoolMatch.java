@@ -90,7 +90,7 @@ public class SchoolMatch {
     public School getExistingSchool() {
         return existingSchool;
     }
-    
+
     /**
      * Get the list of {@link Attribute Attributes} that the user chose to update for the {@link #existingSchool}. Note
      * that this will never be <code>null</code>. By default, it is an empty list.
@@ -116,12 +116,17 @@ public class SchoolMatch {
     /**
      * Return the {@link #matchingAttributes} that match at or above the given {@link MatchLevel}.
      *
+     * @param includeExcludes If this is <code>true</code>, the attributes that are
+     *                        {@link Attribute#isExclusionRelated() exclusion related} are included in the list.
+     *                        Otherwise, they are omitted.
+     *
      * @return A list of attributes.
      */
     @NotNull
-    public List<Attribute> getMatchingAttributes(@NotNull MatchLevel level) {
+    public List<Attribute> getMatchingAttributes(@NotNull MatchLevel level, boolean includeExcludes) {
         return matchingAttributes.entrySet().stream()
                 .filter(e -> e.getValue().isAtLeast(level))
+                .filter(e -> includeExcludes || !e.getKey().isExclusionRelated())
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
@@ -130,12 +135,17 @@ public class SchoolMatch {
      * Return every {@link #matchingAttributes matchingAttribute} whose {@link MatchLevel} is anything less than
      * {@link MatchLevel#EXACT EXACT}, meaning the values aren't a perfect match.
      *
+     * @param includeExcludes If this is <code>true</code>, the attributes that are
+     *                        {@link Attribute#isExclusionRelated() exclusion related} are included in the list.
+     *                        Otherwise, they are omitted.
+     *
      * @return A list of attributes.
      */
     @NotNull
-    public List<Attribute> getDifferingAttributes() {
+    public List<Attribute> getDifferingAttributes(boolean includeExcludes) {
         return matchingAttributes.entrySet().stream()
                 .filter(e -> e.getValue() != MatchLevel.EXACT)
+                .filter(e -> includeExcludes || !e.getKey().isExclusionRelated())
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
@@ -144,7 +154,7 @@ public class SchoolMatch {
      * Return whether the {@link #existingSchool} exactly matches the {@link #incomingSchool}.
      * <p>
      * For this to be true, <i>one</i> of the following conditions must be met for <i>every</i> attribute, except for
-     * {@link Attribute#is_excluded is_excluded} and {@link Attribute#excluded_reason excluded_reason}:
+     * those that are {@link Attribute#isExclusionRelated() exclusionRelated}:
      * <ul>
      *     <li>The {@link #matchingAttributes} map records the attribute as an {@link MatchLevel#EXACT EXACT} match.
      *     <li>The attribute is {@link Attribute#isEffectivelyNull(Object) null} for the {@link #incomingSchool} but
@@ -157,7 +167,7 @@ public class SchoolMatch {
      */
     public boolean isExactMatch() {
         return matchingAttributes.entrySet().stream()
-                .filter(e -> e.getKey() != Attribute.is_excluded && e.getKey() != Attribute.excluded_reason)
+                .filter(e -> !e.getKey().isExclusionRelated())
                 .allMatch(e -> e.getValue() == MatchLevel.EXACT ||
                                (incomingSchool.isEffectivelyNull(e.getKey()) &&
                                 !existingSchool.isEffectivelyNull(e.getKey()))

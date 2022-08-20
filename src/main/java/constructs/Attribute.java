@@ -135,7 +135,9 @@ public enum Attribute {
      * @throws SQLException             If there is an error adding the value to the statement.
      * @throws IllegalArgumentException If this {@link Attribute Attribute's} type isn't recognized.
      */
-    public void addToStatement(PreparedStatement statement, Object value, int position) throws SQLException {
+    public void addToStatement(@NotNull PreparedStatement statement,
+                               @Nullable Object value,
+                               int position) throws SQLException {
         // Handle null values
         if (value == null) {
             int sqlType;
@@ -278,5 +280,16 @@ public enum Attribute {
             return URLUtils.domainEquals(schoolA.getStr(this), schoolB.getStr(this));
 
         return matches(schoolA, schoolB);
+    }
+
+    /**
+     * This simply returns <code>true</code> if this attribute is {@link #is_excluded} or {@link #excluded_reason}.
+     * Those attributes aren't included in a number of comparisons between schools, and they should only be modified in
+     * the database following explicit instruction from the user.
+     *
+     * @return <code>True</code> if and only if this attribute is related to a school being excluded.
+     */
+    public boolean isExclusionRelated() {
+        return this == is_excluded || this == excluded_reason;
     }
 }

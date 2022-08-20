@@ -1,6 +1,5 @@
 package schoolListGeneration.matching;
 
-import constructs.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,10 +12,11 @@ public class MatchResult {
 
     /**
      * This is an optional {@link SchoolMatch} that may contain extra relevant information about the match. It is only
-     * included for {@link MatchResultType#ADD_TO_DISTRICT ADD_TO_DISTRICT}, {@link MatchResultType#APPEND APPEND}, and
+     * included for {@link MatchResultType#DUPLICATE DUPLICATE},
+     * {@link MatchResultType#ADD_TO_DISTRICT ADD_TO_DISTRICT}, {@link MatchResultType#APPEND APPEND}, and
      * {@link MatchResultType#OVERWRITE OVERWRITE} {@link #type types}. For
-     * {@link MatchResultType#NEW_DISTRICT NEW_DISTRICT}, {@link MatchResultType#OMIT OMIT}, and
-     * {@link MatchResultType#DUPLICATE DUPLICATE}, it is <code>null</code>.
+     * {@link MatchResultType#NEW_DISTRICT NEW_DISTRICT} and {@link MatchResultType#OMIT OMIT}, it is
+     * <code>null</code>.
      */
     @Nullable
     private final SchoolMatch match;
@@ -36,16 +36,10 @@ public class MatchResult {
         this.type = type;
         this.match = match;
 
-        switch (type) {
-            case NEW_DISTRICT, OMIT, DUPLICATE -> {
-                if (match != null)
-                    throw new IllegalArgumentException("MatchResultType " + type + " should not include a match.");
-            }
-            case ADD_TO_DISTRICT, APPEND, OVERWRITE -> {
-                if (match == null)
-                    throw new IllegalArgumentException("MatchResultType " + type + " missing SchoolMatch instance.");
-            }
-        }
+        if (((type == MatchResultType.NEW_DISTRICT || type == MatchResultType.OMIT) && match != null) ||
+            ((type == MatchResultType.DUPLICATE || type == MatchResultType.ADD_TO_DISTRICT ||
+              type == MatchResultType.APPEND || type == MatchResultType.OVERWRITE) && match == null))
+            throw new IllegalArgumentException("Unreachable state: Match type " + type + " received match " + match);
     }
 
     /**
@@ -93,21 +87,5 @@ public class MatchResult {
      */
     public boolean usesInsertStmt() {
         return type == MatchResultType.NEW_DISTRICT || type == MatchResultType.ADD_TO_DISTRICT;
-    }
-
-    /**
-     * This returns whether a SQL <code>UPDATE</code> statement will be generated for this {@link MatchResult}. That is
-     * determined based the {@link #type}.
-     * <p>
-     * {@link MatchResultType#APPEND APPEND} and {@link MatchResultType#OVERWRITE OVERWRITE} will return
-     * <code>true</code>, because they update attributes for an existing school. Everything else will return
-     * <code>false</code>.
-     * <p>
-     * Note that for types where this is <code>true</code>, the {@link #match} parameter must contain a {@link School}.
-     *
-     * @return Whether a SQL <code>UPDATE</code> statement is required based on this match type.
-     */
-    public boolean usesUpdateStmt() {
-        return type == MatchResultType.APPEND || type == MatchResultType.OVERWRITE;
     }
 }
