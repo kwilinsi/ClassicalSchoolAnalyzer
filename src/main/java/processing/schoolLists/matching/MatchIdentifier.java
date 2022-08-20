@@ -4,6 +4,7 @@ import com.googlecode.lanterna.gui2.*;
 import constructs.*;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
+import constructs.school.MatchLevel;
 import constructs.school.School;
 import gui.utils.GUIUtils;
 import gui.windows.prompt.attribute.AttributeOption;
@@ -35,7 +36,7 @@ public class MatchIdentifier {
      * This function (using its helper functions in this class) performs the following steps in order:
      * <ol>
      *     <li>Search the database (using the <code>schoolsCache</code>) for any schools that might match this one.
-     *     <li>While searching, if any {@link SchoolMatch#isExactMatch() exact} matches are found (duplicate schools),
+     *     <li>While searching, if any {@link SchoolMatch#isExactMatchOrSubset() exact} matches are found (duplicate schools),
      *     immediately exit, marking this school as a {@link MatchResultType#DUPLICATE DUPLICATE}.
      *     <li>Identify a list of districts from all of the partially matching schools.
      *     <li>Check each district for a possible match by providing summary information on the schools in the district
@@ -67,7 +68,7 @@ public class MatchIdentifier {
             if (m.isPartialMatch()) {
                 matches.add(m);
                 m.processAllAttributes();
-                if (m.isExactMatch()) return MatchResultType.DUPLICATE.of(m);
+                if (m.isExactMatchOrSubset()) return MatchResultType.DUPLICATE.of(m);
             }
         }
 

@@ -3,6 +3,7 @@ package processing.schoolLists.matching;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.Organization;
+import constructs.school.MatchLevel;
 import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,16 +31,16 @@ public class SchoolMatch {
     private final CreatedSchool incomingSchool;
 
     /**
-     * This map records which of the {@link Attribute Attributes} are found to match between the {@link #incomingSchool}
-     * and the {@link #existingSchool}, and the {@link MatchLevel Level} of the match.
+     * This map records the {@link MatchLevel} between the {@link #incomingSchool incoming} and
+     * {@link #existingSchool existing} schools for each {@link Attribute}.
      * <p>
-     * This map contains as its keys {@link Attribute#values() every} {@link Attribute}.
+     * This map contains as its keys {@link Attribute#values() every} attribute.
      */
     @NotNull
-    private final Map<Attribute, MatchLevel> matchingAttributes = new HashMap<>();
+    private final Map<Attribute, MatchLevel> attributes = new HashMap<>();
 
     /**
-     * This is the number of attributes in {@link #matchingAttributes} that are not
+     * This is the number of attributes in {@link #attributes} that are not
      * {@link Attribute#isEffectivelyNull(Object) null} for either school.
      * <p>
      * This is used for assessing the <i>strength</i> of the match (e.g., how closely two schools match overall).
@@ -69,7 +70,7 @@ public class SchoolMatch {
 
     /**
      * Create a new {@link SchoolMatch} attached to a particular {@link School}. Set the existing and incoming schools
-     * and the {@link #matchingAttributes}.
+     * and the {@link #attributes}.
      *
      * @param existingSchool The {@link #existingSchool}.
      * @param incomingSchool The {@link #incomingSchool}.
@@ -78,7 +79,7 @@ public class SchoolMatch {
         this.existingSchool = existingSchool;
         this.incomingSchool = incomingSchool;
 
-        Stream.of(Attribute.values()).forEach(a -> matchingAttributes.put(a, MatchLevel.NONE));
+        Stream.of(Attribute.values()).forEach(a -> attributes.put(a, MatchLevel.NONE));
     }
 
     /**
@@ -114,7 +115,7 @@ public class SchoolMatch {
     }
 
     /**
-     * Return the {@link #matchingAttributes} that match at or above the given {@link MatchLevel}.
+     * Return the {@link #attributes} that match at or above the given {@link MatchLevel}.
      *
      * @param includeExcludes If this is <code>true</code>, the attributes that are
      *                        {@link Attribute#isExclusionRelated() exclusion related} are included in the list.
@@ -124,7 +125,7 @@ public class SchoolMatch {
      */
     @NotNull
     public List<Attribute> getMatchingAttributes(@NotNull MatchLevel level, boolean includeExcludes) {
-        return matchingAttributes.entrySet().stream()
+        return attributes.entrySet().stream()
                 .filter(e -> e.getValue().isAtLeast(level))
                 .filter(e -> includeExcludes || !e.getKey().isExclusionRelated())
                 .map(Map.Entry::getKey)
@@ -132,7 +133,7 @@ public class SchoolMatch {
     }
 
     /**
-     * Return every {@link #matchingAttributes matchingAttribute} whose {@link MatchLevel} is anything less than
+     * Return every {@link #attributes matchingAttribute} whose {@link MatchLevel} is anything less than
      * {@link MatchLevel#EXACT EXACT}, meaning the values aren't a perfect match.
      *
      * @param includeExcludes If this is <code>true</code>, the attributes that are
@@ -143,7 +144,7 @@ public class SchoolMatch {
      */
     @NotNull
     public List<Attribute> getDifferingAttributes(boolean includeExcludes) {
-        return matchingAttributes.entrySet().stream()
+        return attributes.entrySet().stream()
                 .filter(e -> e.getValue() != MatchLevel.EXACT)
                 .filter(e -> includeExcludes || !e.getKey().isExclusionRelated())
                 .map(Map.Entry::getKey)
@@ -156,17 +157,18 @@ public class SchoolMatch {
      * For this to be true, <i>one</i> of the following conditions must be met for <i>every</i> attribute, except for
      * those that are {@link Attribute#isExclusionRelated() exclusionRelated}:
      * <ul>
-     *     <li>The {@link #matchingAttributes} map records the attribute as an {@link MatchLevel#EXACT EXACT} match.
+     *     <li>The {@link #attributes} map records the attribute as an {@link MatchLevel#EXACT EXACT} match.
      *     <li>The attribute is {@link Attribute#isEffectivelyNull(Object) null} for the {@link #incomingSchool} but
      *     not for the {@link #existingSchool}. (This indicates that less information is provided by the new school,
-     *     thereby rendering it an irrelevant duplicate).
+     *     thereby rendering it an irrelevant subset of that school).
      * </ul>
      *
-     * @return <code>True</code> if and only if the schools are an exact match.
+     * @return <code>True</code> if and only if the schools are an exact match or the incoming school is a subset of
+     *         the existing one.
      * @see #isPartialMatch()
      */
-    public boolean isExactMatch() {
-        return matchingAttributes.entrySet().stream()
+    public boolean isExactMatchOrSubset() {
+        return attributes.entrySet().stream()
                 .filter(e -> !e.getKey().isExclusionRelated())
                 .allMatch(e -> e.getValue() == MatchLevel.EXACT ||
                                (incomingSchool.isEffectivelyNull(e.getKey()) &&
@@ -178,19 +180,21 @@ public class SchoolMatch {
      * Return whether the {@link #existingSchool} and {@link #incomingSchool} are at least a partial match.
      * <p>
      * This is defined as one or more of the {@link Organization#getMatchIndicatorAttributes() matchIndicatorAttributes}
-     * having at least an {@link MatchLevel#INDICATOR INDICATOR} match level.
+     * having at least the {@link MatchLevel#RELATED RELATED} match level while also not being
+     * {@link Attribute#isEffectivelyNull(Object) effectively null} for either school.
      *
      * @return <code>True</code> if and only if the schools are at least a partial match.
      * @see #processIndicatorAttributes()
-     * @see #isExactMatch()
+     * @see #isExactMatchOrSubset()
      */
     public boolean isPartialMatch() {
         return Arrays.stream(incomingSchool.getOrganization().getMatchIndicatorAttributes())
-                .anyMatch(a -> matchingAttributes.get(a).isAtLeast(MatchLevel.INDICATOR));
+                .filter(a -> !incomingSchool.isEffectivelyNull(a))
+                .anyMatch(a -> attributes.get(a).isAtLeast(MatchLevel.RELATED));
     }
 
     /**
-     * Return the number of non-null {@link #matchingAttributes} between this {@link #existingSchool} and some
+     * Return the number of non-null {@link #attributes} between this {@link #existingSchool} and some
      * <code>incomingSchool</code>.
      *
      * @return {@link #nonNullMatchCount}
@@ -200,41 +204,41 @@ public class SchoolMatch {
     }
 
     /**
-     * Attempt to {@link Attribute#schoolIndicatorMatches(School, School) match} each of the
-     * {@link Organization#getMatchIndicatorAttributes() matchIndicatorAttributes} between the {@link #existingSchool}
-     * and the {@link #incomingSchool}, assigning the {@link MatchLevel#INDICATOR INDICATOR} match level to matching
-     * attributes.
-     *
-     * @see #processAllAttributes()
+     * This is similar to {@link #processAllAttributes()}, but it only processes the
+     * {@link Organization#getMatchIndicatorAttributes() matchIndicatorAttributes} from the
+     * {@link #incomingSchool incoming} school's parent {@link Organization}.
+     * <p>
+     * This helps improve performance when checking matches against hundreds of schools. By calling this method first,
+     * we can only call the {@link #processAllAttributes()} method if this finds some interesting matches.
      */
     public void processIndicatorAttributes() {
         for (Attribute a : incomingSchool.getOrganization().getMatchIndicatorAttributes())
-            if (a.schoolIndicatorMatches(existingSchool, incomingSchool))
-                // Only overwrite the match level if it's NONE; never change EXACT to INDICATOR.
-                if (matchingAttributes.get(a) == MatchLevel.NONE)
-                    matchingAttributes.put(a, MatchLevel.INDICATOR);
+            attributes.put(a, a.matches(incomingSchool, existingSchool));
     }
 
     /**
-     * Run the complete process of determining whether (and to what {@link MatchLevel Level}) the
-     * {@link #existingSchool} and {@link #incomingSchool} match.
+     * Run the complete process of {@link Attribute#matches(Object, Object) determining} the {@link MatchLevel} for each
+     * {@link Attribute} between the incoming and existing schools. The match levels are stored in the
+     * {@link #attributes} map.
      * <p>
-     * This traverses every attribute in the {@link #matchingAttributes} map, calling
-     * {@link Attribute#matches(School, School) Attribute.matches()} to check whether the existing and incoming schools
-     * match for that attribute. If they do, the match level {@link MatchLevel#EXACT EXACT} is mapped to the attribute.
-     *
-     * @see #processIndicatorAttributes()
+     * This will not re-process the attributes that were already processed by {@link #processIndicatorAttributes()}.
+     * Only the other attributes are processed.
+     * <p>
+     * Every time an attribute is found to match at all (e.g. not {@link MatchLevel#NONE NONE}), the
+     * {@link #nonNullMatchCount} is incremented.
      */
     public void processAllAttributes() {
         if (isProcessed) return;
 
-        for (Attribute a : matchingAttributes.keySet())
-            if (a.matches(existingSchool, incomingSchool)) {
-                matchingAttributes.put(a, MatchLevel.EXACT);
-                // If the attribute is not null for either school, update the counter
-                if (!incomingSchool.isEffectivelyNull(a))
-                    nonNullMatchCount++;
-            }
+        List<Attribute> indicators = Arrays.asList(incomingSchool.getOrganization().getMatchIndicatorAttributes());
+
+        attributes.keySet().stream()
+                .filter(a -> !indicators.contains(a))
+                .forEach(a -> {
+                    MatchLevel level = a.matches(incomingSchool, existingSchool);
+                    attributes.put(a, level);
+                    if (level != MatchLevel.NONE) nonNullMatchCount++;
+                });
 
         isProcessed = true;
     }
@@ -249,30 +253,26 @@ public class SchoolMatch {
      *     {@link #incomingSchool}
      *     <li>Every {@link Organization#getMatchRelevantAttributes() match relevant} attribute for the
      *     {@link #incomingSchool}
-     *     <li>Every discrepancy attribute, <i>if and only if</i> there are no more than 5 of these (not counting the
-     *     ones that are already a part of the indicator/relevant attributes). This is defined as an attribute with
-     *     match level {@link MatchLevel#NONE NONE}, indicating different values.
+     *     <li>Every {@link #getDifferingAttributes(boolean) differing} attribute (including
+     *     {@link Attribute#isExclusionRelated() exclusion} related ones), <i>if and only if</i> there are no
+     *     more than 5 of these (not counting the ones that are already a part of the indicator/relevant attributes).
      * </ul>
      *
-     * @return A list of {@link Attribute Attributes}.
+     * @return An immutable list of {@link Attribute Attributes}.
      */
     @NotNull
     public List<Attribute> getRelevantDisplayAttributes() {
         List<Attribute> indicator = List.of(incomingSchool.getOrganization().getMatchIndicatorAttributes());
         List<Attribute> relevant = List.of(incomingSchool.getOrganization().getMatchRelevantAttributes());
 
-        // TODO instead of defining a discrepancy attribute as NONE, maybe call it anything less than EXACT
-
-        // Identify differing attributes. If there's more than 5, don't include any of them.
-        List<Attribute> discrepancy = matchingAttributes.entrySet().stream()
-                .filter(e -> e.getValue() == MatchLevel.NONE)
-                .filter(e -> !indicator.contains(e.getKey()) && !relevant.contains(e.getKey()))
-                .map(Map.Entry::getKey)
+        // Retrieve the differing attributes. If there's more than 5, don't include any of them.
+        List<Attribute> differing = getDifferingAttributes(true).stream()
+                .filter(a -> !indicator.contains(a) && !relevant.contains(a))
                 .collect(Collectors.toList());
-        discrepancy = discrepancy.size() <= 5 ? discrepancy : Collections.emptyList();
+        differing = differing.size() <= 5 ? differing : Collections.emptyList();
 
         // Combine all attribute sources into a single list
-        return Stream.of(indicator, relevant, discrepancy)
+        return Stream.of(indicator, relevant, differing)
                 .flatMap(List::stream)
                 .distinct()
                 .toList();

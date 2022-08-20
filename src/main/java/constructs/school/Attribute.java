@@ -1,6 +1,5 @@
 package constructs.school;
 
-import constructs.Organization;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -79,6 +78,10 @@ public enum Attribute {
 
     /**
      * The data type of the attribute.
+     * <p>
+     * Note: Some attributes have the {@link URL} type. That doesn't mean they actually use the URL class to store the
+     * data. Instead, it means that the value is a {@link String}, but it represents a URL; therefore two values of this
+     * type should be {@link #matches(Object, Object) compared} differently than regular strings.
      */
     public final Class<?> type;
 
@@ -100,6 +103,17 @@ public enum Attribute {
 
     <T> Attribute(Class<T> type, T defaultValue) {
         this(type, defaultValue, -1);
+    }
+
+    /**
+     * This simply returns <code>true</code> if this attribute is {@link #is_excluded} or {@link #excluded_reason}.
+     * Those attributes aren't included in a number of comparisons between schools, and they should only be modified in
+     * the database following explicit instruction from the user.
+     *
+     * @return <code>True</code> if and only if this attribute is related to a school being excluded.
+     */
+    public boolean isExclusionRelated() {
+        return this == is_excluded || this == excluded_reason;
     }
 
     /**
@@ -201,39 +215,122 @@ public enum Attribute {
      * @param schoolA The first school.
      * @param schoolB The second school.
      *
-     * @return <code>True</code> if and only if the schools match for this attribute.
+     * @return The resulting {@link MatchLevel}.
+     * @see #matches(Object, Object)
      */
-    public boolean matches(@NotNull School schoolA, @NotNull School schoolB) {
+    @NotNull
+    public MatchLevel matches(@NotNull School schoolA, @NotNull School schoolB) {
         return matches(schoolA.get(this), schoolB.get(this));
     }
 
     /**
-     * Determine whether two values match for this attribute.
+     * Determine whether two values match for this attribute. This is returned as a {@link MatchLevel} that indicates
+     * the degree to which the values match.
      * <p>
-     * The values for attributes are compared via {@link Objects#equals(Object, Object)}. However, some attributes use
-     * different comparison rules based on their data type:
+     * <h3>Procedure:</h3>
+     * The procedure for assessing a possible match is as follows:
+     * <ol>
+     *     <li>The objects are compared via {@link Objects#equals(Object, Object) Objects.equals()}. If this yields
+     *     <code>true</code>, {@link MatchLevel#EXACT EXACT} is returned.
+     *     <li>If both values are {@link #isEffectivelyNull(Object) effectively null},
+     *     {@link MatchLevel#INDICATOR INDICATOR} is returned.
+     *     <li>If either value is {@link #isEffectivelyNull(Object) effectively null}, {@link MatchLevel#NONE NONE}
+     *     is returned, because with only one null value they clearly don't match.
+     *     <li>{@link #isExactMatch(Object, Object) isExactMatch()} is used to give the values one last change to be an
+     *     exact match. This allows certain attribute types to be compared slightly differently. If this yields
+     *     <code>true</code>, {@link MatchLevel#EXACT EXACT} is returned.
+     *     <li>{@link #isIndicatorMatch(Object, Object) isIndicatorMatch()} is used to check for an
+     *     {@link MatchLevel#INDICATOR INDICATOR} level match. If it returns <code>true</code>, the indicator level
+     *     is returned.
+     *     <li>{@link #isRelatedMatch(Object, Object) isPossibleMatch()} is used to check for a
+     *     {@link MatchLevel#RELATED POSSIBLE} match. If it returns <code>true</code>, the possible level is returned.
+     *     <li>The values clearly don't match at all. {@link MatchLevel#NONE NONE} is returned.
+     * </ol>
+     *
+     * @param valA The first value.
+     * @param valB The second value.
+     *
+     * @return <code>True</code> if and only if the values match.
+     * @see #matches(School, School)
+     */
+    @NotNull
+    public MatchLevel matches(@Nullable Object valA, @Nullable Object valB) {
+        // Deal with possibly null values
+        if (Objects.equals(valA, valB)) return MatchLevel.EXACT;
+        boolean nullA = isEffectivelyNull(valA), nullB = isEffectivelyNull(valB);
+        if (nullA && nullB) return MatchLevel.INDICATOR;
+        if (nullA || nullB) return MatchLevel.NONE;
+
+        // Check for an EXACT match
+        if (isExactMatch(valA, valB)) return MatchLevel.EXACT;
+
+        // Check for an INDICATOR match
+        if (isIndicatorMatch(valA, valB)) return MatchLevel.INDICATOR;
+
+        // Check for a POSSIBLE match
+        if (isRelatedMatch(valA, valB)) return MatchLevel.RELATED;
+
+        // There's no match
+        return MatchLevel.NONE;
+    }
+
+    /**
+     * Determine whether two values are an {@link MatchLevel#EXACT EXACT} match for this attribute.
+     * <p>
+     * <h3>Disambiguation:</h3>
+     * Unlike {@link #matches(Object, Object)}, this does not check for possibly <code>null</code> values. Instead, it
+     * operates with the prediction that neither value is <code>null</code> or
+     * {@link #isEffectivelyNull(Object) effectively null}. Additionally, it presumes that
+     * {@link Objects#equals(Object, Object) Objects.equals()} was already used to test for an exact match.
+     * <p>
+     * For these reasons, this method is not particularly useful for actually assessing an exact match between two
+     * values, except as a helper method for {@link #matches(Object, Object) matches()}. For that reason, it has
+     * <code>private</code> scope in this class.
+     * <p>
+     * <h3>Procedure:</h3>
+     * This method handles the following {@link #type types} specially:
      * <ul>
-     *     <li>{@link URL URLs} are compared via {@link URLUtils#equals(URL, URL) URLUtils.equals()}.
      *     <li>{@link LocalDate LocalDates} are compared via
      *     {@link LocalDate#isEqual(ChronoLocalDate) LocalDate.isEqual()}.
      *     <li>{@link Double Doubles} are compared up to a precision of 0.00001.
+     *     <li>All other attribute types return <code>false</code>.
      * </ul>
      *
-     * @param valA The value of the first school.
-     * @param valB The value of the second school.
+     * @param valA The first value.
+     * @param valB The second value.
      *
-     * @return <code>True</code> if and only if the values match.
+     * @return <code>True</code> if and only if the values are an {@link MatchLevel#EXACT EXACT} match.
      */
-    public boolean matches(@Nullable Object valA, @Nullable Object valB) {
-        // If they're both null, they match
-        if (isEffectivelyNull(valA) && isEffectivelyNull(valB)) return true;
-        // Otherwise, if one is null, they don't match
-        if (valA == null || valB == null) return false;
+    private boolean isExactMatch(@NotNull Object valA, @NotNull Object valB) {
+        if (type == LocalDate.class)
+            return ((LocalDate) valA).isEqual((LocalDate) valB);
 
-        //
-        // Run separate comparisons for certain data types
-        //
+        if (type == Double.class || type == Double.TYPE)
+            return Math.abs((Double) valA - (Double) valB) <= 0.00001;
 
+        return false;
+    }
+
+    /**
+     * Determine whether two values are an {@link MatchLevel#INDICATOR INDICATOR} match for this attribute.
+     * <p>
+     * This is done differently based on the {@link #type} of this {@link Attribute}. In all cases, it's assumed that
+     * neither value is <code>null</code> or {@link #isEffectivelyNull(Object) effectively null}.
+     * <ul>
+     *     <li> For {@link URL} types, the values are treated as {@link String Strings}, converted to {@link URL URLs},
+     *     and compared via {@link URLUtils#equals(URL, URL) URLUtils.equals()}.
+     *     <li>{@link #grades_offered} and {@link #address}: <i>To be implemented</i>.
+     * </ul>
+     *
+     * @param valA The first value.
+     * @param valB The second value.
+     *
+     * @return <code>True</code> if and only if the values are an {@link MatchLevel#INDICATOR INDICATOR} match.
+     * @see #matches(Object, Object)
+     * @see #isExactMatch(Object, Object)
+     * @see #isRelatedMatch(Object, Object)
+     */
+    private boolean isIndicatorMatch(@NotNull Object valA, @NotNull Object valB) {
         if (type == URL.class)
             try {
                 return URLUtils.equals(new URL((String) valA), new URL((String) valB));
@@ -242,55 +339,33 @@ public enum Attribute {
                 return false;
             }
 
-        if (type == LocalDate.class)
-            return ((LocalDate) valA).isEqual((LocalDate) valB);
-
-        if (type == Double.class || type == Double.TYPE)
-            return Math.abs((Double) valA - (Double) valB) <= 0.00001;
-
-        // Generic match for all other attributes
-        return Objects.equals(valA, valB);
-    }
-
-    /**
-     * This is a particular implementation of {@link #matches(School, School) matches()} that is designed specifically
-     * for matching the {@link Organization#getMatchIndicatorAttributes() matchIndicatorAttributes} associated with each
-     * {@link Organization}.
-     * <p>
-     * Match detection in this method exhibits the following behavior:
-     * <ul>
-     *     <li>If the value of this attribute is {@link #isEffectivelyNull(Object) effectively null} for either
-     *     school, the match returns <code>false</code>.
-     *     <li>Exclusively for the {@link #website_url} attribute, {@link URLUtils#domainEquals(String, String)
-     *     URLUtils.domainEquals()} is used to determine a match.
-     *     <li>For all other attributes, the standard {@link #matches(School, School) matches()} method is used.
-     * </ul>
-     *
-     * @param schoolA The first school.
-     * @param schoolB The second school.
-     *
-     * @return <code>True</code> if and only if the value of this attribute for both schools is determined to match
-     *         according to the above procedure.
-     */
-    public boolean schoolIndicatorMatches(@NotNull School schoolA, @NotNull School schoolB) {
-        if (isEffectivelyNull(schoolA.get(this))) return false;
-
         // TODO implement better matching for grades_offered, and maybe even addresses
-
-        if (this == website_url)
-            return URLUtils.domainEquals(schoolA.getStr(this), schoolB.getStr(this));
-
-        return matches(schoolA, schoolB);
+        return false;
     }
 
     /**
-     * This simply returns <code>true</code> if this attribute is {@link #is_excluded} or {@link #excluded_reason}.
-     * Those attributes aren't included in a number of comparisons between schools, and they should only be modified in
-     * the database following explicit instruction from the user.
+     * Determine whether two values are a {@link MatchLevel#RELATED POSSIBLE} match for this attribute.
+     * <p>
+     * This is done differently based on the {@link #type} of this {@link Attribute}. In all cases, it's assumed that
+     * neither value is <code>null</code> or {@link #isEffectivelyNull(Object) effectively null}.
+     * <ul>
+     *     <li> For {@link #website_url} attribute only, the values are compared via
+     *     {@link URLUtils#hostEquals(String, String) URLUtils.hostEquals()}. Thus, only the hosts of the URLs must
+     *     be the same for this to be a possible match.
+     * <ul>
      *
-     * @return <code>True</code> if and only if this attribute is related to a school being excluded.
+     * @param valA The first value.
+     * @param valB The second value.
+     *
+     * @return <code>True</code> if and only if the values are a {@link MatchLevel#RELATED POSSIBLE} match.
+     * @see #matches(Object, Object)
+     * @see #isExactMatch(Object, Object)
+     * @see #isIndicatorMatch(Object, Object)
      */
-    public boolean isExclusionRelated() {
-        return this == is_excluded || this == excluded_reason;
+    private boolean isRelatedMatch(@NotNull Object valA, @NotNull Object valB) {
+        if (this == website_url)
+            return URLUtils.hostEquals(String.valueOf(valA), String.valueOf(valB));
+
+        return false;
     }
 }

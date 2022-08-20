@@ -64,15 +64,15 @@ public class URLUtils {
     }
 
     /**
-     * Determine whether two {@link URL URLs} have the same domain. This is case-insensitive and ignores the
-     * '<code>www.</code>' prefix.
+     * Determine whether two {@link URL URLs} have the same domain (host and subdomains). This is case-insensitive and
+     * ignores the '<code>www.</code>' prefix.
      *
      * @param urlA The first URL as a string.
      * @param urlB The second URL as a string.
      *
-     * @return <code>True</code> if and only if the URLs have the same domain; <code>false</code> otherwise.
+     * @return <code>True</code> if and only if the URLs have the same host; <code>false</code> otherwise.
      */
-    public static boolean domainEquals(@Nullable String urlA, @Nullable String urlB) {
+    public static boolean hostEquals(@Nullable String urlA, @Nullable String urlB) {
         // If both URLs are null, they're equal; if only one is null, they're not equal
         if (urlA == null && urlB == null) return true;
         if (urlA == null || urlB == null) return false;
