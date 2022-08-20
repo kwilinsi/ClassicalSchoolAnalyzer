@@ -211,6 +211,8 @@ public class SchoolMatch {
      */
     public void processAllAttributes() {
         if (isProcessed) return;
+        // TODO while identifying matches, when there's a difference, try to guess which one to go with. Then, if the
+        //  computer can make a choice for every different attribute, we can avoid prompting the user.
 
         List<Attribute> indicators = Arrays.asList(incomingSchool.getOrganization().getMatchIndicatorAttributes());
 

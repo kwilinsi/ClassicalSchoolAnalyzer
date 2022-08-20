@@ -67,6 +67,8 @@ public class HomeScreen extends MyBaseWindow {
         logPanel.removeAllComponents();
         for (ILoggingEvent entry : entries)
             logPanel.addComponent(GUIUtils.logEntry(entry));
+
+        // TODO make the thread text narrower and the class name wider in the log
     }
 
     /**

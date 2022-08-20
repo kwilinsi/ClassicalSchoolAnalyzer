@@ -123,6 +123,8 @@ public class MatchIdentifier {
         // Get the prompt panel
         Panel promptPanel = createDistrictMatchGUIPanel(incomingSchool, district, districtSchools);
 
+        // TODO add some "back" buttons in all these dialogs
+
         // Construct and execute the prompt
         MatchResultType choice = Main.GUI.showPrompt(SelectionPrompt.of(
                 "Match Resolution",
@@ -146,6 +148,8 @@ public class MatchIdentifier {
 
         // Otherwise the choice must be type OVERWRITE or APPEND.
         // Determine which school the user is talking about and which of its attributes they want to change.
+
+        // TODO in the GUI, indicate which of the schools is incoming and which already exists
 
         SchoolMatch match;
 
@@ -223,6 +227,8 @@ public class MatchIdentifier {
             try {
                 District d = match.getExistingSchool().getDistrict();
 
+                // TODO this doesn't work. The same district is sometimes added multiple times
+
                 // If the district is already in the map, skip it
                 if (districts.containsKey(d)) continue;
 
@@ -259,7 +265,7 @@ public class MatchIdentifier {
                                                      @NotNull List<SchoolMatch> districtSchools) {
         // Get the list of attributes to display for the incoming school. This is simply an aggregate of all
         // attributes that will be displayed for each school in the district. They're paired with MatchLevel.NONE to
-        // just to make this a map.
+        // make this a map.
         Map<Attribute, MatchLevel> incomingAttributes = districtSchools.stream()
                 .map(SchoolMatch::getRelevantDisplayAttributes)
                 .flatMap(m -> m.keySet().stream())
@@ -284,6 +290,13 @@ public class MatchIdentifier {
         panel.addComponent(new Label("District:"));
         panel.addComponent(GUIUtils.formatDistrictAttributes(district));
         panel.addComponent(new EmptySpace());
+
+        // TODO if there's more than, say 2 member schools, put them in a widget with a scroll bar
+
+        // TODO also maybe highlight attributes that are non-null EXACT matches
+
+        // TODO Add a button somewhere to open the school's page in the browser, or maybe just put the link in the
+        //  console so I can click it easily
 
         // Add the info for the district's member schools
         for (int i = 0; i < districtSchools.size(); i++) {

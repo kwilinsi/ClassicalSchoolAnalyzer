@@ -92,6 +92,9 @@ public class Actions {
                     try {
                         school.validate();
                         school.saveToDatabase(schoolsCache);
+
+                        // TODO add a progress bar while saving to database
+
                     } catch (SQLException e) {
                         logger.error("Failed to save school " + school.name() + " to database.", e);
                     }

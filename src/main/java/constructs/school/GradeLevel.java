@@ -10,7 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public enum GradeLevel {
-    PRE_K(true, "pre-k", "pre—k", "pre–k", "pre_k", "prek",
+    PRE_K(true, "p", "pk", "pre-k", "pre—k", "pre–k", "pre_k", "prek",
             "pre-kindergarten", "prekindergarten", "pre kindergarten", "preschool", "pre-school"),
     VPK(false, "vpk", "voluntary prekindergarten", "voluntary prekindergarten education program"),
     TK(false, "tk", "transitional kindergarten"),
@@ -38,7 +38,7 @@ public enum GradeLevel {
             .sorted(Comparator.reverseOrder())
             .toArray(GradeLevel[]::new);
 
-    private final static Pattern GRADE_RANGE_PARENTHETICAL = Pattern.compile("^(.+)(\\(Expand.+\\))$");
+    private final static Pattern GRADE_RANGE_PARENTHETICAL = Pattern.compile("^(.+)(\\(expand.+\\))$");
 
     /**
      * These are the different ways this grade level is written as a string. These are all be lowercase.
