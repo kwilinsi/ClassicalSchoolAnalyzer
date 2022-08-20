@@ -1,18 +1,18 @@
-package schoolListGeneration.extractors;
+package processing.schoolLists.extractors;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
-import constructs.Attribute;
-import constructs.CreatedSchool;
-import constructs.SchoolManager;
+import constructs.school.Attribute;
+import constructs.school.CreatedSchool;
+import constructs.school.SchoolManager;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import schoolListGeneration.extractors.helpers.ExtUtils;
+import processing.schoolLists.extractors.helpers.ExtUtils;
 
 import java.io.StringReader;
 import java.util.ArrayList;

@@ -1,8 +1,8 @@
-package schoolListGeneration.matching;
+package processing.schoolLists.matching;
 
-import constructs.CreatedSchool;
+import constructs.school.CreatedSchool;
 import constructs.District;
-import constructs.School;
+import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;

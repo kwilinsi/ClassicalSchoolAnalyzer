@@ -1,6 +1,6 @@
-package schoolListGeneration.extractors;
+package processing.schoolLists.extractors;
 
-import constructs.CreatedSchool;
+import constructs.school.CreatedSchool;
 import org.jetbrains.annotations.NotNull;
 
 import org.jsoup.nodes.Document;

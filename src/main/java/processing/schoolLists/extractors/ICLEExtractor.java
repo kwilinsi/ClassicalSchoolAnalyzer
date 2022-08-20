@@ -1,6 +1,6 @@
-package schoolListGeneration.extractors;
+package processing.schoolLists.extractors;
 
-import constructs.CreatedSchool;
+import constructs.school.CreatedSchool;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
 import main.Main;
@@ -8,8 +8,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import schoolListGeneration.extractors.helpers.ExtUtils;
-import schoolListGeneration.extractors.helpers.ICLEPageParser;
+import processing.schoolLists.extractors.helpers.ICLEPageParser;
+import processing.schoolLists.extractors.helpers.ExtUtils;
 import utils.Config;
 
 import java.util.ArrayList;

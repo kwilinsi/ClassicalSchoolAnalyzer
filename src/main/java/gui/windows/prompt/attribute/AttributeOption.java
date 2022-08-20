@@ -1,6 +1,6 @@
 package gui.windows.prompt.attribute;
 
-import constructs.Attribute;
+import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

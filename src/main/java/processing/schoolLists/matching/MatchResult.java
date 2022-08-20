@@ -1,4 +1,4 @@
-package schoolListGeneration.matching;
+package processing.schoolLists.matching;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -1,10 +1,14 @@
-package schoolListGeneration.extractors.helpers;
+package processing.schoolLists.extractors.helpers;
 
 import constructs.*;
+import constructs.school.Attribute;
+import constructs.school.CreatedSchool;
+import constructs.school.School;
+import constructs.school.SchoolManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
-import schoolListGeneration.extractors.ACCSExtractor;
+import processing.schoolLists.extractors.ACCSExtractor;
 import utils.Config;
 import utils.JsoupHandler;
 import utils.JsoupHandler.DownloadConfig;

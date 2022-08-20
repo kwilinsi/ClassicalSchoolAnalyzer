@@ -1,6 +1,6 @@
-package schoolListGeneration.extractors;
+package processing.schoolLists.extractors;
 
-import constructs.CreatedSchool;
+import constructs.school.CreatedSchool;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
 import main.Main;
@@ -9,7 +9,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import schoolListGeneration.extractors.helpers.ACCSSchoolParser;
+import processing.schoolLists.extractors.helpers.ACCSSchoolParser;
 import utils.Config;
 
 import java.util.ArrayList;

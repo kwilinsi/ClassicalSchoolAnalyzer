@@ -1,7 +1,7 @@
-package schoolListGeneration.matching;
+package processing.schoolLists.matching;
 
-import constructs.Attribute;
-import constructs.School;
+import constructs.school.Attribute;
+import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 
 /**

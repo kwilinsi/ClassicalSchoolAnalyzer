@@ -1,6 +1,10 @@
 package main;
 
 import constructs.*;
+import constructs.school.Attribute;
+import constructs.school.CreatedSchool;
+import constructs.school.School;
+import constructs.school.SchoolManager;
 import gui.windows.prompt.attribute.AttributeOption;
 import gui.windows.prompt.attribute.AttributePrompt;
 import gui.windows.prompt.selection.Option;

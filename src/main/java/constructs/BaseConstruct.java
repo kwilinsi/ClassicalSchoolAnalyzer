@@ -1,5 +1,6 @@
 package constructs;
 
+import constructs.school.School;
 import utils.Config;
 
 import java.nio.file.Path;

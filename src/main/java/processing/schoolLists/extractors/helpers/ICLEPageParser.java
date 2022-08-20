@@ -1,6 +1,9 @@
-package schoolListGeneration.extractors.helpers;
+package processing.schoolLists.extractors.helpers;
 
 import constructs.*;
+import constructs.school.Attribute;
+import constructs.school.CreatedSchool;
+import constructs.school.SchoolManager;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;

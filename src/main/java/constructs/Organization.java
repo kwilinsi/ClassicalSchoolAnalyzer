@@ -1,12 +1,14 @@
 package constructs;
 
-import schoolListGeneration.extractors.Extractor;
+import constructs.school.Attribute;
+import constructs.school.CreatedSchool;
+import processing.schoolLists.extractors.Extractor;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import schoolListGeneration.matching.MatchIdentifier;
+import processing.schoolLists.matching.MatchIdentifier;
 import utils.Config;
 import utils.JsoupHandler;
 

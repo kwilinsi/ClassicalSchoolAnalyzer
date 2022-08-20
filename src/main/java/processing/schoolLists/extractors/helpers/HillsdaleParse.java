@@ -1,4 +1,4 @@
-package schoolListGeneration.extractors.helpers;
+package processing.schoolLists.extractors.helpers;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -1,8 +1,8 @@
-package schoolListGeneration.extractors.helpers;
+package processing.schoolLists.extractors.helpers;
 
-import constructs.CreatedSchool;
+import constructs.school.CreatedSchool;
 import constructs.OrganizationManager;
-import constructs.Attribute;
+import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.nodes.Document;
 import utils.JsoupHandler;

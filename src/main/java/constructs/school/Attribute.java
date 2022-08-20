@@ -1,5 +1,6 @@
-package constructs;
+package constructs.school;
 
+import constructs.Organization;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;

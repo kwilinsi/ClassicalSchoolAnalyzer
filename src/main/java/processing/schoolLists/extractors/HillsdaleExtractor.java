@@ -1,16 +1,16 @@
-package schoolListGeneration.extractors;
+package processing.schoolLists.extractors;
 
-import constructs.Attribute;
-import constructs.CreatedSchool;
-import constructs.SchoolManager;
+import constructs.school.Attribute;
+import constructs.school.CreatedSchool;
+import constructs.school.SchoolManager;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import schoolListGeneration.extractors.helpers.ExtUtils;
-import schoolListGeneration.extractors.helpers.HillsdaleParse;
+import processing.schoolLists.extractors.helpers.ExtUtils;
+import processing.schoolLists.extractors.helpers.HillsdaleParse;
 
 import java.util.ArrayList;
 import java.util.List;

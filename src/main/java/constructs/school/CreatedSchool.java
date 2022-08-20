@@ -1,12 +1,14 @@
-package constructs;
+package constructs.school;
 
+import constructs.District;
+import constructs.Organization;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import schoolListGeneration.matching.MatchIdentifier;
-import schoolListGeneration.matching.MatchResult;
-import schoolListGeneration.matching.MatchResultType;
-import schoolListGeneration.matching.SchoolMatch;
+import processing.schoolLists.matching.MatchIdentifier;
+import processing.schoolLists.matching.MatchResult;
+import processing.schoolLists.matching.MatchResultType;
+import processing.schoolLists.matching.SchoolMatch;
 import utils.Database;
 import utils.URLUtils;
 import utils.Utils;

@@ -1,9 +1,9 @@
-package schoolListGeneration.matching;
+package processing.schoolLists.matching;
 
-import constructs.Attribute;
-import constructs.CreatedSchool;
+import constructs.school.Attribute;
+import constructs.school.CreatedSchool;
 import constructs.Organization;
-import constructs.School;
+import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -260,6 +260,8 @@ public class SchoolMatch {
     public List<Attribute> getRelevantDisplayAttributes() {
         List<Attribute> indicator = List.of(incomingSchool.getOrganization().getMatchIndicatorAttributes());
         List<Attribute> relevant = List.of(incomingSchool.getOrganization().getMatchRelevantAttributes());
+
+        // TODO instead of defining a discrepancy attribute as NONE, maybe call it anything less than EXACT
 
         // Identify differing attributes. If there's more than 5, don't include any of them.
         List<Attribute> discrepancy = matchingAttributes.entrySet().stream()

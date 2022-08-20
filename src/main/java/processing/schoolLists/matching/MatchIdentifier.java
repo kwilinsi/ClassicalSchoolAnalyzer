@@ -1,7 +1,10 @@
-package schoolListGeneration.matching;
+package processing.schoolLists.matching;
 
 import com.googlecode.lanterna.gui2.*;
 import constructs.*;
+import constructs.school.Attribute;
+import constructs.school.CreatedSchool;
+import constructs.school.School;
 import gui.utils.GUIUtils;
 import gui.windows.prompt.attribute.AttributeOption;
 import gui.windows.prompt.attribute.AttributePrompt;
