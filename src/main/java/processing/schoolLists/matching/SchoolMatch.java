@@ -115,24 +115,6 @@ public class SchoolMatch {
     }
 
     /**
-     * Return the {@link #attributes} that match at or above the given {@link MatchLevel}.
-     *
-     * @param includeExcludes If this is <code>true</code>, the attributes that are
-     *                        {@link Attribute#isExclusionRelated() exclusion related} are included in the list.
-     *                        Otherwise, they are omitted.
-     *
-     * @return A list of attributes.
-     */
-    @NotNull
-    public List<Attribute> getMatchingAttributes(@NotNull MatchLevel level, boolean includeExcludes) {
-        return attributes.entrySet().stream()
-                .filter(e -> e.getValue().isAtLeast(level))
-                .filter(e -> includeExcludes || !e.getKey().isExclusionRelated())
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-    }
-
-    /**
      * Return every {@link #attributes matchingAttribute} whose {@link MatchLevel} is anything less than
      * {@link MatchLevel#EXACT EXACT}, meaning the values aren't a perfect match.
      *
@@ -244,8 +226,9 @@ public class SchoolMatch {
     }
 
     /**
-     * Get a list of {@link Attribute Attributes} that may be useful for manually comparing the {@link #existingSchool}
-     * and {@link #incomingSchool}.
+     * Get a list of {@link Attribute Attributes} (and their corresponding {@link MatchLevel} from the
+     * {@link #attributes} map) that may be useful for manually comparing the {@link #existingSchool} and
+     * {@link #incomingSchool}.
      * <p>
      * Attributes are included in the list from the following sources:
      * <ul>
@@ -258,10 +241,10 @@ public class SchoolMatch {
      *     more than 5 of these (not counting the ones that are already a part of the indicator/relevant attributes).
      * </ul>
      *
-     * @return An immutable list of {@link Attribute Attributes}.
+     * @return A map of {@link Attribute Attributes} and {@link MatchLevel MatchLevels}.
      */
     @NotNull
-    public List<Attribute> getRelevantDisplayAttributes() {
+    public Map<Attribute, MatchLevel> getRelevantDisplayAttributes() {
         List<Attribute> indicator = List.of(incomingSchool.getOrganization().getMatchIndicatorAttributes());
         List<Attribute> relevant = List.of(incomingSchool.getOrganization().getMatchRelevantAttributes());
 
@@ -275,6 +258,7 @@ public class SchoolMatch {
         return Stream.of(indicator, relevant, differing)
                 .flatMap(List::stream)
                 .distinct()
-                .toList();
+                .map(a -> new AbstractMap.SimpleEntry<>(a, attributes.get(a)))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 }

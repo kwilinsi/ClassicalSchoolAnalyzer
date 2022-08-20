@@ -50,15 +50,21 @@ public class AttributeOption {
     }
 
     /**
-     * Get the name of the {@link #attribute}. This will have an asterisk (*) prefix if the {@link #firstValue first}
-     * and {@link #secondValue second} values {@link Attribute#matches(Object, Object) match} at all (e.g. not a match
-     * level of {@link MatchLevel#NONE NONE}).
+     * Get the name of the {@link #attribute}.
+     * <p>
+     * This also checks the {@link #firstValue first} and {@link #secondValue second} values to see if they
+     * {@link Attribute#matches(Object, Object) match}. The {@link MatchLevel#getPrefix() prefix} of the resulting match
+     * is prepended to the name.
+     * <p>
+     * For example, if two schools have {@link Attribute#website_url website_urls} that match at the
+     * {@link MatchLevel#INDICATOR INDICATOR} level, the name returned by this method is
+     * <code>"(I) website_url"</code> (including the parentheses).
      *
-     * @return The name of the {@link #attribute}.
+     * @return The name of the {@link #attribute}, possibly with a prefix to indicate a match.
      */
     @NotNull
     public String getAttrName() {
-        return (attribute.matches(firstValue, secondValue) == MatchLevel.NONE ? "" : "(*) ") + attribute.name();
+        return attribute.matches(firstValue, secondValue).getPrefix() + attribute.name();
     }
 
     /**

@@ -16,7 +16,7 @@ public enum MatchLevel {
     /**
      * The values for an attribute match exactly. There is no visible difference between them.
      */
-    EXACT,
+    EXACT('E'),
 
     /**
      * The values for an attribute aren't exactly the same, but it's clear that they're referring to the same thing.
@@ -24,18 +24,45 @@ public enum MatchLevel {
      * For example, "K-6" and "K, 1, 2, 3, 4, 5, 6" clearly mean the same thing, even if they aren't an {@link #EXACT}
      * match.
      */
-    INDICATOR,
+    INDICATOR('I'),
 
     /**
      * The values for an attribute aren't the same, but they're somewhat related. This might refer to two URLs that
      * point to different pages on the {@link utils.URLUtils#hostEquals(String, String) same host}.
      */
-    RELATED,
+    RELATED('R'),
 
     /**
      * The values for an attribute do not match whatsoever. They are entirely different.
      */
-    NONE;
+    NONE(' ');
+
+    /**
+     * The prefix to indicate this match level, obtainable via {@link #getPrefix()}.
+     */
+    private final char prefix;
+
+    /**
+     * Instantiate a {@link MatchLevel} by providing the prefix.
+     *
+     * @param prefix The {@link #prefix}.
+     */
+    MatchLevel(char prefix) {
+        this.prefix = prefix;
+    }
+
+    /**
+     * Get the prefix for this {@link MatchLevel}. If this is the level {@link #NONE}, an empty string is returned.
+     * Otherwise, the prefix is enclosed in parentheses and returned as a string.
+     * <p>
+     * For example, calling this method on {@link #INDICATOR} returns <code>"(I) "</code>.
+     *
+     * @return The prefix for this match level.
+     */
+    @NotNull
+    public String getPrefix() {
+        return this == NONE ? "" : "(" + prefix + ") ";
+    }
 
     /**
      * Return <code>true</code> if this {@link MatchLevel} is at least as specific as the given level.

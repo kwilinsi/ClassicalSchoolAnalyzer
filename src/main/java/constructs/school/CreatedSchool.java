@@ -150,7 +150,7 @@ public class CreatedSchool extends School {
             if (useInsertStmt)
                 statement.setInt(attributes.size() + 1, this.district_id);
             else
-                statement.setInt(1, schoolMatch.getExistingSchool().getId());
+                statement.setInt(attributes.size() + 1, schoolMatch.getExistingSchool().getId());
 
             // Execute the finished statement
             statement.execute();

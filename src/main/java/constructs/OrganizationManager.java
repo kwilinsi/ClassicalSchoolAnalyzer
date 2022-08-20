@@ -14,7 +14,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 public class OrganizationManager {
     /**
@@ -153,8 +152,8 @@ public class OrganizationManager {
      * <br><b>Name Abbreviation:</b> OCSA
      * <br><b>Homepage URL:</b> <a href="https://www.orthodoxschools.org">website</a>
      * <br><b>School List URL:</b> <a href="https://www.orthodoxschools.org/directory-of-schools/">school list</a>
-     * <br><b>Additional Indirect Matching Attributes:</b> <i>N/A</i>
-     * <br><b>Additional Relevant Matching Attributes:</b> <i>N/A</i>
+     * <br><b>Additional Indirect Matching Attributes:</b> <i>Removed</i> {@link Attribute#phone phone} from defaults.
+     * <br><b>Additional Relevant Matching Attributes:</b> <i>Added</i> {@link Attribute#phone phone}
      * <p><br>
      * <b>Notes:</b> This organization is not explicitly classical. However, it's hard to conceive of a truly
      * Orthodox school that is not at least somewhat classical; thus, it is included here.
@@ -165,8 +164,8 @@ public class OrganizationManager {
             "OCSA",
             "https://www.orthodoxschools.org",
             "https://www.orthodoxschools.org/directory-of-schools/",
-            indAttr(),
-            relAttr(),
+            indAttr(Attribute.phone),
+            relAttr(Attribute.phone),
             new OCSAExtractor()
     );
 
@@ -252,40 +251,63 @@ public class OrganizationManager {
      *     <li>{@link Attribute#address}</li>
      *     <li>{@link Attribute#phone}</li>
      * </ul>
+     * <p>
+     * If any attributes are provided that are already added by default (in the list above), they will be
+     * <i>removed</i>. Thus, the incoming attribute list acts as a list of changes, rather than a list of additions.
      *
-     * @param attributes Zero or more attributes to append to the default list of attributes. Do not include any
-     *                   duplicates from the list above.
+     * @param attributes Zero or more attributes to change. If they are already added, they are removed; if they aren't
+     *                   already included, they will be added. Do <i>not</i> include the same attribute twice; the
+     *                   behavior cannot be guaranteed.
      *
      * @return An array of all match indicator attributes.
      */
     private static Attribute[] indAttr(Attribute... attributes) {
-        return Stream.concat(
-                Stream.of(Attribute.website_url, Attribute.address, Attribute.phone),
-                Stream.of(attributes)
-        ).toArray(Attribute[]::new);
+        List<Attribute> attrList = new ArrayList<>();
+        attrList.add(Attribute.website_url);
+        attrList.add(Attribute.address);
+        attrList.add(Attribute.phone);
+
+        for (Attribute a : attributes)
+            if (!attrList.contains(a))
+                attrList.add(a);
+            else
+                attrList.remove(a);
+
+        return attrList.toArray(new Attribute[0]);
     }
 
     /**
      * Generate an array of {@link Attribute Attributes} for the
      * {@link Organization#getMatchRelevantAttributes() matchRelevantAttributes} of an organization. This automatically
-     * includes the default list of attributes; any attributes passed as parameters are added to this list. The
-     * following attributes are included by default:
+     * includes the following list of default attributes:
      * <ul>
      *     <li>{@link Attribute#name}</li>
      *     <li>{@link Attribute#is_excluded}</li>
      *     <li>{@link Attribute#excluded_reason}</li>
      * </ul>
+     * <p>
+     * If any attributes are provided that are already added by default (in the list above), they will be
+     * <i>removed</i>. Thus, the incoming attribute list acts as a list of changes, rather than a list of additions.
      *
-     * @param attributes Zero or more attributes to append to the default list of attributes. Do not include any
-     *                   duplicates from the list above.
+     * @param attributes Zero or more attributes to change. If they are already added, they are removed; if they aren't
+     *                   already included, they will be added. Do <i>not</i> include the same attribute twice; the
+     *                   behavior cannot be guaranteed.
      *
      * @return An array of all match relevant attributes.
      */
     private static Attribute[] relAttr(Attribute... attributes) {
-        return Stream.concat(
-                Stream.of(Attribute.name, Attribute.is_excluded, Attribute.excluded_reason),
-                Stream.of(attributes)
-        ).toArray(Attribute[]::new);
+        List<Attribute> attrList = new ArrayList<>();
+        attrList.add(Attribute.name);
+        attrList.add(Attribute.is_excluded);
+        attrList.add(Attribute.excluded_reason);
+
+        for (Attribute a : attributes)
+            if (!attrList.contains(a))
+                attrList.add(a);
+            else
+                attrList.remove(a);
+
+        return attrList.toArray(new Attribute[0]);
     }
 
 }

@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 public enum GradeLevel {
     PRE_K(true, "pre-k", "pre—k", "pre–k", "pre_k", "prek",
-            "pre-kindergarten", "prekindergarten", "pre kindergarten"),
+            "pre-kindergarten", "prekindergarten", "pre kindergarten", "preschool", "pre-school"),
     VPK(false, "vpk", "voluntary prekindergarten", "voluntary prekindergarten education program"),
     TK(false, "tk", "transitional kindergarten"),
     K(true, "k", "kindergarten"),

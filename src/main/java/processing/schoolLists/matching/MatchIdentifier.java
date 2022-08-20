@@ -36,7 +36,8 @@ public class MatchIdentifier {
      * This function (using its helper functions in this class) performs the following steps in order:
      * <ol>
      *     <li>Search the database (using the <code>schoolsCache</code>) for any schools that might match this one.
-     *     <li>While searching, if any {@link SchoolMatch#isExactMatchOrSubset() exact} matches are found (duplicate schools),
+     *     <li>While searching, if any {@link SchoolMatch#isExactMatchOrSubset() exact} matches are found (duplicate
+     *     schools),
      *     immediately exit, marking this school as a {@link MatchResultType#DUPLICATE DUPLICATE}.
      *     <li>Identify a list of districts from all of the partially matching schools.
      *     <li>Check each district for a possible match by providing summary information on the schools in the district
@@ -257,12 +258,14 @@ public class MatchIdentifier {
                                                      @NotNull District district,
                                                      @NotNull List<SchoolMatch> districtSchools) {
         // Get the list of attributes to display for the incoming school. This is simply an aggregate of all
-        // attributes that will be displayed for each school in the district.
-        List<Attribute> incomingAttributes = districtSchools.stream()
+        // attributes that will be displayed for each school in the district. They're paired with MatchLevel.NONE to
+        // just to make this a map.
+        Map<Attribute, MatchLevel> incomingAttributes = districtSchools.stream()
                 .map(SchoolMatch::getRelevantDisplayAttributes)
-                .flatMap(List::stream)
+                .flatMap(m -> m.keySet().stream())
                 .distinct()
-                .toList();
+                .map(a -> new AbstractMap.SimpleEntry<>(a, MatchLevel.NONE))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
 
@@ -273,7 +276,7 @@ public class MatchIdentifier {
         // Add the info for the incoming school
         panel.addComponent(new Label("Incoming school:"));
         panel.addComponent(
-                GUIUtils.formatSchoolAttributes(incomingSchool, incomingAttributes, null, false)
+                GUIUtils.formatSchoolAttributes(incomingSchool, incomingAttributes, false)
         );
         panel.addComponent(new EmptySpace());
 
@@ -290,7 +293,6 @@ public class MatchIdentifier {
             panel.addComponent(GUIUtils.formatSchoolAttributes(
                     match.getExistingSchool(),
                     match.getRelevantDisplayAttributes(),
-                    match.getMatchingAttributes(MatchLevel.INDICATOR, true),
                     true
             ));
             panel.addComponent(new EmptySpace());
