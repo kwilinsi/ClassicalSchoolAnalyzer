@@ -76,9 +76,13 @@ public class ASAExtractor implements Extractor {
         // Get the location, and split it into the city and state
         String location = ExtUtils.extHtmlStr(el, "div.member-heading div.location-website h4");
         if (location != null) {
-            String[] locationSplit = location.split(", ");
-            school.put(Attribute.city, locationSplit[0]);
-            school.put(Attribute.state, locationSplit[1]);
+            String[] locationSplit = location.split("[,|]");
+            if (locationSplit.length > 1) {
+                school.put(Attribute.city, ExtUtils.aliasNull(locationSplit[0]));
+                school.put(Attribute.state, ExtUtils.aliasNull(locationSplit[1]));
+            } else
+                logger.warn("Failed to extract city and state from location '{}' for school '{}'",
+                        location, school.name());
         } else
             logger.warn("No location found for school {}", school.name());
 

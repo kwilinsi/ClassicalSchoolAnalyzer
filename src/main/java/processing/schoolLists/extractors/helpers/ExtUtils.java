@@ -35,7 +35,7 @@ public class ExtUtils {
      */
     @Nullable
     public static String aliasNull(@Nullable String input) {
-        if (input == null) return null;
+        if (input == null || input.isBlank()) return null;
         String s = input.trim();
         for (String n : NULL_STRINGS)
             if (s.equalsIgnoreCase(n))
