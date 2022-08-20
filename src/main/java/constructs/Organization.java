@@ -1,6 +1,6 @@
 package constructs;
 
-import schoolListGeneration.extractors.OrganizationListExtractor;
+import schoolListGeneration.extractors.Extractor;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -58,11 +57,11 @@ public class Organization extends BaseConstruct {
     private final String school_list_url;
 
     /**
-     * This is a reference to the function in {@link OrganizationListExtractor} that parses the school list page for
-     * this organization.
+     * This is a reference to the organization's {@link Extractor} that parses the school list page for this
+     * organization.
      */
     @NotNull
-    private final Function<Document, CreatedSchool[]> schoolListParser;
+    private final Extractor schoolListExtractor;
 
     /**
      * These attributes, if they match between two schools, indicate a high probability that the schools are either the
@@ -104,14 +103,17 @@ public class Organization extends BaseConstruct {
      * @param matchRelevantAttributes  The {@link #matchRelevantAttributes}. Only provide the attributes not included in
      *                                 the <code>matchIndicatorAttributes</code>, as those are included in this array
      *                                 automatically.
+     * @param schoolListExtractor      The {@link #schoolListExtractor}.
      */
+
     public Organization(int id,
                         @NotNull String name,
                         @NotNull String name_abbr,
                         @NotNull String homepage_url,
                         @NotNull String school_list_url,
                         @NotNull Attribute[] matchIndicatorAttributes,
-                        @NotNull Attribute[] matchRelevantAttributes) {
+                        @NotNull Attribute[] matchRelevantAttributes,
+                        @NotNull Extractor schoolListExtractor) {
         this.id = id;
         this.name = name;
         this.name_abbr = name_abbr;
@@ -122,11 +124,7 @@ public class Organization extends BaseConstruct {
                 Arrays.stream(matchIndicatorAttributes),
                 Arrays.stream(matchRelevantAttributes)
         ).toArray(Attribute[]::new);
-
-        Function<Document, CreatedSchool[]> extractor = OrganizationListExtractor.getExtractor(this.name_abbr);
-        if (extractor == null)
-            throw new NullPointerException("No extractor found for organization " + this.name_abbr + ".");
-        this.schoolListParser = extractor;
+        this.schoolListExtractor = schoolListExtractor;
     }
 
     /**
@@ -233,10 +231,9 @@ public class Organization extends BaseConstruct {
      *                     {@link Document}.
      */
     @NotNull
-    public CreatedSchool[] retrieveSchools(boolean useCache) throws IOException {
+    public List<CreatedSchool> retrieveSchools(boolean useCache) throws IOException {
         logger.info("Retrieving school list for " + this.name_abbr + (useCache ? " using cache." : "."));
-        Document page = loadSchoolListPage(useCache);
-        return schoolListParser.apply(page);
+        return schoolListExtractor.extract(loadSchoolListPage(useCache));
     }
 
     /**

@@ -1,4 +1,4 @@
-package schoolListGeneration.extractors;
+package schoolListGeneration.extractors.helpers;
 
 import constructs.CreatedSchool;
 import constructs.OrganizationManager;

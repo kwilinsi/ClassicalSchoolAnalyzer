@@ -79,7 +79,7 @@ public class Actions {
         // Download schools from each organization
         for (Organization organization : orgs) {
             try {
-                CreatedSchool[] schools = organization.retrieveSchools(useCache);
+                List<CreatedSchool> schools = organization.retrieveSchools(useCache);
 
                 // Validate each school and save it to the database. Then add it to the cache for checking the next
                 // school.

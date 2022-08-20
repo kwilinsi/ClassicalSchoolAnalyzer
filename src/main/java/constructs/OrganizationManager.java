@@ -5,6 +5,7 @@ import gui.windows.prompt.selection.SelectionPrompt;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import schoolListGeneration.extractors.*;
 import utils.Database;
 
 import java.sql.Connection;
@@ -25,7 +26,8 @@ public class OrganizationManager {
             "https://classicalchristian.org",
             "https://classicalchristian.org/find-a-school/",
             indAttr(Attribute.accs_page_url),
-            relAttr()
+            relAttr(),
+            new ACCSExtractor()
     );
 
     /**
@@ -51,7 +53,8 @@ public class OrganizationManager {
             "https://greathearts.institute",
             "https://static.batchgeo.com/map/json/f0a726285be76dc6dc336e561b0726e6/1654008594?_=1660413403330",
             indAttr(Attribute.latitude, Attribute.longitude),
-            relAttr()
+            relAttr(),
+            new GHIExtractor()
     );
 
     /**
@@ -64,7 +67,8 @@ public class OrganizationManager {
             "https://k12.hillsdale.edu",
             "https://k12.hillsdale.edu/Schools/Affiliate-Classical-Schools/",
             indAttr(),
-            relAttr()
+            relAttr(),
+            new HillsdaleExtractor()
     );
 
     /**
@@ -77,7 +81,8 @@ public class OrganizationManager {
             "https://catholicliberaleducation.org",
             "https://my.catholicliberaleducation.org/schools/",
             indAttr(Attribute.icle_page_url),
-            relAttr()
+            relAttr(),
+            new ICLEExtractor()
     );
 
     /**
@@ -90,7 +95,8 @@ public class OrganizationManager {
             "https://anglicanschools.org",
             "https://anglicanschools.org/members/",
             indAttr(),
-            relAttr()
+            relAttr(),
+            new ASAExtractor()
     );
 
     /**
@@ -103,7 +109,8 @@ public class OrganizationManager {
             "http://www.ccle.org",
             "http://www.ccle.org/directory/",
             indAttr(),
-            relAttr()
+            relAttr(),
+            new CCLEExtractor()
     );
 
     /**
@@ -119,7 +126,8 @@ public class OrganizationManager {
             "https://www.orthodoxschools.org",
             "https://www.orthodoxschools.org/directory-of-schools/",
             indAttr(),
-            relAttr()
+            relAttr(),
+            new OCSAExtractor()
     );
 
     /**
@@ -159,8 +167,8 @@ public class OrganizationManager {
 
     /**
      * Get the list of {@link #ORGANIZATIONS} as {@link Option Options} for the user to choose between in a
-     * {@link SelectionPrompt}. Each selection is assigned a value corresponding to the {@link Organization Organization's}
-     * {@link Organization#getId() id}.
+     * {@link SelectionPrompt}. Each selection is assigned a value corresponding to the
+     * {@link Organization Organization's} {@link Organization#getId() id}.
      * <p>
      * The first selection option is "All", which returns the value 0, and the last option is "None", which returns the
      * value -1.

@@ -1,9 +1,10 @@
-package schoolListGeneration.extractors;
+package schoolListGeneration.extractors.helpers;
 
 import constructs.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
+import schoolListGeneration.extractors.ACCSExtractor;
 import utils.Config;
 import utils.JsoupHandler;
 import utils.JsoupHandler.DownloadConfig;
@@ -15,8 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * This class is utilized by {@link OrganizationListExtractor#extract_ACCS(Document)} to extract the school list from
- * the ACCS website.
+ * This class is utilized by {@link ACCSExtractor#extract(Document)} to extract the school list from the ACCS website.
  */
 public class ACCSSchoolParser implements Callable<CreatedSchool> {
     private static final Pattern SCHOOL_NAME_PATTERN = Pattern.compile("^(.*?)(?:\\s\\((.*)\\))?$");

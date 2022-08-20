@@ -1,4 +1,4 @@
-package schoolListGeneration.extractors;
+package schoolListGeneration.extractors.helpers;
 
 import constructs.*;
 import org.jsoup.nodes.Document;

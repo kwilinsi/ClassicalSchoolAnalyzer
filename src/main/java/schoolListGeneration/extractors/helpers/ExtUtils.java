@@ -1,4 +1,4 @@
-package schoolListGeneration.extractors;
+package schoolListGeneration.extractors.helpers;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
