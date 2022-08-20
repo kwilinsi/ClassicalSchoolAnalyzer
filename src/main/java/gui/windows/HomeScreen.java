@@ -42,7 +42,7 @@ public class HomeScreen extends MyBaseWindow {
             @Override
             public void onResized(Window window, TerminalSize oldSize, TerminalSize newSize) {
                 // Update spacing to force the footer to the bottom
-                logPanel.setPreferredSize(new TerminalSize(newSize.getColumns(), newSize.getRows() - 4));
+                logPanel.setPreferredSize(new TerminalSize(newSize.getColumns(), Math.max(0, newSize.getRows() - 4)));
                 updateLog();
             }
         });
