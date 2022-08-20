@@ -1,6 +1,5 @@
 package main;
 
-import main.Actions.Action;
 import gui.GUI;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
@@ -39,11 +38,9 @@ public class Main {
             );
 
             Action selection = GUI.showPrompt(prompt);
-
             if (selection == null)
                 break;
-
-            Actions.run(selection);
+            selection.run();
         }
 
         exit();

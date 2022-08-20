@@ -5,7 +5,6 @@ import gui.windows.prompt.attribute.AttributeOption;
 import gui.windows.prompt.attribute.AttributePrompt;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
@@ -22,35 +21,26 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
+/**
+ * This class contains the methods that correspond to the {@link Action} enums and are {@link Action#run() run} by those
+ * enums.
+ */
 public class Actions {
     private static final Logger logger = LoggerFactory.getLogger(Actions.class);
 
-    public enum Action {
-        UPDATE_SCHOOL_LIST,
-        DOWNLOAD_SCHOOL_WEBSITES,
-        PERFORM_ANALYSIS,
-        SETUP_DATABASE,
-        CLEAR_DATA_DIRECTORY,
-
-        TEST
-    }
-
-    public static void run(@NotNull Action action) {
-        switch (action) {
-            case UPDATE_SCHOOL_LIST -> UpdateSchoolList();
-            case DOWNLOAD_SCHOOL_WEBSITES -> downloadSchoolWebsites();
-            case PERFORM_ANALYSIS -> performAnalysis();
-            case SETUP_DATABASE -> setupDatabase();
-            case CLEAR_DATA_DIRECTORY -> clearDataDirectory();
-            case TEST -> test();
-        }
-    }
-
+    /**
+     * This is called by {@link Action} methods for actions that are not yet implemented.
+     */
     private static void notImplemented() {
         logger.error("Sorry, this feature is not yet implemented.");
     }
 
-    private static void UpdateSchoolList() {
+    /**
+     * Update the list of {@link School Schools} in the database.
+     * <p>
+     * Calling {@link Action}: {@link Action#UPDATE_SCHOOL_LIST UPDATE_SCHOOL_LIST}
+     */
+    static void updateSchoolList() {
         logger.info("Updating school list.");
 
         int orgChoice = Main.GUI.showPrompt(SelectionPrompt.of(
@@ -106,17 +96,32 @@ public class Actions {
         }
     }
 
-    private static void downloadSchoolWebsites() {
+    /**
+     * Download the websites of all {@link School Schools} in the database.
+     * <p>
+     * Calling {@link Action}: {@link Action#DOWNLOAD_SCHOOL_WEBSITES DOWNLOAD_SCHOOL_WEBSITES}
+     */
+    static void downloadSchoolWebsites() {
         logger.info("Downloading school websites.");
         notImplemented();
     }
 
-    private static void performAnalysis() {
+    /**
+     * Perform an analysis of all {@link School} websites in the database.
+     * <p>
+     * Calling {@link Action}: {@link Action#PERFORM_ANALYSIS PERFORM_ANALYSIS}
+     */
+    static void performAnalysis() {
         logger.info("Performing analysis on classical schools.");
         notImplemented();
     }
 
-    private static void setupDatabase() {
+    /**
+     * Set up the MySQL database with the proper table structure.
+     * <p>
+     * Calling {@link Action}: {@link Action#SETUP_DATABASE SETUP_DATABASE}
+     */
+    static void setupDatabase() {
         logger.info("Setting up SQL database.");
         Database.deleteTables();
         Database.createTables();
@@ -129,8 +134,10 @@ public class Actions {
      * For more information, see
      * <a href="https://stackoverflow.com/questions/779519/delete-directories-recursively-in-java">this
      * question</a> on StackOverflow.
+     * <p>
+     * Calling {@link Action}: {@link Action#CLEAR_DATA_DIRECTORY CLEAR_DATA_DIRECTORY}
      */
-    private static void clearDataDirectory() {
+    static void clearDataDirectory() {
         logger.info("Clearing data directory.");
 
         String p;
@@ -173,7 +180,12 @@ public class Actions {
         }
     }
 
-    private static void test() {
+    /**
+     * Run some test procedure related to what I'm currently developing. This entire method is temporary.
+     * <p>
+     * Calling {@link Action}: {@link Action#TEST TEST}
+     */
+    static void test() {
         logger.info("Running test script.");
 
         School schoolA, schoolB;
