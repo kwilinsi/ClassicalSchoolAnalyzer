@@ -64,7 +64,7 @@ public class MatchIdentifier {
             if (m.isPartialMatch()) {
                 matches.add(m);
                 m.processAllAttributes();
-                if (m.isExactMatch()) return MatchResultType.DUPLICATE.of();
+                if (m.isExactMatch()) return MatchResultType.DUPLICATE.of(m);
             }
         }
 
@@ -171,6 +171,7 @@ public class MatchIdentifier {
                     AttributePrompt.of(
                             "Select the attributes to overwrite:",
                             match.getDifferingAttributes(true).stream()
+                                    .sorted()
                                     .map(a -> AttributeOption.of(
                                             a,
                                             incomingSchool.get(a),
