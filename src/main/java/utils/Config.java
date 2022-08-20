@@ -2,6 +2,8 @@ package utils;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,31 +15,123 @@ import java.util.Scanner;
 public enum Config {
 
     // Jsoup configuration
+    /**
+     * Whether to use the {@link #USERAGENT} when making {@link Jsoup} requests.
+     * <p>
+     * <b>Default:</b> <code>true</code>
+     */
     USE_USERAGENT(true),
+
+    /**
+     * The user agent to {@link #USE_USERAGENT use} when making {@link Jsoup} requests.
+     * <p>
+     * <b>Default:</b> <code>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)
+     * Chrome/74.0.3729.169 Safari/537.36"</code>
+     */
     USERAGENT("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit 537.36 (KHTML, like Gecko) " +
               "Chrome/102.0.5005.136 Safari/537.36"),
+
+    /**
+     * The timeout in milliseconds to wait for a {@link Jsoup} request to complete.
+     * <p>
+     * <b>Default:</b> <code>30000</code>
+     */
     CONNECTION_TIMEOUT(30000),
+
+    /**
+     * Whether {@link Jsoup} should be allowed to use {@link Connection#ignoreHttpErrors(boolean)} when making requests.
+     * If this is <code>true</code>, all http errors will be thrown; otherwise, they're merely logged.
+     * <p>
+     * <b>Default:</b> <code>false</code>
+     */
     STRICT_HTTP(false),
 
     // Database configuration
+    /**
+     * The ip address of the MySQL database.
+     * <p>
+     * <b>Default:</b> <code>null</code>
+     */
     DATABASE_IP(null),
+
+    /**
+     * The port for connections to the MySQL database.
+     * <p>
+     * <b>Default:</b> <code>3306</code>
+     */
     DATABASE_PORT(3306),
+
+    /**
+     * The name of the database in the MySQL server.
+     * <p>
+     * <b>Default:</b> <code>"classical"</code>
+     */
     DATABASE_NAME("classical"),
+
+    /**
+     * The username to use when connecting to the MySQL database.
+     * <p>
+     * <b>Default:</b> <code>null</code>
+     */
     DATABASE_USERNAME(null),
+
+    /**
+     * The password to use when connecting to the MySQL database.
+     * <p>
+     * <b>Default:</b> <code>null</code>
+     */
     DATABASE_PASSWORD(null),
 
     // General configuration
+
+    /**
+     * The path to the directory where downloaded files pertaining to this project are stored.
+     * <p>
+     * <b>Default:</b> <code>null</code>
+     */
     DATA_DIRECTORY(null),
+
+    /**
+     * The name to use for HTML files from each organization that contain their school list, when downloading them to
+     * the {@link #DATA_DIRECTORY}.
+     * <p>
+     * <b>Default:</b> <code>"school_list.html"</code>
+     */
     SCHOOL_LIST_FILE_NAME("school_list.html"),
+
+    /**
+     * The maximum number of threads to use while download school pages from each organization.
+     * <p>
+     * <b>Default:</b> <code>15</code>
+     */
     MAX_THREADS_ORGANIZATIONS(15),
-    MISSING_NAME_SUBSTITUTION("MISSING NAME"),
-    SCHOOL_MATCH_URL_MODE("APPEND");
+
+    /**
+     * The default name to assign to schools whose name can't be determined.
+     * <p>
+     * <b>Default:</b> <code>"MISSING NAME"</code>
+     */
+    MISSING_NAME_SUBSTITUTION("MISSING NAME");
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
+
+    /**
+     * The name of the file that stores these configuration settings.
+     */
     private static final String FILE_NAME = "config.properties";
+
+    /**
+     * The default value for each configuration setting.
+     */
+    @Nullable
     private final Object defaultValue;
 
-    Config(Object defaultValue) {
+    /**
+     * Instantiate a new {@link Config} setting with the given default value.
+     *
+     * @param defaultValue The {@link #defaultValue}.
+     */
+    Config(@Nullable Object defaultValue) {
         this.defaultValue = defaultValue;
     }
 
@@ -105,6 +199,8 @@ public enum Config {
         if (prop != null) return prop;
 
         String val = String.valueOf(this.defaultValue);
+
+        // TODO update this to use the new prompt interface with the GUI
 
         // If no value is found anywhere, ask the user to provide one
         if (this.defaultValue == null) {
