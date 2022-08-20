@@ -1,5 +1,6 @@
 package utils;
 
+import database.Database;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;

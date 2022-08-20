@@ -23,9 +23,9 @@ public enum Action {
     PERFORM_ANALYSIS(Actions::performAnalysis),
 
     /**
-     * Run {@link Actions#setupDatabase()}.
+     * Run {@link Actions#manageDatabase()}.
      */
-    SETUP_DATABASE(Actions::setupDatabase),
+    MANAGE_DATABASE(Actions::manageDatabase),
 
     /**
      * Run {@link Actions#clearDataDirectory()}.

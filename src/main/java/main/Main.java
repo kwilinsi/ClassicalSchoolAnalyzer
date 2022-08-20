@@ -26,9 +26,7 @@ public class Main {
                     Option.of("Download school list", Action.UPDATE_SCHOOL_LIST),
                     Option.of("Download school websites", Action.DOWNLOAD_SCHOOL_WEBSITES),
                     Option.of("Perform analysis", Action.PERFORM_ANALYSIS),
-                    Option.of("Setup database", Action.SETUP_DATABASE,
-                            "This will delete all data in the database and recreate it.\n" +
-                            "Are you sure you wish to continue?"),
+                    Option.of("Manage database", Action.MANAGE_DATABASE),
                     Option.of("Clear data directory", Action.CLEAR_DATA_DIRECTORY,
                             "This will delete all downloaded files in the data directory.\n" +
                             "Are you sure you wish to continue?"),

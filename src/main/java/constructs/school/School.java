@@ -5,7 +5,7 @@ import constructs.District;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import utils.Config;
-import utils.Database;
+import database.Database;
 import utils.Utils;
 
 import java.sql.Connection;

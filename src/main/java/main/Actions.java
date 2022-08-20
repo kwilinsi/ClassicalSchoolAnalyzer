@@ -5,6 +5,7 @@ import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
 import constructs.school.SchoolManager;
+import database.DatabaseManager;
 import gui.windows.prompt.attribute.AttributeOption;
 import gui.windows.prompt.attribute.AttributePrompt;
 import gui.windows.prompt.selection.Option;
@@ -12,7 +13,7 @@ import gui.windows.prompt.selection.SelectionPrompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
-import utils.Database;
+import database.Database;
 
 import java.io.File;
 import java.io.IOException;
@@ -121,15 +122,13 @@ public class Actions {
     }
 
     /**
-     * Set up the MySQL database with the proper table structure.
+     * Present the user with a prompt for various database-related actions.
      * <p>
-     * Calling {@link Action}: {@link Action#SETUP_DATABASE SETUP_DATABASE}
+     * Calling {@link Action}: {@link Action#MANAGE_DATABASE MANAGE_DATABASE}
      */
-    static void setupDatabase() {
-        logger.info("Setting up SQL database.");
-        Database.deleteTables();
-        Database.createTables();
-        OrganizationManager.addOrganizationsToSQL();
+    static void manageDatabase() {
+        logger.info("Calling DatabaseManager.prompt().");
+        DatabaseManager.prompt();
     }
 
     /**

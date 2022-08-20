@@ -16,34 +16,34 @@ public class Option<T> {
      * The name associated with this option, shown to the user.
      */
     @NotNull
-    private final String name;
+    protected final String name;
 
     /**
      * The value that is returned when this {@link Option} is selected.
      */
     @Nullable
-    private final T value;
+    protected final T value;
 
     /**
-     * If this attribute is non-null, a confirmation prompt will be shown to the user when they select this option. Only
-     * if they confirm their choice will this option be selected.
+     * If this is non-null, a confirmation prompt will be shown to the user when they select this option. Only if they
+     * confirm their choice will this option be selected.
      */
     @Nullable
-    private final String confirmationMessage;
+    protected final String confirmationMessage;
 
-    private Option(@NotNull String name, @Nullable T value, @Nullable String confirmationMessage) {
+    protected Option(@NotNull String name, @Nullable T value, @Nullable String confirmationMessage) {
         this.name = name;
         this.value = value;
         this.confirmationMessage = confirmationMessage;
     }
 
     /**
-     * Create a new selection by providing the text shown to the user and the value returned when selected.
+     * Create a new option by providing the text shown to the user and the value returned when selected.
      *
      * @param name  The {@link #getName() name}.
      * @param value The {@link #value value}.
      *
-     * @return The new selection.
+     * @return The new option.
      * @see #of(String, T, String)
      */
     public static <T> Option<T> of(@NotNull String name, @Nullable T value) {
@@ -51,16 +51,16 @@ public class Option<T> {
     }
 
     /**
-     * Create a new selection with a confirmation message.
+     * Create a new option with a confirmation message.
      *
      * @param name                The {@link #getName() name}.
      * @param value               The {@link #value value}.
      * @param confirmationMessage The {@link #confirmationMessage}.
      *
-     * @return The new selection.
+     * @return The new option.
      * @see #of(String, T)
      */
-    public static <T> Option<T> of(@NotNull String name, @Nullable T value, @NotNull String confirmationMessage) {
+    public static <T> Option<T> of(@NotNull String name, @Nullable T value, @Nullable String confirmationMessage) {
         return new Option<>(name, value, confirmationMessage);
     }
 

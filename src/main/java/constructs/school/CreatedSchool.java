@@ -9,7 +9,7 @@ import processing.schoolLists.matching.MatchIdentifier;
 import processing.schoolLists.matching.MatchResult;
 import processing.schoolLists.matching.MatchResultType;
 import processing.schoolLists.matching.SchoolMatch;
-import utils.Database;
+import database.Database;
 import utils.URLUtils;
 import utils.Utils;
 
@@ -192,7 +192,7 @@ public class CreatedSchool extends School {
     public void addDistrictOrganizationRelation() throws SQLException, IllegalArgumentException {
         try {
             if (this.district_id == -1) throw new IllegalArgumentException();
-            new District(this.district_id, null, null).addOrganizationRelation(organization);
+            new District(this.district_id).addOrganizationRelation(organization);
         } catch (SQLException e) {
             throw new SQLException("Failed to add organization relation to district " + this.district_id + ".", e);
         } catch (IllegalArgumentException e) {
