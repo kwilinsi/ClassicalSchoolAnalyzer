@@ -46,6 +46,7 @@ public enum Attribute {
     email(String.class, null, 100),
     accs_accredited(Boolean.class, null),
     office_phone(String.class, null, 20),
+    fax_number(String.class, null, 20),
     date_accredited(LocalDate.class, null),
     year_founded(Integer.class, null),
     grades_offered(String.class, null, 100),

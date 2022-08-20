@@ -56,7 +56,8 @@ public class ASAExtractor implements Extractor {
      *
      * @return The created school.
      */
-    private CreatedSchool extractSingleSchool(Element el) {
+    @NotNull
+    private CreatedSchool extractSingleSchool(@NotNull Element el) {
         CreatedSchool school = new CreatedSchool(OrganizationManager.ASA);
 
         // Set basic attributes of the school

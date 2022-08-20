@@ -51,14 +51,14 @@ public class AttributeOption {
 
     /**
      * Get the name of the {@link #attribute}. This will have an asterisk (*) prefix if the {@link #firstValue first}
-     * and {@link #secondValue second} values {@link Attribute#matches(Object, Object) match}
-     * {@link MatchLevel#EXACT EXACTLY}.
+     * and {@link #secondValue second} values {@link Attribute#matches(Object, Object) match} at all (e.g. not a match
+     * level of {@link MatchLevel#NONE NONE}).
      *
      * @return The name of the {@link #attribute}.
      */
     @NotNull
     public String getAttrName() {
-        return (attribute.matches(firstValue, secondValue) == MatchLevel.EXACT ? "(*) " : "") + attribute.name();
+        return (attribute.matches(firstValue, secondValue) == MatchLevel.NONE ? "" : "(*) ") + attribute.name();
     }
 
     /**

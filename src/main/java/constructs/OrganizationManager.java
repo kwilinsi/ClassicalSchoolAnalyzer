@@ -115,7 +115,7 @@ public class OrganizationManager {
      * <br><b>Name Abbreviation:</b> ASA
      * <br><b>Homepage URL:</b> <a href="https://anglicanschools.org">website</a>
      * <br><b>School List URL:</b> <a href="https://anglicanschools.org/members/">school list</a>
-     * <br><b>Additional Indirect Matching Attributes:</b> <i>N/A</i>
+     * <br><b>Additional Indirect Matching Attributes:</b> {@link Attribute#email email}
      * <br><b>Additional Relevant Matching Attributes:</b> <i>N/A</i>
      */
     public static final Organization ASA = new Organization(
@@ -124,7 +124,7 @@ public class OrganizationManager {
             "ASA",
             "https://anglicanschools.org",
             "https://anglicanschools.org/members/",
-            indAttr(),
+            indAttr(Attribute.email),
             relAttr(),
             new ASAExtractor()
     );

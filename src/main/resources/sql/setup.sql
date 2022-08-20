@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS Schools
     email                                   VARCHAR(100),
     accs_accredited                         BOOL,
     office_phone                            VARCHAR(20),
+    fax_number                              VARCHAR(20),
     date_accredited                         DATE,
     year_founded                            INTEGER,
     grades_offered                          VARCHAR(100),
