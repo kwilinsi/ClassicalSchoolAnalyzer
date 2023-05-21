@@ -37,8 +37,7 @@ public class MatchIdentifier {
      * <ol>
      *     <li>Search the database (using the <code>schoolsCache</code>) for any schools that might match this one.
      *     <li>While searching, if any {@link SchoolMatch#isExactMatchOrSubset() exact} matches are found (duplicate
-     *     schools),
-     *     immediately exit, marking this school as a {@link MatchResultType#DUPLICATE DUPLICATE}.
+     *     schools), immediately exit, marking this school as a {@link MatchResultType#DUPLICATE DUPLICATE}.
      *     <li>Identify a list of districts from all of the partially matching schools.
      *     <li>Check each district for a possible match by providing summary information on the schools in the district
      *     and prompting the user for a verdict.
@@ -47,7 +46,6 @@ public class MatchIdentifier {
      *
      * @param incomingSchool The {@link CreatedSchool} to match.
      * @param schoolsCache   A list of all the schools already in the database.
-     *
      * @return A {@link MatchResult} indicating the result of the match.
      */
     @NotNull
@@ -108,9 +106,8 @@ public class MatchIdentifier {
      * @param district        The {@link District} that might match the incoming school.
      * @param districtSchools A list of {@link SchoolMatch} objects corresponding to cached {@link School Schools} in
      *                        the district.
-     *
      * @return A {@link MatchResult} indicating the result of the match, or <code>null</code> if the user chose to
-     *         ignore the match.
+     * ignore the match.
      */
     @Nullable
     private static MatchResult processDistrictMatch(@NotNull CreatedSchool incomingSchool,
@@ -214,7 +211,6 @@ public class MatchIdentifier {
      *                        {@link SchoolMatch#getNonNullMatchCount() non-null match count}.
      * @param allMatchObjects A list of all {@link SchoolMatch SchoolMatches}, one for every {@link School} in the
      *                        database cache.
-     *
      * @return A list of {@link District Districts} and their member {@link School} matches.
      */
     @NotNull
@@ -256,7 +252,6 @@ public class MatchIdentifier {
      * @param district        The {@link District} that was flagged as a possible match with the incoming school.
      * @param districtSchools A list of {@link SchoolMatch} objects corresponding to the schools already in the
      *                        district. This must contain at least one object.
-     *
      * @return A {@link Panel} containing a neatly formatted prompt message.
      */
     @NotNull
