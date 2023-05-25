@@ -6,3 +6,5 @@
 /installation/
 /reference/
 /tmp/
+/external/address/*/
+/external/address/*.spec
