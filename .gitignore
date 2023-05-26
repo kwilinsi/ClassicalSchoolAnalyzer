@@ -1,10 +1,15 @@
-# Project exclude paths
+# JVM and IntelliJ
 /.gradle/
 /.idea/
 /src/test/
 /build/
+
+# Project-specific paths
 /installation/
 /reference/
 /tmp/
+
+# Python address parser
 /external/address/*/
 /external/address/*.spec
+/external/address/test*
