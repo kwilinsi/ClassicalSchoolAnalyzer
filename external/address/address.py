@@ -50,8 +50,7 @@ def normalize_file():
     """
 
     input_path = sys.argv[2]
-    output_path = os.path.join(os.path.dirname(
-        input_path, "normalized_addresses.json"))
+    output_path = os.path.join(os.path.dirname(input_path), "normalized_addresses.json")
 
     try:
         with open(input_path, 'r') as input_file:

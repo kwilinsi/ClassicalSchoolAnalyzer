@@ -27,11 +27,12 @@ def parse(input: str) -> OrderedDict[str, str]:
     try:
         return normalize_address_record(input)
     except Exception as e:
-        error = e, stack = traceback.format_exc()
+        error = e
+        stack = traceback.format_exc()
 
     # If that fails, parse it with usaddress
     try:
-        tagged, addr_type = tag(input)
+        tagged, _ = tag(input)
     except Exception as e:
         return error_dict("Failed to parse address.", f'{str(error)} | {str(e)}', stack)
 
@@ -51,7 +52,7 @@ def parse(input: str) -> OrderedDict[str, str]:
     def clean(s):
         return post_clean_addr_str(pre_clean_addr_str(s.upper()))
 
-    for key, value in tagged:
+    for key, value in tagged.items():
         if key == 'PlaceName':
             address['city'] = clean(value.upper())
             ignore_future_tags = True
@@ -97,32 +98,32 @@ def normalize(address: OrderedDict[str, str]) -> str:
     ])
 
 
-def parse_and_normalize(input: str) -> str:
+def parse_and_normalize(input: str) -> OrderedDict[str, str]:
     """
     Parse and foramt the given address. This is done via calls to parse() and normalize(),
     respectively.
 
     If the parse() method fails to parse the address, instead returning an error, this
-    method will format the error as JSON and return it as such.
+    method will return the error plainly as an OrderedDict, ready for putting in JSON.
 
-    On the other hand, if the parsing is successful, the address is formated and returned
-    in a JSON object mapped to the key "normalized".
+    On the other hand, if the parsing is successful, the address is normalized and returned
+    in an OrderedDict mapped to the key "normalized".
 
-    Either way, this returns a JSON object as a string.
+    Either way, this returns an OrderedDict.
 
     Args:
         input: The address to parse and normalize.
 
     Returns:
-        A JSON-encoded normalized address (or error message).
+        An OrderedDict with the normalized address (or error message).
     """
 
     parsed = parse(input)
 
     if 'error' in parsed:
-        return json.dumps(parsed)
+        return parsed
     else:
-        return json.dumps({"normalized": normalize(parsed)})
+        return OrderedDict([("normalized", normalize(parsed))])
 
 
 def compare(addr1: str, addr2: str, parsed1: OrderedDict[str, str] = None) -> str:
