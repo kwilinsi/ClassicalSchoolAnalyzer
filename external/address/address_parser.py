@@ -2,12 +2,35 @@ from collections import OrderedDict
 from typing import OrderedDict, List
 import json
 import traceback
+import re
 
 from address_utils import error_dict, format_error
 
 from usaddress import tag
 from scourgify import normalize_address_record
 from scourgify.cleaning import pre_clean_addr_str, post_clean_addr_str
+
+ADDRESS_PREFIX_REGEX = r'^((mailing?)\s*address[:;\s]*)'
+
+
+def clean_address(input: str) -> str:
+    """
+    Clean some input address to remove a few possible artifacts. This is done
+    before parsing it.
+
+    Args:
+        input: The address to clean.
+
+    Returns:
+        The cleaned address.
+    """
+
+    # Look for the prefix "address:" or "mailing address:" and remove it
+    match = re.match(ADDRESS_PREFIX_REGEX, input, re.IGNORECASE)
+    if match:
+        input = input[match.end():].strip()
+
+    return input
 
 
 def parse(input: str) -> OrderedDict[str, str]:
@@ -23,7 +46,10 @@ def parse(input: str) -> OrderedDict[str, str]:
         A dictionary with parsed address information.
     """
 
-    # First, attempt to parse the adddress with usaddress-scourgify
+    # First, clean the input
+    input = clean_address(input)
+
+    # Attempt to parse the adddress with usaddress-scourgify
     try:
         return normalize_address_record(input)
     except Exception as e:
