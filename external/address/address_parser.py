@@ -25,12 +25,30 @@ def clean_address(input: str) -> str:
         The cleaned address.
     """
 
+    # Replace "null" and "none" with None
+    if not input or input.lower() in ['null', 'none']:
+        return None
+
     # Look for the prefix "address:" or "mailing address:" and remove it
     match = re.match(ADDRESS_PREFIX_REGEX, input, re.IGNORECASE)
     if match:
         input = input[match.end():].strip()
 
     return input
+
+
+def define_address(address_line_1, address_line_2, city, state, postal_code) -> OrderedDict:
+    """
+    Manually define a scourgify-style address dictionary.
+    """
+
+    return OrderedDict([
+        ('address_line_1', address_line_1),
+        ('address_line_2', address_line_2),
+        ('city', city),
+        ('state', state),
+        ('postal_code', postal_code),
+    ])
 
 
 def parse(input: str) -> OrderedDict[str, str]:
@@ -49,6 +67,10 @@ def parse(input: str) -> OrderedDict[str, str]:
     # First, clean the input
     input = clean_address(input)
 
+    # If the input is null or empty, return an empty address record
+    if not input:
+        return define_address(None, None, None, None, None)
+
     # Attempt to parse the adddress with usaddress-scourgify
     try:
         return normalize_address_record(input)
@@ -65,13 +87,7 @@ def parse(input: str) -> OrderedDict[str, str]:
     # Now take a naive approach to grouping tags. Stick everything on address_line_1 except
     # for the city, state, and postal code. Also ignore tags after those three, because it's
     # probably just the country name.
-    address = OrderedDict([
-        ('address_line_1', []),
-        ('address_line_2', None),
-        ('city', None),
-        ('state', None),
-        ('postal_code', None),
-    ])
+    address = define_address([], None, None, None, None)
 
     ignore_future_tags = False
 
@@ -110,6 +126,9 @@ def normalize(address: OrderedDict[str, str]) -> str:
     Returns:
         The normalized address in a single string.
     """
+
+    if not address:
+        return None
 
     city_line = join_parts(' ', [
         address['city'],
@@ -254,6 +273,9 @@ def compare(addr1: str, addr2: str, parsed1: OrderedDict[str, str] = None) -> st
 
     if normalized1 == normalized2:
         return result('INDICATOR', normalized1, f'Fixed malformed spacing')
+    
+    if (normalized1 and not normalized2) or (not normalized1 and normalized2):
+        return result ('NONE', normalized1 if normalized1 else normalized2, f'Preferred non-null')
 
     # Check whether they start with "PO BOX" but with improper spacing, and if so, fix it
     if normalized1.replace(' ', '').startswith('POBOX'):
