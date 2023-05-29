@@ -102,7 +102,7 @@ Use the following syntax:
 
 The file must contain a JSON array, where each element is an address string to normalize.
 
-The output is a JSON object with key `"output_file"` pointing to the path of the output data. (If a fatal error occurred, the output will be the error message instead.) The output file is located in the same directory as the input. The output is also a JSON array, this time containing objects. Each object will either have the key `normalized` mapped to the normalized address, or it will contain an error message.
+The output is a JSON object with key `"output_file"` pointing to the path of the output data. (If a fatal error occurred, the output will be the error message instead.) The output file is located in the same directory as the input, having the same file name but with the suffix `"_normalized"`. The output is also a JSON array, this time containing objects. Each object will either have the key `normalized` mapped to the normalized address, or it will contain an error message.
 
 ### __Task: `compare`__
 
@@ -144,4 +144,4 @@ Use the following syntax:
 
 This will compare the `address` to every address in the file. The file must contain a JSON array, where each element is an address string to compare.
 
-The output is a JSON object with key `"output_file"` pointing to the path of the output data. (If a fatal error occurred, the output will be the error message instead.) The output file is located in the same directory as the input. The output is also a JSON array, this time containing objects. Each object will either be an error message, or it will contain the keys `"match"`, `"preference"`, and `"info"` (see [`compare`](#task-compare)).
+The output is a JSON object with key `"output_file"` pointing to the path of the output data. (If a fatal error occurred, the output will be the error message instead.) The output file is located in the same directory as the input, having the same file name but with the suffix `"_compared"`. The output is also a JSON array, this time containing objects. Each object will either be an error message, or it will contain the keys `"match"`, `"preference"`, and `"info"` (see [`compare`](#task-compare)).

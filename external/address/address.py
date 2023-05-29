@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import traceback
+from pathlib import Path
 
 from address_utils import format_error
 import address_parser
@@ -50,7 +51,10 @@ def normalize_file():
     """
 
     input_path = sys.argv[2]
-    output_path = os.path.join(os.path.dirname(input_path), "normalized_addresses.json")
+    output_path = os.path.join(
+        os.path.dirname(input_path),
+        f'{Path(input_path).stem}_normalized.json'
+    )
 
     try:
         with open(input_path, 'r') as input_file:
@@ -98,8 +102,10 @@ def compare_file():
     addr1 = sys.argv[2]
     parsed1 = address_parser.parse(addr1)
     input_path = sys.argv[3]
-    output_path = os.path.join(os.path.dirname(
-        input_path, "compared_addresses.json"))
+    output_path = os.path.join(
+        os.path.dirname(input_path),
+        f'{Path(input_path).stem}_compared.json'
+    )
 
     try:
         with open(input_path, 'r') as input_file:
