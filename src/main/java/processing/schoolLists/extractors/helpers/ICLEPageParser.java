@@ -67,6 +67,7 @@ public class ICLEPageParser implements Callable<List<CreatedSchool>> {
         logger.debug("Downloading ICLE school list page {}.", pageNum);
 
         // Download the appropriate page number
+        @SuppressWarnings("SpellCheckingInspection")
         String url = String.format("%spage/%d/", OrganizationManager.ICLE.getSchoolListUrl(), pageNum);
         Document doc = JsoupHandler.downloadAndSave(
                 url,

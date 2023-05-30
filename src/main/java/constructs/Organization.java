@@ -68,7 +68,7 @@ public class Organization extends BaseConstruct {
     /**
      * These attributes, if they match between two schools, indicate a high probability that the schools are either the
      * same school or part of the same district. When
-     * {@link MatchIdentifier#determineMatch(CreatedSchool, List) checking} for an existing school in the database that
+     * {@link MatchIdentifier#compare(CreatedSchool, List) checking} for an existing school in the database that
      * matches this one, these attributes are used.
      * <p>
      * Typically, two schools should not share the same value for any of these attributes unless they are part of the

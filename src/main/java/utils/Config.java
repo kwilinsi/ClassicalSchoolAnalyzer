@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.Scanner;
@@ -29,7 +30,7 @@ public enum Config {
      * Chrome/74.0.3729.169 Safari/537.36"</code>
      */
     USERAGENT("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit 537.36 (KHTML, like Gecko) " +
-              "Chrome/102.0.5005.136 Safari/537.36"),
+            "Chrome/102.0.5005.136 Safari/537.36"),
 
     /**
      * The timeout in milliseconds to wait for a {@link Jsoup} request to complete.
@@ -100,7 +101,7 @@ public enum Config {
     SCHOOL_LIST_FILE_NAME("school_list.html"),
 
     /**
-     * The maximum number of threads to use while download school pages from each organization.
+     * The maximum number of threads to use while downloading school pages from each organization.
      * <p>
      * <b>Default:</b> <code>15</code>
      */
@@ -111,7 +112,19 @@ public enum Config {
      * <p>
      * <b>Default:</b> <code>"MISSING NAME"</code>
      */
-    MISSING_NAME_SUBSTITUTION("MISSING NAME");
+    MISSING_NAME_SUBSTITUTION("MISSING NAME"),
+
+    /**
+     * The path to the Python executable that parses addresses with <code>usaddress-scourgify</code>.
+     * <p>
+     * This path is used by {@link processing.schoolLists.matching.AddressParser AddressParser} to interface
+     * with the python executable.
+     * <p>
+     * <b>Default:</b> <code>"external/address/dist/address-parser.exe"</code> (with platform-dependent slashes)
+     */
+    PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH(
+            Paths.get("external", "address", "dist", "address.exe").toAbsolutePath()
+    );
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
 
@@ -188,7 +201,7 @@ public enum Config {
             properties.load(new FileInputStream(configFile));
         } catch (IOException e) {
             logger.error("Failed to load " +
-                         configFile.getAbsolutePath() + " to Properties object. Everything will now break.", e);
+                    configFile.getAbsolutePath() + " to Properties object. Everything will now break.", e);
             return null;
         }
 
@@ -222,7 +235,7 @@ public enum Config {
             out = new FileOutputStream(configFile);
         } catch (FileNotFoundException e) {
             logger.warn("Failed to create output stream for " +
-                        configFile.getAbsolutePath() + ". Couldn't save properties.", e);
+                    configFile.getAbsolutePath() + ". Couldn't save properties.", e);
             return val;
         }
 

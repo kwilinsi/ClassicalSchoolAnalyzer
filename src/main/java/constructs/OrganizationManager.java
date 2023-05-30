@@ -190,7 +190,7 @@ public class OrganizationManager {
                 @SuppressWarnings("SqlInsertValues")
                 PreparedStatement preparedStatement = connection.prepareStatement(
                         "INSERT INTO Organizations (id, name, name_abbr, homepage_url, school_list_url) " +
-                        "VALUES (?, ?, ?, ?, ?)"
+                                "VALUES (?, ?, ?, ?, ?)"
                 );
                 preparedStatement.setInt(1, organization.getId());
                 preparedStatement.setString(2, organization.getName());
@@ -230,7 +230,6 @@ public class OrganizationManager {
      * Get an {@link Organization} from its {@link Organization#getId() id}.
      *
      * @param id The id of the desired organization.
-     *
      * @return The organization with the given id, or <code>null</code> if no organization with that id exists.
      */
     @Nullable
@@ -258,7 +257,6 @@ public class OrganizationManager {
      * @param attributes Zero or more attributes to change. If they are already added, they are removed; if they aren't
      *                   already included, they will be added. Do <i>not</i> include the same attribute twice; the
      *                   behavior cannot be guaranteed.
-     *
      * @return An array of all match indicator attributes.
      */
     private static Attribute[] indAttr(Attribute... attributes) {
@@ -292,7 +290,6 @@ public class OrganizationManager {
      * @param attributes Zero or more attributes to change. If they are already added, they are removed; if they aren't
      *                   already included, they will be added. Do <i>not</i> include the same attribute twice; the
      *                   behavior cannot be guaranteed.
-     *
      * @return An array of all match relevant attributes.
      */
     private static Attribute[] relAttr(Attribute... attributes) {

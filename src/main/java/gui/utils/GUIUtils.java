@@ -6,9 +6,9 @@ import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.*;
 import constructs.school.Attribute;
 import constructs.District;
-import constructs.school.MatchLevel;
 import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
+import processing.schoolLists.matching.AttributeComparison;
 import utils.Utils;
 
 import java.time.Instant;
@@ -34,7 +34,6 @@ public class GUIUtils {
      * </ul>
      *
      * @param text The text to display in the header.
-     *
      * @return The header label.
      * @see #warningHeader(String)
      */
@@ -52,7 +51,6 @@ public class GUIUtils {
      * a warning message.
      *
      * @param text The text to display in the warning header.
-     *
      * @return The warning header label.
      */
     @NotNull
@@ -72,7 +70,6 @@ public class GUIUtils {
      * </ul>
      *
      * @param text The text to display in the footer.
-     *
      * @return The footer label.
      * @see #footer(String)
      */
@@ -91,7 +88,6 @@ public class GUIUtils {
      * window.
      *
      * @param text The text to display in the footer.
-     *
      * @return The footer panel.
      */
     @NotNull
@@ -108,7 +104,6 @@ public class GUIUtils {
      * formatted log message.
      *
      * @param event The log event to format.
-     *
      * @return The formatted log message.
      */
     @NotNull
@@ -163,25 +158,24 @@ public class GUIUtils {
      * {@link School}.
      * <p>
      * The panel is formatted as a {@link GridLayout} containing the given attributes and their corresponding values for
-     * the school. The name of each attribute is prefixed by its corresponding {@link MatchLevel}
-     * {@link MatchLevel#getPrefix() prefix}.
+     * the school. The name of each attribute is prefixed by its corresponding {@link AttributeComparison.Level Level}
+     * {@link AttributeComparison.Level#getPrefix() prefix}.
      * <p>
      * The <code>attributes</code> list is automatically sorted according to the natural order of attribute enums in the
      * {@link Attribute} class. If <code>includeId</code> is true, indicating that the school's
      * {@link School#getId() id} should be included, it will be placed first in the list.
      *
      * @param school     The school from which to retrieve the attribute values.
-     * @param attributes The list of attributes to include in the panel, and their corresponding match state.
+     * @param attributes A map of every attribute to include in the panel and the corresponding comparisons.
      * @param includeId  Whether to include the school's {@link School#getId() id} as a pseudo-attribute in the panel.
-     *
      * @return A nicely formatted panel displaying some of the school's attributes.
      */
     @NotNull
     public static Panel formatSchoolAttributes(@NotNull School school,
-                                               Map<Attribute, MatchLevel> attributes,
+                                               Map<Attribute, AttributeComparison.Level> attributes,
                                                boolean includeId) {
         // Create a copy of the attributes list, sorted according to their natural order
-        LinkedHashMap<Attribute, MatchLevel> sortedAttributes = new LinkedHashMap<>();
+        LinkedHashMap<Attribute, AttributeComparison.Level> sortedAttributes = new LinkedHashMap<>();
         attributes.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .forEachOrdered(e -> sortedAttributes.put(e.getKey(), e.getValue()));
@@ -213,7 +207,6 @@ public class GUIUtils {
      * {@link District#getWebsiteURL() website URL}.
      *
      * @param district The district to format.
-     *
      * @return A formatted panel with the district's attributes.
      * @see #formatSchoolAttributes(School, Map, boolean)
      */
@@ -231,8 +224,11 @@ public class GUIUtils {
         panel.addComponent(new Label(district.getName()));
 
         // Add the website URL
-        panel.addComponent(new Label("id:").setForegroundColor(TextColor.ANSI.BLUE));
-        panel.addComponent(new Label(district.getWebsiteURL()));
+        panel.addComponent(new Label("url:").setForegroundColor(TextColor.ANSI.BLUE));
+        panel.addComponent(
+                new Label(district.getWebsiteURL() == null ? "null" : district.getWebsiteURL())
+                        .setForegroundColor(TextColor.ANSI.RED)
+        );
 
         return panel;
     }

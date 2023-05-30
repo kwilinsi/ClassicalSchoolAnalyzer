@@ -12,19 +12,22 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This utility class contains methods that are designed to create {@link CreatedSchool Schools} from each organization.
+ */
 public class SchoolManager {
     private static final Logger logger = LoggerFactory.getLogger(SchoolManager.class);
 
     /**
-     * Get a list of every {@link School} currently in the database.
+     * Get a list of every {@link School} currently in the database as a {@link CachedSchool}.
      *
-     * @return A list of schools.
+     * @return A list of cached schools.
      * @throws SQLException If there is an error establishing the SQL connection or executing the query.
      */
     @NotNull
-    public static List<School> getSchoolsFromDatabase() throws SQLException {
+    public static List<CachedSchool> getSchoolsFromDatabase() throws SQLException {
         logger.debug("Retrieving all schools from database...");
-        List<School> schools = new ArrayList<>();
+        List<CachedSchool> schools = new ArrayList<>();
 
         // Execute query
         Connection connection = Database.getConnection();
@@ -32,7 +35,7 @@ public class SchoolManager {
 
         // Convert the resultSet to a list of schools
         while (resultSet.next())
-            schools.add(new School(resultSet));
+            schools.add(new CachedSchool(resultSet));
 
         return schools;
     }

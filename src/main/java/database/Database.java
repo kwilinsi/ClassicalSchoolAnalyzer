@@ -26,7 +26,7 @@ public class Database {
     static void load() {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(
-                String.format("jdbc:mysql://%s:%d/%s",
+                String.format("jdbc:mysql://%s:%d/%s?useUnicode=true",
                         Config.DATABASE_IP.get(), Config.DATABASE_PORT.getInt(), Config.DATABASE_NAME.get()
                 )
         );

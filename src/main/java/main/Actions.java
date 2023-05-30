@@ -1,17 +1,14 @@
 package main;
 
 import constructs.*;
-import constructs.school.Attribute;
-import constructs.school.CreatedSchool;
-import constructs.school.School;
-import constructs.school.SchoolManager;
+import constructs.school.*;
 import database.DatabaseManager;
-import gui.windows.prompt.attribute.AttributeOption;
-import gui.windows.prompt.attribute.AttributePrompt;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import processing.schoolLists.matching.AddressParser;
+import processing.schoolLists.matching.AttributeComparison;
 import utils.Config;
 import database.Database;
 
@@ -73,7 +70,7 @@ public class Actions {
 
         // Download all existing schools from the database to create a cache. This will be used for identifying
         // duplicate schools when saving them to the database.
-        List<School> schoolsCache;
+        List<CachedSchool> schoolsCache;
         try {
             schoolsCache = SchoolManager.getSchoolsFromDatabase();
         } catch (SQLException e) {
@@ -182,7 +179,7 @@ public class Actions {
                 logger.warn("Failed to re-create the data directory root folder " + p + ".");
         } catch (SecurityException e) {
             logger.warn("Encountered a security exception while attempting to recreate data directory root folder " +
-                        p + ".", e);
+                    p + ".", e);
         }
     }
 
@@ -194,46 +191,37 @@ public class Actions {
     static void test() {
         logger.info("Running test script.");
 
-        School schoolA, schoolB;
-
-        // Get two schools at random
+        // Get all the address values
         try (Connection connection = Database.getConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("SELECT * FROM Schools ORDER BY RAND() LIMIT 1");
+            PreparedStatement stmt = connection.prepareStatement("SELECT DISTINCT address FROM Schools");
 
             ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            schoolA = new School(resultSet);
 
-            resultSet = stmt.executeQuery();
-            resultSet.next();
-            schoolB = new School(resultSet);
+            connection.setAutoCommit(false);
+            PreparedStatement insertStmt = connection.prepareStatement(
+                    "INSERT INTO Addresses (raw, normalized) VALUES (?, ?)"
+            );
+
+            List<String> raw = new ArrayList<>();
+
+            while (resultSet.next())
+                raw.add(resultSet.getString(1));
+
+            logger.info("normalizing {} addresses", raw.size());
+            List<String> normalized = AddressParser.normalize(raw);
+
+            for (int i = 0; i < normalized.size(); i++) {
+                insertStmt.setString(1, raw.get(i));
+                insertStmt.setString(2, normalized.get(i));
+                insertStmt.addBatch();
+            }
+
+            insertStmt.executeBatch();
+            logger.info("Added address strings to database.");
+
+            connection.commit();
         } catch (SQLException e) {
             logger.error("", e);
-            return;
         }
-
-        // Randomly select 10 attributes to compare
-        List<Attribute> attributes = Arrays.asList(Attribute.values());
-        Collections.shuffle(attributes);
-        attributes = attributes.subList(0, 10);
-
-        // Get a list of attribute options
-        List<AttributeOption> options = attributes.stream()
-                .map(a -> AttributeOption.of(a, schoolA.get(a), schoolB.get(a)))
-                .toList();
-
-        // Prompt the user
-        AttributePrompt prompt = AttributePrompt.of(
-                "Select the attributes to overwrite:",
-                options,
-                schoolA,
-                schoolB
-        );
-
-        List<Attribute> selection = Main.GUI.showPrompt(prompt);
-
-        System.out.println("Selection:");
-        for (Attribute attribute : selection)
-            System.out.println(attribute.name());
     }
 }

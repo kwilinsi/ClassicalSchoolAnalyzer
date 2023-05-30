@@ -6,9 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import processing.schoolLists.matching.MatchIdentifier;
-import processing.schoolLists.matching.MatchResult;
-import processing.schoolLists.matching.MatchResultType;
-import processing.schoolLists.matching.SchoolMatch;
+import processing.schoolLists.matching.SchoolComparison;
 import database.Database;
 import utils.URLUtils;
 import utils.Utils;
@@ -17,6 +15,7 @@ import java.net.URL;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -50,131 +49,130 @@ public class CreatedSchool extends School {
     }
 
     /**
-     * Save this {@link School} to the SQL database.
+     * Save this {@link CreatedSchool} to the SQL database.
      *
      * @param schoolsCache A list of all the schools already in the database. This is used for
-     *                     {@link MatchIdentifier#determineMatch(CreatedSchool, List) determining matches}.
-     *
+     *                     {@link MatchIdentifier#compare(CreatedSchool, List) determining matches}.
      * @throws SQLException If there is an error saving to the database.
      */
-    public void saveToDatabase(List<School> schoolsCache) throws SQLException, IllegalArgumentException {
+    public void saveToDatabase(List<CachedSchool> schoolsCache) throws SQLException, IllegalArgumentException {
         // ---------- ---------- ---------- ---------- ----------
         // Check for a matching school and such
         // ---------- ---------- ---------- ---------- ----------
 
-        logger.info("Saving school {} to database.", name());
+        logger.info("Starting database saving for school '{}'", name());
 
         // Run the matching process to look for other schools or districts that might match this one
-        MatchResult matchResult = MatchIdentifier.determineMatch(this, schoolsCache);
-        MatchResultType matchType = matchResult.getType();
+        SchoolComparison comparison = MatchIdentifier.compare(this, schoolsCache);
+        SchoolComparison.Level level = comparison.getLevel();
 
-        // If match result says to omit this school, don't add it to the database and stop immediately.
-        if (matchType == MatchResultType.OMIT) {
-            logger.debug("Omitting school {}.", name());
+        // TODO under new system, if updating a school, you need to re-check the validation process to ensure it
+        //  didn't just get a new URL or something
+
+        // If the comparison says to omit this school, don't add it to the database, and stop immediately.
+        if (level == SchoolComparison.Level.OMIT) {
+            logger.debug("Omitting school {}", name());
             return;
         }
-
-        boolean useInsertStmt = matchResult.usesInsertStmt();
-        SchoolMatch schoolMatch = matchResult.getMatch();
-        // I know this is true, but IntelliJ doesn't believe me. So assert it explicitly
-        assert (useInsertStmt || schoolMatch != null) &&
-               (matchType == MatchResultType.NEW_DISTRICT || schoolMatch != null);
 
         //
         // ---------- Determine the district_id, if applicable ----------
         //
 
         // If adding a new school and district, first create the district and set the district_id attribute.
-        if (matchType == MatchResultType.NEW_DISTRICT) {
+        if (level == SchoolComparison.Level.NO_MATCH) {
             District district = new District(name(), getStr(Attribute.website_url));
             district.saveToDatabase();
             this.district_id = district.getId();
         } else {
             // Otherwise copy the district_id from matching school
-            this.district_id = schoolMatch.getExistingSchool().getDistrictId();
+            this.district_id = comparison.getExistingSchool().getDistrictId();
         }
 
-        // If this is a duplicate, just add an organization relation and exit
-        if (matchType == MatchResultType.DUPLICATE) {
+        // Add a DistrictOrganization relation if applicable
+        if (level.isAddDistrictOrganization())
             addDistrictOrganizationRelation();
-            return;
-        }
 
         // ---------- ---------- ---------- ---------- ----------
-        // Generate a SQL statement
+        // Generate the SQL statement
         // ---------- ---------- ---------- ---------- ----------
-
 
         String sql;
-        List<Attribute> attributes;
+        boolean insertStmt = level.usesInsertStmt();
 
-        // Set the list of attributes to be used in the SQL statement.
-        if (useInsertStmt)
-            attributes = new ArrayList<>(this.attributes.keySet());
-        else
-            attributes = schoolMatch.getAttributesToUpdate();
+        // Set the list of attributes to be used in the SQL statement
+        List<Attribute> attributes = insertStmt ?
+                new ArrayList<>(this.attributes.keySet()) : comparison.getAttributesToUpdate();
 
-        // If there aren't any attributes, clearly there's nothing to do. Exit the method.
+        // If there aren't any attributes, this must be an exact duplicate match
         if (attributes.size() == 0) {
-            logger.debug("No attributes to update for school {}.", name());
+            logger.info("- Found matching school {}; cancelling save", comparison.getExistingSchool().id);
             return;
         }
 
-        // Get the names of the attributes for use in the SQL statement
-        List<String> attributeNames = attributes.stream().map(Attribute::name).collect(Collectors.toList());
+        if (!insertStmt) logger.debug("- Identified {} attributes to update", attributes.size());
 
-        // For an insert statement, add the district_id
-        if (useInsertStmt) attributeNames.add("district_id");
+        // Get the names of the attributes for use in the SQL statement
+        List<String> attributeNames = attributes.stream()
+                .map(Attribute::name)
+                .collect(Collectors.toList());
 
         // Create the SQL statement based on the appropriate statement type and the attributes to include
-        if (useInsertStmt)
+        if (insertStmt) {
+            attributeNames.add("district_id");
             sql = "INSERT INTO Schools %s;".formatted(Utils.generateSQLStmtArgs(attributeNames, true));
-        else
+        } else {
             sql = "UPDATE Schools %s WHERE id = ?;".formatted(Utils.generateSQLStmtArgs(attributeNames, false));
-
+        }
 
         // ---------- ---------- ---------- ---------- ----------
         // Execute SQL statement
         // ---------- ---------- ---------- ---------- ----------
-
 
         // Open database connection
         try (Connection connection = Database.getConnection()) {
             PreparedStatement statement = connection.prepareStatement(sql);
 
             // Add each attribute to the statement according to its type
-            for (int i = 0; i < attributes.size(); i++)
-                attributes.get(i).addToStatement(statement, get(attributes.get(i)), i + 1);
+            for (int i = 0; i < attributes.size(); i++) {
+                Attribute attribute = attributes.get(i);
+                attribute.addToStatement(
+                        statement,
+                        insertStmt ? get(attribute) : comparison.getAttributeValue(attribute),
+                        i + 1
+                );
+            }
 
             // Add the district_id / school id, depending on the statement type
-            if (useInsertStmt)
+            if (insertStmt)
                 statement.setInt(attributes.size() + 1, this.district_id);
             else
-                statement.setInt(attributes.size() + 1, schoolMatch.getExistingSchool().getId());
+                statement.setInt(attributes.size() + 1, comparison.getExistingSchool().getId());
 
             // Execute the finished statement
             statement.execute();
 
             // If an INSERT statement was used to add a new school, get the new id assigned by the database.
-            if (useInsertStmt) {
+            if (insertStmt) {
                 Statement stmt = connection.createStatement();
                 ResultSet result = stmt.executeQuery("SELECT LAST_INSERT_ID();");
                 if (result.next())
                     this.id = result.getInt(1);
                 else
                     logger.error("Failed to get auto-generated id of newly created school {}.", name());
+
+                logger.info("- Added to database in district " + district_id);
             } else {
                 // Otherwise, get the school and district ids by copying the one from the updated school
-                this.id = schoolMatch.getExistingSchool().getId();
+                this.id = comparison.getExistingSchool().getId();
+                logger.info("- Updated existing {} with {} modified attributes",
+                        comparison.getExistingSchool(),
+                        attributes.size());
             }
         }
 
-        // Add a relation between the parent district of this school and the organization from which this school was
-        // created.
-        addDistrictOrganizationRelation();
-
         // Finally, add this new school to the cache
-        schoolsCache.add(this);
+        schoolsCache.add(new CachedSchool(this));
     }
 
     /**
@@ -196,8 +194,9 @@ public class CreatedSchool extends School {
         } catch (SQLException e) {
             throw new SQLException("Failed to add organization relation to district " + this.district_id + ".", e);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Failed to add district organization relation for school " +
-                                               name() + ". District id not set.", e);
+            throw new IllegalArgumentException(
+                    "Failed to add district organization relation for school " + this + ". District id not set.", e
+            );
         }
     }
 

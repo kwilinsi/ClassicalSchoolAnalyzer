@@ -1,7 +1,8 @@
 package utils;
 
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -13,6 +14,8 @@ import java.util.regex.Pattern;
  * This class contains utility methods for handling {@link URL URLs}.
  */
 public class URLUtils {
+    private static final Logger logger = LoggerFactory.getLogger(URLUtils.class);
+
     private static final Pattern MULTIPLE_PROTOCOLS_PATTERN = Pattern.compile("^(https?://)(?=https?://)");
 
     /**
@@ -29,10 +32,13 @@ public class URLUtils {
      *
      * @param urlA The first URL to compare.
      * @param urlB The second URL to compare.
-     *
      * @return <code>True</code> if and only if the URLs are equal; <code>false</code> otherwise.
      */
-    public static boolean equals(@NotNull URL urlA, @NotNull URL urlB) {
+    public static boolean equals(@Nullable URL urlA, @Nullable URL urlB) {
+        // If both URLs are null, they're equal; if only one is null, they're not equal
+        if (urlA == null && urlB == null) return true;
+        if (urlA == null || urlB == null) return false;
+
         // Check hostname
         if (!urlA.getHost().equalsIgnoreCase(urlB.getHost())) {
             // If they're not equal, attempt to remove www. and try again
@@ -69,37 +75,26 @@ public class URLUtils {
      *
      * @param urlA The first URL as a string.
      * @param urlB The second URL as a string.
-     *
      * @return <code>True</code> if and only if the URLs have the same host; <code>false</code> otherwise.
      */
-    public static boolean hostEquals(@Nullable String urlA, @Nullable String urlB) {
+    public static boolean hostEquals(@Nullable URL urlA, @Nullable URL urlB) {
         // If both URLs are null, they're equal; if only one is null, they're not equal
         if (urlA == null && urlB == null) return true;
         if (urlA == null || urlB == null) return false;
 
-        try {
-            URL urlObjA = new URL(urlA);
-            URL urlObjB = new URL(urlB);
-            String hostA = urlObjA.getHost();
-            String hostB = urlObjB.getHost();
+        String hostA = urlA.getHost();
+        String hostB = urlB.getHost();
 
-            // Check for null hostnames using the same procedure as before
-            if (hostA == null && hostB == null) return false;
-            if (hostA == null || hostB == null) return false;
+        // Check for null hostnames
+        if (hostA == null && hostB == null) return false;
+        if (hostA == null || hostB == null) return false;
 
-            hostA = hostA.toLowerCase(Locale.ROOT);
-            hostB = hostB.toLowerCase(Locale.ROOT);
+        hostA = hostA.toLowerCase(Locale.ROOT);
+        hostB = hostB.toLowerCase(Locale.ROOT);
+        while (hostA.startsWith("www.")) hostA = hostA.substring(4);
+        while (hostB.startsWith("www.")) hostB = hostB.substring(4);
 
-            // Check for equal hostnames
-            if (hostA.equals(hostB)) return true;
-            if (hostA.startsWith("www.")) hostA = hostA.substring(4);
-            if (hostB.startsWith("www.")) hostB = hostB.substring(4);
-            return hostA.equals(hostB);
-
-        } catch (MalformedURLException e) {
-            // If the URLs are malformed, they're only equal when the string representations are the same
-            return urlA.equals(urlB);
-        }
+        return hostA.equals(hostB);
     }
 
     /**
@@ -112,12 +107,11 @@ public class URLUtils {
      * <ol>
      *     <li>If the URL is <code>null</code> or a {@link String#isBlank() blank} string, return <code>null</code>.
      *     <li>If the URL starts with multiple protocols (http/https), attempt to remove the outer ones.
-     *     <li>Attempt to parse the URL. If this fails, check for a missing protocol. Add http:// if missing.
+     *     <li>Attempt to parse the URL. If this fails, check for a missing protocol. Add https:// if missing.
      *     <li>Attempt again to parse the URL. If this fails, return <code>null</code>.
      * </ol>
      *
      * @param url The url as a string. If this is <code>null</code>, <code>null</code> is immediately returned.
-     *
      * @return A {@link URL} object, or <code>null</code> if the url could not be processed.
      */
     @Nullable
@@ -137,7 +131,7 @@ public class URLUtils {
 
         // Check for missing protocol
         if (!url.startsWith("http")) {
-            url = "http://" + url;
+            url = "https://" + url;
         }
 
         try {
@@ -146,5 +140,49 @@ public class URLUtils {
         }
 
         return null;
+    }
+
+    /**
+     * Attempt to normalize a URL to a relatively standard format. Though this method may semantically change the
+     * URL, this is deemed necessary, as most URLs are malformed on the original organization pages anyway.
+     * <p>
+     * The following steps are performed to normalize the input URL:
+     * <ol>
+     *     <li>Make the hostname lowercase
+     *     <li>Change <code>"http://"</code> to <code>"https://"</code>
+     *     <li>Remove <code>"www."</code> on hostnames
+     * </ol>
+     * It's suggested to first convert the URL from a string with {@link #createURL(String)}.
+     *
+     * @param url The URL to normalize.
+     * @return The normalized URL, or <code>null</code> if the input is <code>null</code>.
+     */
+    @Nullable
+    public static String normalize(@Nullable URL url) {
+        if (url == null) return null;
+
+        try {
+            // Make the host lowercase
+            String host = url.getHost().toLowerCase(Locale.ROOT);
+
+            // Remove www
+            while (host.startsWith("www."))
+                host = host.substring(4);
+
+            // Make the protocol lowercase
+            String protocol = url.getProtocol().toLowerCase(Locale.ROOT);
+
+            // Replace http with https
+            if ("http".equals(protocol))
+                protocol = "https";
+
+            url = new URL(protocol, host, url.getPort(), url.getFile());
+
+        } catch (MalformedURLException e) {
+            logger.warn("Unexpected error while recreating '" + url + "' during normalization", e);
+            return url.toString();
+        }
+
+        return url.toExternalForm();
     }
 }

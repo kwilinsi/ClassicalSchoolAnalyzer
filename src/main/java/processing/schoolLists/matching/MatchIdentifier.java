@@ -3,8 +3,8 @@ package processing.schoolLists.matching;
 import com.googlecode.lanterna.gui2.*;
 import constructs.*;
 import constructs.school.Attribute;
+import constructs.school.CachedSchool;
 import constructs.school.CreatedSchool;
-import constructs.school.MatchLevel;
 import constructs.school.School;
 import gui.utils.GUIUtils;
 import gui.windows.prompt.attribute.AttributeOption;
@@ -16,6 +16,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import processing.schoolLists.matching.AttributeComparison.Level;
+import processing.schoolLists.matching.AttributeComparison.Preference;
 
 import java.sql.SQLException;
 import java.util.*;
@@ -30,214 +32,250 @@ public class MatchIdentifier {
     private static final Logger logger = LoggerFactory.getLogger(MatchIdentifier.class);
 
     /**
-     * Determine whether the database contains a match for the given {@link CreatedSchool}.
-     * <p>
+     * Compare some incoming {@link CreatedSchool} with every school already in the database, looking for matches.
      * <h2>Process</h2>
-     * This function (using its helper functions in this class) performs the following steps in order:
+     * Broadly speaking, this function (using its helper functions in this class) performs the following steps:
      * <ol>
      *     <li>Search the database (using the <code>schoolsCache</code>) for any schools that might match this one.
-     *     <li>While searching, if any {@link SchoolMatch#isExactMatchOrSubset() exact} matches are found (duplicate
-     *     schools), immediately exit, marking this school as a {@link MatchResultType#DUPLICATE DUPLICATE}.
-     *     <li>Identify a list of districts from all of the partially matching schools.
-     *     <li>Check each district for a possible match by providing summary information on the schools in the district
-     *     and prompting the user for a verdict.
-     *     <li>Return a {@link MatchResult} corresponding to the user's decision.
+     *     <li>While searching, if any high-probability matches are found, where every attribute comparison between
+     *     the schools is automatically {@link AttributeComparison#isResolvable() resolvable}, immediately exit,
+     *     identifying that school as a match.
+     *     <li>Otherwise, identify a list of districts from all of the partially matching schools.
+     *     <li>Process each district further, likely asking the user to resolve issues manually. If the incoming
+     *     school is found to match any of those districts, return the comparison instance for the school from that
+     *     district.
+     *     <li>Otherwise, return an empty comparison indicating no match with any existing school.
      * </ol>
      *
      * @param incomingSchool The {@link CreatedSchool} to match.
      * @param schoolsCache   A list of all the schools already in the database.
-     * @return A {@link MatchResult} indicating the result of the match.
+     * @return A {@link SchoolComparison} indicating the result of the match.
      */
     @NotNull
-    public static MatchResult determineMatch(@NotNull CreatedSchool incomingSchool,
-                                             @NotNull List<School> schoolsCache) {
-        // Create two lists of SchoolMatch objects. One contains all cached schools; the other contains only those
-        // with at least partial matches.
-        List<SchoolMatch> allSchoolMatches = new ArrayList<>();
-        List<SchoolMatch> matches = new ArrayList<>();
+    public static SchoolComparison compare(@NotNull CreatedSchool incomingSchool,
+                                           @NotNull List<CachedSchool> schoolsCache) {
+        // Create a SchoolComparison instance for every cached school. Compare the matchIndicatorAttributes for each.
+        List<SchoolComparison> allComparisons = new ArrayList<>();
+        for (CachedSchool existingSchool : schoolsCache)
+            allComparisons.add(new SchoolComparison(incomingSchool, existingSchool));
 
-        for (School school : schoolsCache) {
-            // Create a new SchoolMatch from the cached school and check for a partial match with the incoming school
-            SchoolMatch m = new SchoolMatch(school, incomingSchool);
-            m.processIndicatorAttributes();
-            allSchoolMatches.add(m);
+        // Compare the matchIndicatorAttributes attributes for every school
+        Attribute[] matchIndicatorAttributes = incomingSchool.getOrganization().getMatchIndicatorAttributes();
+        bulkCompare(Arrays.asList(matchIndicatorAttributes), incomingSchool, allComparisons);
 
-            // If there is a partial match, run additional processing to check every attribute. If this reveals an
-            // exact match, exit immediately
-            if (m.isPartialMatch()) {
-                matches.add(m);
-                m.processAllAttributes();
-                if (m.isExactMatchOrSubset()) return MatchResultType.DUPLICATE.of(m);
-            }
+        // Identify the probable matches
+        List<SchoolComparison> matches = new ArrayList<>();
+        for (SchoolComparison comparison : allComparisons)
+            if (comparison.isProbableMatch(matchIndicatorAttributes))
+                matches.add(comparison);
+
+        // If there are no matches, return an empty comparison with the default level NO_MATCH
+        if (matches.size() == 0) {
+            logger.debug("Incoming school '{}' found no matches in database", incomingSchool);
+            return new SchoolComparison(incomingSchool, new CachedSchool());
         }
 
-        // If there aren't any matches, created a new district and put this school in it
-        if (matches.size() == 0) return MatchResultType.NEW_DISTRICT.of();
+        // Process all remaining attributes of the probable matches
+        List<Attribute> otherAttributes = Arrays.stream(Attribute.values())
+                .filter(a -> !Arrays.asList(matchIndicatorAttributes).contains(a))
+                .toList();
+        bulkCompare(otherAttributes, incomingSchool, matches);
 
-        // Sort the list of matches so that schools with more non-null matching attributes (e.g. stronger matches)
-        // are listed first.
-        matches.sort(Comparator.comparingInt(SchoolMatch::getNonNullMatchCount).reversed());
+        // Sort the matches to prefer those requiring less user input. If any require NONE, use them
+        matches.sort(Comparator.comparingInt(SchoolComparison::getResolvableAttributes).reversed());
+        if (matches.get(0).areAllResolvable()) {
+            matches.get(0).logMatchInfo("MATCHED");
+            matches.get(0).setLevel(SchoolComparison.Level.SCHOOL_MATCH);
+            return matches.get(0);
+        }
 
-        // Get a list of districts corresponding to the partial matches
-        LinkedHashMap<District, List<SchoolMatch>> districtMatches = extractDistricts(matches, allSchoolMatches);
+        // Get the districts associated with the identified matches
+        LinkedHashMap<District, List<SchoolComparison>> districtMatches = extractDistricts(matches, allComparisons);
 
-        logger.info("Found {} school matches in {} districts for incoming school {}.",
-                matches.size(), districtMatches.size(), incomingSchool
+        logger.info("Incoming school {} found {} school matches corresponding to {} districts",
+                incomingSchool, matches.size(), districtMatches.size()
+        );
+
+        // If any schools in those districts haven't been fully processed, process their attributes now
+        bulkCompare(otherAttributes, incomingSchool, districtMatches.values().stream()
+                .flatMap(List::stream)
+                .filter(comp -> !matches.contains(comp))
+                .toList()
         );
 
         // Process each of the districts in turn
         for (District district : districtMatches.keySet()) {
-            MatchResult result = processDistrictMatch(incomingSchool, district, districtMatches.get(district));
+            SchoolComparison result = processDistrictMatch(incomingSchool, district, districtMatches.get(district));
             if (result != null) return result;
         }
 
         // If there's no more matches to check, it means the user chose to ignore all the matches. That means
         // this is a new school, and it should be added to the database under a new district.
-        return MatchResultType.NEW_DISTRICT.of();
+        return new SchoolComparison(incomingSchool, new CachedSchool());
+    }
+
+    /**
+     * Call the bulk {@link AttributeComparison#compare(Attribute, CreatedSchool, List)} method for multiple
+     * attributes over a set of existing schools.
+     * <p>
+     * The comparison is done in place, with the {@link AttributeComparison AttributeComparisons} being
+     * {@link SchoolComparison#putAttributeComparison(Attribute, AttributeComparison) stored} in the
+     * {@link SchoolComparison} instances automatically.
+     *
+     * @param attributes     The list of attributes on which to run the comparisons.
+     * @param incomingSchool The single incoming school being added to the database.
+     * @param comparisons    A list of comparisons, one for each existing school being compared to the incoming one.
+     */
+    private static void bulkCompare(List<Attribute> attributes,
+                                    CreatedSchool incomingSchool,
+                                    List<SchoolComparison> comparisons) {
+        // Extract the existing schools from the school comparisons
+        List<CachedSchool> schools = comparisons.stream().map(SchoolComparison::getExistingSchool).toList();
+
+        // Process each attribute in turn
+        for (Attribute attribute : attributes) {
+            // Compare and save the results for each school
+            List<AttributeComparison> attComps = AttributeComparison.compare(attribute, incomingSchool, schools);
+
+            for (int i = 0; i < attComps.size(); i++)
+                comparisons.get(i).putAttributeComparison(attribute, attComps.get(i));
+        }
     }
 
     /**
      * Given some incoming {@link CreatedSchool} and a {@link District} that might match the school, prompt the user to
      * determine what to do. If the user chooses to act on the match in some way, return the appropriate
-     * {@link MatchResult}. Otherwise, if the user ignores the match, return <code>null</code> to check other possible
-     * matches.
+     * {@link SchoolComparison}. Otherwise, if the user ignores the match, return <code>null</code> to check other
+     * possible matches.
      *
      * @param incomingSchool  The {@link CreatedSchool} to match.
      * @param district        The {@link District} that might match the incoming school.
-     * @param districtSchools A list of {@link SchoolMatch} objects corresponding to cached {@link School Schools} in
-     *                        the district.
-     * @return A {@link MatchResult} indicating the result of the match, or <code>null</code> if the user chose to
+     * @param districtSchools A list of {@link SchoolComparison} objects corresponding to cached {@link School
+     *                        Schools} in the district.
+     * @return A {@link SchoolComparison} indicating the result of the match, or <code>null</code> if the user chose to
      * ignore the match.
      */
     @Nullable
-    private static MatchResult processDistrictMatch(@NotNull CreatedSchool incomingSchool,
-                                                    @NotNull District district,
-                                                    @NotNull List<SchoolMatch> districtSchools) {
-        // Run complete processing on each school in the district, if they haven't been processed already
-        for (SchoolMatch schoolMatch : districtSchools)
-            schoolMatch.processAllAttributes();
-
+    private static SchoolComparison processDistrictMatch(@NotNull CreatedSchool incomingSchool,
+                                                         @NotNull District district,
+                                                         @NotNull List<SchoolComparison> districtSchools) {
         // Get the prompt panel
         Panel promptPanel = createDistrictMatchGUIPanel(incomingSchool, district, districtSchools);
 
         // TODO add some "back" buttons in all these dialogs
 
         // Construct and execute the prompt
-        MatchResultType choice = Main.GUI.showPrompt(SelectionPrompt.of(
+        SchoolComparison.Level choice = Main.GUI.showPrompt(SelectionPrompt.of(
                 "Match Resolution",
                 promptPanel,
-                Option.of("This is not a match. Ignore it.", null),
-                Option.of("Add this school to this district.", MatchResultType.ADD_TO_DISTRICT),
+                Option.of("This is not a match. Ignore it.", SchoolComparison.Level.NO_MATCH),
+                Option.of("Add this school to this district.", SchoolComparison.Level.DISTRICT_MATCH),
                 Option.of(
-                        "This school matches one of the schools in this district. Overwrite its existing values.",
-                        MatchResultType.OVERWRITE
+                        "This school matches one of the schools in this district. Update the existing values.",
+                        SchoolComparison.Level.PARTIAL_MATCH
                 ),
-                Option.of(
-                        "This school matches one of the schools in this district. Fill any existing null values.",
-                        MatchResultType.APPEND
-                ),
-                Option.of("Omit this school entirely. Don't check for other matches.", MatchResultType.OMIT)
+                Option.of("Omit this school entirely. Don't check for other matches.", SchoolComparison.Level.OMIT)
         ));
 
-        if (choice == null) return null;
-        if (choice == MatchResultType.ADD_TO_DISTRICT) return choice.of(districtSchools.get(0));
-        if (choice == MatchResultType.OMIT) return choice.of();
+        // Handle NO_MATCH, DISTRICT_MATCH, and OMIT selections
+        if (choice == SchoolComparison.Level.NO_MATCH)
+            return null;
+        else if (choice == SchoolComparison.Level.DISTRICT_MATCH)
+            return districtSchools.get(0).setLevel(SchoolComparison.Level.DISTRICT_MATCH);
+        else if (choice == SchoolComparison.Level.OMIT)
+            return choice.of(incomingSchool);
 
-        // Otherwise the choice must be type OVERWRITE or APPEND.
-        // Determine which school the user is talking about and which of its attributes they want to change.
+        // Otherwise, handle PARTIAL_MATCH with a GUI
 
         // TODO in the GUI, indicate which of the schools is incoming and which already exists
 
-        SchoolMatch match;
+        SchoolComparison match;
 
-        if (districtSchools.size() == 1) {
+        // If there are multiple schools, prompt the user to pick one
+        if (districtSchools.size() == 1)
             match = districtSchools.get(0);
-        } else {
-            // Put the schools in a list of options to choose from
+        else
             match = Main.GUI.showPrompt(SelectionPrompt.of(
                     "School Selection",
-                    "Select the school to " + (choice == MatchResultType.OVERWRITE ? "overwrite." : "append to."),
+                    "Select the school to update.",
                     districtSchools.stream()
-                            .map(m -> Option.of(
-                                    String.format("%s (%d)",
-                                            m.getExistingSchool().name(), m.getExistingSchool().getId()
-                                    ), m))
+                            .map(m -> Option.of(m.getExistingSchool().toString(), m))
                             .collect(Collectors.toList())
             ));
-        }
 
         if (match == null) {
             logger.error("Unreachable state: selected school match is null.");
-            return MatchResultType.OMIT.of();
+            return SchoolComparison.Level.OMIT.of(incomingSchool);
         }
 
-        // If the user chose to OVERWRITE, give them a prompt asking exactly which attributes to overwrite.
-        if (choice == MatchResultType.OVERWRITE)
-            match.setAttributesToUpdate(Main.GUI.showPrompt(
-                    AttributePrompt.of(
-                            "Select the attributes to overwrite:",
-                            match.getDifferingAttributes(true).stream()
-                                    .sorted()
-                                    .map(a -> AttributeOption.of(
-                                            a,
-                                            incomingSchool.get(a),
-                                            match.getExistingSchool().get(a)
-                                    ))
-                                    .collect(Collectors.toList()),
-                            incomingSchool,
-                            match.getExistingSchool()
-                    )
-            ));
+        // Give a prompt asking exactly which attributes to change
+        List<Attribute> attributesToOverwrite = Main.GUI.showPrompt(
+                AttributePrompt.of(
+                        "Select the attributes to overwrite:",
+                        match.getDifferingAttributes().stream()
+                                .sorted()
+                                .map(a -> AttributeOption.of(
+                                        a,
+                                        match.getAttributeComparison(a),
+                                        incomingSchool.get(a),
+                                        match.getExistingSchool().get(a)
+                                ))
+                                .collect(Collectors.toList()),
+                        incomingSchool,
+                        match.getExistingSchool()
+                )
+        );
 
-        // If they chose to APPEND instead, use the attributes that differ, aren't effectively null for the incoming
-        // school, and aren't exclusionRelated.
-        if (choice == MatchResultType.APPEND)
-            match.setAttributesToUpdate(
-                    match.getDifferingAttributes(false).stream()
-                            .filter(a -> !incomingSchool.isEffectivelyNull(a))
-                            .collect(Collectors.toList())
+        // Mark each of these attributes going in favor of the INCOMING school
+        for (Attribute attribute : attributesToOverwrite)
+            match.putAttributeComparison(
+                    attribute,
+                    match.getAttributeComparison(attribute).newPreference(Preference.INCOMING)
             );
 
-        return choice.of(match);
+        return match;
     }
 
     /**
-     * Extract a list of {@link District Districts} from the {@link SchoolMatch#getExistingSchool() existing}
-     * {@link School Schools} in a list of {@link SchoolMatch SchoolMatches}. Pair each of these districts with a list
-     * of school match objects for each of its member schools.
+     * Extract a list of {@link District Districts} from the {@link SchoolComparison#getExistingSchool() existing}
+     * schools in a list of {@link SchoolComparison SchoolComparisons}. Pair each of these districts
+     * with a list of school match objects for each of its member schools.
+     * <p>
+     * Importantly, the list of schools associated with each district comes directly from the
+     * <code>allComparisons</code> list, meaning that <code>allComparisons.contains()</code> will be
+     * <code>true</code> for every {@link SchoolComparison} returned by this function.
      *
-     * @param matches         A list of {@link SchoolMatch SchoolMatches}, each of which corresponds to a cached
-     *                        {@link School}. This is given in descending order of match relevance, based on the
-     *                        {@link SchoolMatch#getNonNullMatchCount() non-null match count}.
-     * @param allMatchObjects A list of all {@link SchoolMatch SchoolMatches}, one for every {@link School} in the
-     *                        database cache.
-     * @return A list of {@link District Districts} and their member {@link School} matches.
+     * @param matches        A list of comparison instances for schools that matched the incoming school. This should
+     *                       be in descending order {@link SchoolComparison#getResolvableAttributes() resolvable
+     *                       attributes}.
+     * @param allComparisons A list of all comparisons, one for every school in the database cache.
+     * @return A list of {@link District Districts} and the {@link SchoolComparison SchoolComparisons} for their
+     * member schools.
      */
     @NotNull
-    private static LinkedHashMap<District, List<SchoolMatch>> extractDistricts(
-            @NotNull List<SchoolMatch> matches, @NotNull List<SchoolMatch> allMatchObjects) {
+    private static LinkedHashMap<District, List<SchoolComparison>> extractDistricts(
+            @NotNull List<SchoolComparison> matches, @NotNull List<SchoolComparison> allComparisons) {
+        List<District> districts = new ArrayList<>();
 
-        LinkedHashMap<District, List<SchoolMatch>> districts = new LinkedHashMap<>();
-
-        for (SchoolMatch match : matches)
+        for (SchoolComparison match : matches)
             try {
                 District d = match.getExistingSchool().getDistrict();
-
-                // TODO this doesn't work. The same district is sometimes added multiple times
-
-                // If the district is already in the map, skip it
-                if (districts.containsKey(d)) continue;
-
-                List<SchoolMatch> districtSchools = new ArrayList<>();
-                for (SchoolMatch s : allMatchObjects)
-                    if (d.getId() == s.getExistingSchool().getDistrictId()) districtSchools.add(s);
-                districts.put(d, districtSchools);
-
+                if (!districts.contains(d)) districts.add(d);
             } catch (SQLException e) {
                 logger.error("Error retrieving district for school " + match.getExistingSchool().name() + ".", e);
             }
 
-        return districts;
+        LinkedHashMap<District, List<SchoolComparison>> districtSchools = new LinkedHashMap<>();
+
+        for (District district : districts) {
+            List<SchoolComparison> comparisons = new ArrayList<>();
+            for (SchoolComparison c : allComparisons)
+                if (district.getId() == c.getExistingSchool().getDistrictId())
+                    comparisons.add(c);
+            districtSchools.put(district, comparisons);
+        }
+
+        return districtSchools;
     }
 
     /**
@@ -250,22 +288,22 @@ public class MatchIdentifier {
      *
      * @param incomingSchool  The {@link CreatedSchool} which might match one of the schools in the district.
      * @param district        The {@link District} that was flagged as a possible match with the incoming school.
-     * @param districtSchools A list of {@link SchoolMatch} objects corresponding to the schools already in the
+     * @param districtSchools A list of {@link SchoolComparison} objects corresponding to the schools already in the
      *                        district. This must contain at least one object.
      * @return A {@link Panel} containing a neatly formatted prompt message.
      */
     @NotNull
     private static Panel createDistrictMatchGUIPanel(@NotNull CreatedSchool incomingSchool,
                                                      @NotNull District district,
-                                                     @NotNull List<SchoolMatch> districtSchools) {
+                                                     @NotNull List<SchoolComparison> districtSchools) {
         // Get the list of attributes to display for the incoming school. This is simply an aggregate of all
-        // attributes that will be displayed for each school in the district. They're paired with MatchLevel.NONE to
+        // attributes that will be displayed for each school in the district. They're paired with Level NONE to
         // make this a map.
-        Map<Attribute, MatchLevel> incomingAttributes = districtSchools.stream()
-                .map(SchoolMatch::getRelevantDisplayAttributes)
+        Map<Attribute, Level> incomingAttributes = districtSchools.stream()
+                .map(SchoolComparison::getRelevantDisplayAttributes)
                 .flatMap(m -> m.keySet().stream())
                 .distinct()
-                .map(a -> new AbstractMap.SimpleEntry<>(a, MatchLevel.NONE))
+                .map(a -> new AbstractMap.SimpleEntry<>(a, Level.NONE))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
@@ -295,7 +333,7 @@ public class MatchIdentifier {
 
         // Add the info for the district's member schools
         for (int i = 0; i < districtSchools.size(); i++) {
-            SchoolMatch match = districtSchools.get(i);
+            SchoolComparison match = districtSchools.get(i);
             panel.addComponent(new EmptySpace());
             panel.addComponent(new Label("District School " + (i + 1) + ":"));
             panel.addComponent(GUIUtils.formatSchoolAttributes(

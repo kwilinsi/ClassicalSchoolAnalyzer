@@ -16,6 +16,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 
 public class Utils {
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
@@ -38,7 +39,6 @@ public class Utils {
      * Get a file by its name in the installation directory. If the file does not exist, it is created.
      *
      * @param fileName The name of the file to retrieve.
-     *
      * @return The file. If creating it failed, this may point to an empty path.
      */
     @NotNull
@@ -75,7 +75,6 @@ public class Utils {
      *
      * @param fileName   The name of the script file to run.
      * @param connection The connection to the database.
-     *
      * @throws IOException  If there is an error locating or reading the script file.
      * @throws SQLException If there is an error running the script.
      */
@@ -98,9 +97,8 @@ public class Utils {
      * returning <code>null</code> if all of them fail.
      *
      * @param text The text to parse, or <code>null</code> to skip parsing and return <code>null</code>.
-     *
      * @return The parsed date; or <code>null</code> if <code>text</code> is <code>null</code> or all parsing formats
-     *         failed.
+     * failed.
      */
     @Nullable
     public static LocalDate parseDate(@Nullable String text) {
@@ -126,7 +124,6 @@ public class Utils {
      * @param file      The name of the file (not the full path or directory).
      * @param extension The extension to add, or <code>null</code> to skip adding an extension. Don't include a period
      *                  in the extension.
-     *
      * @return The cleaned file name.
      */
     @NotNull
@@ -151,13 +148,12 @@ public class Utils {
      * @param input    The input string to format.
      * @param length   The length of the desired output.
      * @param ellipsis Whether to add an ellipsis to the end of the string if it is too long.
-     *
      * @return The formatted string.
      */
     @NotNull
     public static String padTrimString(@NotNull String input, int length, boolean ellipsis) {
         if (input.length() > length)
-            return input.substring(0, length - (ellipsis ? 1 : 0)) + (ellipsis ? "\u2026" : "");
+            return input.substring(0, length - (ellipsis ? 1 : 0)) + (ellipsis ? "…" : "");
         else
             return String.format("%-" + length + "s", input);
     }
@@ -187,7 +183,6 @@ public class Utils {
      *                 empty string is returned.
      * @param isInsert <code>True</code> if the string should be generated for use in an INSERT statement;
      *                 <code>false</code> for use in an UPDATE statement.
-     *
      * @return The generated string.
      */
     @NotNull
@@ -210,5 +205,83 @@ public class Utils {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Attempt to find any of the search strings in the base string using {@link String#startsWith(String)}. The
+     * first matching search string is returned. If there are no matches, <code>null</code> is returned.
+     *
+     * @param base     The string to search.
+     * @param searches The search strings to look for in the start of the base string.
+     * @return The first identified search string, or <code>null</code> if there are no matches.
+     */
+    @Nullable
+    public static String startsWithAny(String base, Collection<String> searches) {
+        for (String search : searches)
+            if (base.startsWith(search))
+                return search;
+        return null;
+    }
+
+    /**
+     * Deletes the files specified by the given file path strings.
+     * Logs the result of each deletion using the {@link #logger}.
+     *
+     * @param filePaths The paths of the files to be deleted.
+     */
+    public static void deleteFiles(@Nullable String... filePaths) {
+        if (filePaths == null)
+            return;
+
+        for (String filePath : filePaths) {
+            if (filePath == null) continue;
+
+            try {
+                File file = new File(filePath);
+                if (file.exists()) {
+                    if (file.delete())
+                        logger.debug("Deleted file '{}'", filePath);
+                    else
+                        logger.debug("Failed to delete '{}'", filePath);
+                } else {
+                    logger.debug("Cannot delete '{}' as it doesn't exist", filePath);
+                }
+            } catch (SecurityException e) {
+                logger.debug("Failed to delete '{}' due to SecurityException: {}", filePath, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Convert the given string to title case, where the first letter of every word is capitalized.
+     *
+     * @param str The string to convert.
+     * @return The converted string, or <code>null</code> if the input was <code>null</code>.
+     */
+    @Nullable
+    public static String titleCase(@Nullable String str) {
+        if (str == null) return null;
+
+        String[] words = str.split(" ");
+        for (int i = 0; i < words.length; i++) {
+            if (words[i].length() == 0) continue;
+            words[i] = words[i].substring(0, 1).toUpperCase(Locale.ROOT) +
+                    words[i].substring(1).toLowerCase(Locale.ROOT);
+        }
+
+        return String.join(" ", words);
+    }
+
+    /**
+     * Package a stacktrace (a set of {@link StackTraceElement StackTraceElements}) in a {@link Throwable}. This is
+     * useful for logging the stacktrace without needing a <code>try-catch</code> block.
+     *
+     * @param stackTrace The stacktrace elements.
+     * @return The throwable.
+     */
+    public static Throwable packageStackTrace(StackTraceElement[] stackTrace) {
+        Throwable throwable = new Throwable();
+        throwable.setStackTrace(stackTrace);
+        return throwable;
     }
 }
