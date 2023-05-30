@@ -92,7 +92,7 @@ public class MatchIdentifier {
         // Get the districts associated with the identified matches
         LinkedHashMap<District, List<SchoolComparison>> districtMatches = extractDistricts(matches, allComparisons);
 
-        logger.info("Incoming school {} found {} school matches corresponding to {} districts",
+        logger.info("Incoming school {} found {} school matches from {} districts",
                 incomingSchool, matches.size(), districtMatches.size()
         );
 

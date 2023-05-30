@@ -132,35 +132,6 @@ public class AddressParser {
     }
 
     /**
-     * Attempt to normalize the given address using the python address script.
-     * <p>
-     * If the address cannot be normalized for some reason and the library throws an error, the error is
-     * {@link #logError(HashMap) logged} to the console and <code>null</code> is returned.
-     *
-     * @param address The address to normalize.
-     * @return The normalized address, or <code>null</code> if the input is null or not parseable.
-     * @see #normalize(List)
-     */
-    @Nullable
-    public static String normalize(@Nullable String address) {
-        if (address == null || address.isBlank()) return null;
-
-        try {
-            // Call the python address parser, and read the result as JSON data
-            Process process = newProcess("normalize", address);
-            InputStreamReader reader = new InputStreamReader(process.getInputStream());
-            HashMap<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
-
-            reader.close();
-            return getOrLogError(map, "normalized");
-        } catch (IOException e) {
-            logger.error("Failed to run the python address parser and read its output. " +
-                    "Did you compile the executable?", e);
-            return null;
-        }
-    }
-
-    /**
      * Bulk normalize many addresses at the same time. This is significantly more efficient, as it minimizes the
      * number of separate calls to the python script, which has a slow start-up time.
      * <p>
@@ -170,7 +141,6 @@ public class AddressParser {
      * @param addresses The list of addresses to normalize.
      * @return A normalized list of addresses in the same order as the input. If a fatal occurs, this is an empty,
      * immutable list.
-     * @see #normalize(String)
      */
     @NotNull
     public static List<String> normalize(@NotNull List<String> addresses) {

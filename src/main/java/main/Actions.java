@@ -22,6 +22,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * This class contains the methods that correspond to the {@link Action} enums and are {@link Action#run() run} by those
@@ -82,6 +83,15 @@ public class Actions {
         for (Organization organization : orgs) {
             try {
                 List<CreatedSchool> schools = organization.retrieveSchools(useCache);
+
+                // Normalize the schools' values for each attributes
+                for (Attribute attribute : Attribute.values()) {
+                    List<?> normalized = AttributeComparison.normalize(attribute, schools);
+                    for (int i = 0; i < normalized.size(); i++)
+                        schools.get(i).put(attribute, normalized.get(i));
+                }
+
+                // TODO deal with the country and state fields better
 
                 // Validate each school and save it to the database. Then add it to the cache for checking the next
                 // school.

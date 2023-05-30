@@ -3,6 +3,7 @@ package processing.schoolLists.matching;
 import constructs.school.Attribute;
 import constructs.school.CachedSchool;
 import constructs.school.CreatedSchool;
+import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -371,6 +372,27 @@ public record AttributeComparison(@NotNull Attribute attribute,
             );
         }
 
+        if (attribute.type == String.class) {
+            // For strings, try trimming them and ignoring case when comparing them. Trimming counts as exact;
+            // case-insensitive counts as INDICATOR
+            if (valI instanceof String strI && valE instanceof String strE) {
+                if (strI.equals(strE))
+                    return AttributeComparison.ofExact(attribute, true);
+
+                strI = strI.trim();
+                strE = strE.trim();
+
+                if (strI.equals(strE))
+                    return AttributeComparison.of(attribute, Level.EXACT, Preference.OTHER, strE, true);
+                else if (strI.equalsIgnoreCase(strE))
+                    return AttributeComparison.of(
+                            attribute, Level.INDICATOR, Preference.NONE, null, false
+                    );
+            }
+
+            return AttributeComparison.ofNone(attribute, false);
+        }
+
         // For other attributes where they're both non-null, try just plain-ol' Objects.equals()
         if (Objects.equals(valI, valE))
             return AttributeComparison.ofExact(attribute, true);
@@ -486,61 +508,68 @@ public record AttributeComparison(@NotNull Attribute attribute,
     }
 
     /**
-     * Take some set of values for an attribute and normalize them to a standard form.
+     * Take some attribute and normalize a school's value for it to a standard form.
+     * <p>
+     * Note: while this will properly handle {@link Attribute#ADDRESS_BASED_ATTRIBUTES address-based} attributes, it
+     * is highly inefficient to normalize them one at a time. When normalizing many address values, use
+     * {@link #normalize(Attribute, List)}.
      *
-     * @param attribute The attribute that the values are for.
-     * @param values    The value(s) to normalize.
-     * @return The normalized value(s). Note that array will not be <code>null</code>, but it may contain
-     * <code>null</code> elements.
+     * @param attribute The attribute to normalize.
+     * @param school    The school whose value should be normalized.
+     * @return The normalized value, which may be <code>null</code>.
      */
-    @NotNull
-    private static Object[] normalize(@NotNull Attribute attribute, @Nullable Object... values) {
-        if (values == null) return new Object[]{};
+    @Nullable
+    public static Object normalize(@NotNull Attribute attribute, @NotNull School school) {
+        Object value = school.get(attribute);
 
-        // If the attribute is an address, use the more efficient bulk normalization process
-        if (attribute == Attribute.address || attribute == Attribute.mailing_address) {
-            return AddressParser.normalize(Arrays.stream(values)
-                    .map(o -> o != null ? o.toString() : null)
-                    .collect(Collectors.toList())
-            ).toArray();
+        if (attribute.isEffectivelyNull(value)) {
+            if (attribute == Attribute.name)
+                return Config.MISSING_NAME_SUBSTITUTION.get();
+            else
+                return null;
         }
 
-        // Otherwise, process each address one at a time
-        Object[] normalized = new Object[values.length];
+        if (attribute.type == URL.class) {
+            URL url = URLUtils.createURL((String) value);
 
-        for (int i = 0; i < values.length; i++) {
-            if (attribute.isEffectivelyNull(values[i])) {
-                if (attribute == Attribute.name)
-                    normalized[i] = Config.MISSING_NAME_SUBSTITUTION.get();
-                else
-                    normalized[i] = null;
-
-                continue;
+            if (url == null) {
+                logger.warn("Failed to parse URL '{}' from {}; setting it to null", value, school);
+                return null;
+            } else {
+                return URLUtils.normalize(url);
             }
-
-            normalized[i] = switch (attribute) {
-                case grades_offered -> GradeLevel.normalize(GradeLevel.identifyGrades((String) values[i]));
-                case email -> ((String) values[i]).toLowerCase(Locale.ROOT);
-                case contact_name, chairman_name, headmaster_name -> Utils.titleCase((String) values[i]);
-                default -> values[i];
-            };
         }
 
-        return normalized;
+        return switch (attribute) {
+            case grades_offered -> GradeLevel.normalize(GradeLevel.identifyGrades((String) value));
+            case email -> ((String) value).toLowerCase(Locale.ROOT);
+            case contact_name, chairman_name, headmaster_name -> Utils.titleCase((String) value);
+            default -> value;
+        };
     }
 
     /**
-     * {@link #normalize(Attribute, Object...) Normalize} every attribute in a list of {@link CachedSchool
-     * CachedSchools}, saving the normalized values in the secondary {@link CachedSchool#getNormalized(Attribute)
-     * normalized} attribute map.
+     * Take some attribute and normalize some schools' values for it to a standard form.
      * <p>
-     * This process is done in place on the list.
+     * This bulk normalization process is particularly efficient for {@link Attribute#ADDRESS_BASED_ATTRIBUTES
+     * address-based} attributes. Other attributes are redirected one at a time to
+     * {@link #normalize(Attribute, School)}.
      *
-     * @param schools The list of schools to normalize.
+     * @param attribute The attribute to normalize.
+     * @param schools   The schools whose values should be normalized.
+     * @return The list of normalized values. If the input values list is empty, this will be an empty, immutable list.
      */
-    public static void normalizeCachedSchools(@NotNull List<CachedSchool> schools) {
-        for (CachedSchool school : schools)
-            for (Attribute attribute : Attribute.values())
-                school.putNormalized(attribute, normalize(attribute, school.get(attribute)));
+    @NotNull
+    public static List<?> normalize(@NotNull Attribute attribute, @NotNull List<? extends School> schools) {
+        // If the attribute is an address, use the more efficient bulk normalization process
+        if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
+            return AddressParser.normalize(schools.stream()
+                    .map(s -> s.getStr(attribute))
+                    .collect(Collectors.toList())
+            );
+        }
+
+        // Otherwise, process each address one at a time
+        return schools.stream().map(v -> normalize(attribute, v)).toList();
     }
 }
