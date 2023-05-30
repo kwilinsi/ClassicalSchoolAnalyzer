@@ -50,18 +50,33 @@ def normalize_file():
     Normalize all the addresses in a file.
     """
 
-    input_path = sys.argv[2]
-    output_path = os.path.join(
-        os.path.dirname(input_path),
-        f'{Path(input_path).stem}_normalized.json'
-    )
+    try:
+        input_path = sys.argv[2]
+        output_path = os.path.join(
+            os.path.dirname(input_path),
+            f'{Path(input_path).stem}_normalized.json'
+        )
+    except Exception as e:
+        print(format_error("Malformed input: unable to identify file paths",
+                           str(e), traceback.format_exc()))
 
     try:
         with open(input_path, 'r') as input_file:
-            input_data = json.load(input_file)
+            try:
+                input_data = json.load(input_file)
+            except json.JSONDecodeError as e:
+                # If the file is empty, that's fine. Otherwise, log the error.
+                if input_file.tell() == 0:
+                    input_data = None
+                else:
+                    print(format_error("Malformed JSON data in input file",
+                                       str(e), traceback.format_exc()))
 
-        output_data = [address_parser.parse_and_normalize(address)
+        if input_data:
+            output_data = [address_parser.parse_and_normalize(address)
                        for address in input_data]
+        else:
+            output_data = None
 
         # Save the resulting JSON array to the output file
         with open(output_path, 'w') as output_file:
@@ -99,20 +114,35 @@ def compare_file():
         print(format_error("Missing the file path. See README for documentation."))
         sys.exit(1)
 
-    addr1 = sys.argv[2]
-    parsed1 = address_parser.parse(addr1)
-    input_path = sys.argv[3]
-    output_path = os.path.join(
-        os.path.dirname(input_path),
-        f'{Path(input_path).stem}_compared.json'
-    )
+    try:
+        addr1 = sys.argv[2]
+        parsed1 = address_parser.parse(addr1)
+        input_path = sys.argv[3]
+        output_path = os.path.join(
+            os.path.dirname(input_path),
+            f'{Path(input_path).stem}_compared.json'
+        )
+    except Exception as e:
+        print(format_error("Malformed input: unable to identify file paths",
+                           str(e), traceback.format_exc()))
 
     try:
         with open(input_path, 'r') as input_file:
-            input_data = json.load(input_file)
+            try:
+                input_data = json.load(input_file)
+            except json.JSONDecodeError as e:
+                # If the file is empty, that's fine. Otherwise, log the error.
+                if input_file.tell() == 0:
+                    input_data = None
+                else:
+                    print(format_error("Malformed JSON data in input file",
+                                       str(e), traceback.format_exc()))
 
-        output_data = [address_parser.compare(
-            addr1, address, parsed1) for address in input_data]
+        if input_data:
+            output_data = [address_parser.compare(
+                addr1, address, parsed1) for address in input_data]
+        else:
+            output_data = None
 
         # Save the resulting JSON array to the output file
         with open(output_path, 'w') as output_file:
@@ -122,9 +152,6 @@ def compare_file():
 
     except FileNotFoundError as e:
         print(format_error("Input file not found", str(e), traceback.format_exc()))
-    except json.JSONDecodeError as e:
-        print(format_error("Malformed JSON data in input file",
-              str(e), traceback.format_exc()))
     except Exception as e:
         print(format_error("An error occurred", str(e), traceback.format_exc()))
 

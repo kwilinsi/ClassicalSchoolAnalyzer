@@ -163,6 +163,9 @@ def parse_and_normalize(input: str) -> OrderedDict[str, str]:
         An OrderedDict with the normalized address (or error message).
     """
 
+    if not input:
+        return None
+
     parsed = parse(input)
 
     if 'error' in parsed:
