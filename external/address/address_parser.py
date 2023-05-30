@@ -163,9 +163,6 @@ def parse_and_normalize(input: str) -> OrderedDict[str, str]:
         An OrderedDict with the normalized address (or error message).
     """
 
-    if not input:
-        return None
-
     parsed = parse(input)
 
     if 'error' in parsed:
@@ -174,12 +171,12 @@ def parse_and_normalize(input: str) -> OrderedDict[str, str]:
         return OrderedDict([("normalized", normalize(parsed))])
 
 
-def compare(addr1: str, addr2: str, parsed1: OrderedDict[str, str] = None) -> str:
+def compare(addr1: str, addr2: str, parsed1: OrderedDict[str, str] = None) -> OrderedDict:
     """
     Compare two addresses to determine whether they're the same. Return the results
-    in a JSON-encoded string.
+    in an ordered dictionary.
 
-    The JSON object will conatin the following keys:
+    The dictionary will conatin the following keys:
 
     'match' - Either 'EXACT', 'INDICATOR', or 'NONE' depending on whether they match.
     'preference' - The preferred normalized format for the address. If they don't match
@@ -193,12 +190,12 @@ def compare(addr1: str, addr2: str, parsed1: OrderedDict[str, str] = None) -> st
         on the same address, as it greatly improves performance.
 
     Returns:
-        A JSON-encoded string with the results: an indication of whether they're the
+        An OrderedDict with the results: an indication of whether they're the
         same and a preference for the best formatted address.
     """
 
     def result(m, p, i=None):
-        return json.dumps({'match': m, 'preference': p, 'info': i})
+        return OrderedDict([('match', m), ('preference', p), ('info', i)])
 
     if addr1 == addr2:
         return result('EXACT', normalize(parse(addr1)))
@@ -258,12 +255,12 @@ def compare(addr1: str, addr2: str, parsed1: OrderedDict[str, str] = None) -> st
     # a missing space. (e.g. "52 WOOD RD CITY ST" and "52 WOOD RDCITY ST").
     # This function checks whether 'b' is simply 'a' with bad spacing.
     def fix_city_spacing(a: object, b: object, b_norm: str) -> str:
-        if a['city'] != b['city']:
+        if a['city'] and b['city'] and a['city'] != b['city'] and a['city'] in b['city']:
             merged_1 = join_parts(
                 '', [a['address_line_1'], a['address_line_2'], a['city']]
             )
 
-            if a['city'] in b['city'] and merged_1.endswith(b['city']):
+            if merged_1 and merged_1.endswith(b['city']):
                 b['address_line_2' if b['address_line_2'] else 'address_line_1'] += \
                     ' ' + b['city'][:-len(a['city'])]
                 b['city'] = a['city']
@@ -276,9 +273,9 @@ def compare(addr1: str, addr2: str, parsed1: OrderedDict[str, str] = None) -> st
 
     if normalized1 == normalized2:
         return result('INDICATOR', normalized1, f'Fixed malformed spacing')
-    
+
     if (normalized1 and not normalized2) or (not normalized1 and normalized2):
-        return result ('NONE', normalized1 if normalized1 else normalized2, f'Preferred non-null')
+        return result('NONE', normalized1 if normalized1 else normalized2, f'Preferred non-null')
 
     # Check whether they start with "PO BOX" but with improper spacing, and if so, fix it
     if normalized1.replace(' ', '').startswith('POBOX'):

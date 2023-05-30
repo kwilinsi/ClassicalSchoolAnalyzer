@@ -74,7 +74,7 @@ def normalize_file():
 
         if input_data:
             output_data = [address_parser.parse_and_normalize(address)
-                       for address in input_data]
+                           for address in input_data]
         else:
             output_data = None
 
@@ -102,7 +102,7 @@ def compare():
         print(format_error("Missing the second address. See README for documentation."))
         sys.exit(1)
 
-    print(address_parser.compare(sys.argv[2], sys.argv[3]))
+    print(json.dumps(address_parser.compare(sys.argv[2], sys.argv[3])))
 
 
 def compare_file():
@@ -139,8 +139,8 @@ def compare_file():
                                        str(e), traceback.format_exc()))
 
         if input_data:
-            output_data = [address_parser.compare(
-                addr1, address, parsed1) for address in input_data]
+            output_data = [address_parser.compare(addr1, address, parsed1)
+                           for address in input_data]
         else:
             output_data = None
 
