@@ -14,17 +14,17 @@ dependencies {
     implementation 'org.jetbrains:annotations:23.0.0'
 
     // https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
-    implementation 'ch.qos.logback:logback-classic:1.3.0-alpha13'
+    implementation 'ch.qos.logback:logback-classic:1.4.7'
 
     // Jsoup - web scraping
-    implementation 'org.jsoup:jsoup:1.15.3'
+    implementation 'org.jsoup:jsoup:1.16.1'
 
     // HikariCP - MySQL integration
     implementation 'com.zaxxer:HikariCP:5.0.1'
     implementation 'mysql:mysql-connector-java:8.0.33'
 
     // gson - JSON parsing
-    implementation 'com.google.code.gson:gson:2.9.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
 
     // Lanterna - terminal UI
     implementation 'com.googlecode.lanterna:lanterna:3.1.1'
