@@ -3,6 +3,7 @@ import os
 import json
 import traceback
 from pathlib import Path
+from collections import OrderedDict
 
 from address_utils import format_error
 import address_parser
@@ -33,6 +34,19 @@ def main():
         compare_file()
 
 
+def parse_normalize(address) -> OrderedDict:
+    """
+    Parse and normalize an address.
+    """
+
+    p = address_parser.parse(address)
+
+    if 'error' not in p:
+        p['normalized'] = address_parser.normalize(p)
+
+    return p
+
+
 def normalize():
     """
     Parse and normalize individual addresses passed via command line.
@@ -40,7 +54,7 @@ def normalize():
 
     parsed = []
     for address in sys.argv[2:]:
-        parsed.append(address_parser.parse_and_normalize(address))
+        parsed.append(parse_normalize(address))
 
     print(json.dumps(parsed))
 
@@ -73,8 +87,7 @@ def normalize_file():
                                        str(e), traceback.format_exc()))
 
         if input_data:
-            output_data = [address_parser.parse_and_normalize(address)
-                           for address in input_data]
+            output_data = [parse_normalize(address) for address in input_data]
         else:
             output_data = None
 
