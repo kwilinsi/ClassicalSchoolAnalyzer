@@ -161,7 +161,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
         /**
          * Prefer some third option not given by
          */
-        OTHER;
+        OTHER
     }
 
     /**

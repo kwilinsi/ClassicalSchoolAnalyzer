@@ -54,39 +54,6 @@ public class SchoolComparison {
         SCHOOL_MATCH,
 
         /**
-         * The incoming school provides no new information on top of the existing one. For every attribute, one of
-         * the following is true:
-         * <ul>
-         *     <li>The incoming school's value is {@link Attribute#isEffectivelyNull(Object) effectively null}.
-         *     <li>The values for the two schools are an {@link AttributeComparison.Level#EXACT EXACT} match.
-         *     <li>The values are different, but the {@link AttributeComparison.Preference Preference} is for the
-         *     {@link AttributeComparison.Preference#EXISTING EXISTING} school.
-         * </ul>
-         * <b>Result:</b> don't modify the existing school in any way. However, in case the incoming school comes
-         * from a different organization, add a record to the DistrictOrganizations table for the matched district.
-         */
-        DUPLICATE_MATCH,
-
-        /**
-         * The incoming school appears to match an existing school with more or less certainty. For at least one of
-         * the incoming school's {@link Organization#getMatchIndicatorAttributes() match indicator attributes}, all
-         * of the following are true:
-         * <ul>
-         *     <li>The values for the two schools are an {@link AttributeComparison.Level#EXACT EXACT},
-         *     {@link AttributeComparison.Level#INDICATOR INDICATOR}, or
-         *     {@link AttributeComparison.Level#RELATED RELATED} match.
-         *     <li>Neither school's value is {@link Attribute#isEffectivelyNull(Object) effectively null}.
-         * </ul>
-         * <p>
-         * These schools may be later reclassified as {@link #DISTRICT_MATCH}.
-         * <p>
-         * <b>Result:</b> modify the existing school to use the updated attribute values. Add a record to the
-         * DistrictOrganizations table for the matched district, in case the incoming school comes from a different
-         * Organization.
-         */
-        PARTIAL_MATCH,
-
-        /**
          * The incoming school comes from the same district as this school but is not a direct match of this school.
          * <p>
          * <b>Result:</b> add the incoming school as a new school to the database. Add a record to the
