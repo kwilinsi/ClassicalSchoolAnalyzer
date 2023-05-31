@@ -3,7 +3,6 @@ package processing.schoolLists.matching;
 import com.googlecode.lanterna.gui2.*;
 import constructs.*;
 import constructs.school.Attribute;
-import constructs.school.CachedSchool;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
 import gui.utils.GUIUtils;
@@ -53,10 +52,10 @@ public class MatchIdentifier {
      */
     @NotNull
     public static SchoolComparison compare(@NotNull CreatedSchool incomingSchool,
-                                           @NotNull List<CachedSchool> schoolsCache) {
+                                           @NotNull List<School> schoolsCache) {
         // Create a SchoolComparison instance for every cached school. Compare the matchIndicatorAttributes for each.
         List<SchoolComparison> allComparisons = new ArrayList<>();
-        for (CachedSchool existingSchool : schoolsCache)
+        for (School existingSchool : schoolsCache)
             allComparisons.add(new SchoolComparison(incomingSchool, existingSchool));
 
         // Compare the matchIndicatorAttributes attributes for every school
@@ -72,7 +71,7 @@ public class MatchIdentifier {
         // If there are no matches, return an empty comparison with the default level NO_MATCH
         if (matches.size() == 0) {
             logger.debug("Incoming school '{}' found no matches in database", incomingSchool);
-            return new SchoolComparison(incomingSchool, new CachedSchool());
+            return new SchoolComparison(incomingSchool, new School());
         }
 
         // Process all remaining attributes of the probable matches
@@ -111,7 +110,7 @@ public class MatchIdentifier {
 
         // If there's no more matches to check, it means the user chose to ignore all the matches. That means
         // this is a new school, and it should be added to the database under a new district.
-        return new SchoolComparison(incomingSchool, new CachedSchool());
+        return new SchoolComparison(incomingSchool, new School());
     }
 
     /**
@@ -130,7 +129,7 @@ public class MatchIdentifier {
                                     CreatedSchool incomingSchool,
                                     List<SchoolComparison> comparisons) {
         // Extract the existing schools from the school comparisons
-        List<CachedSchool> schools = comparisons.stream().map(SchoolComparison::getExistingSchool).toList();
+        List<School> schools = comparisons.stream().map(SchoolComparison::getExistingSchool).toList();
 
         // Process each attribute in turn
         for (Attribute attribute : attributes) {

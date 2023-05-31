@@ -1,7 +1,6 @@
 package processing.schoolLists.matching;
 
 import constructs.school.Attribute;
-import constructs.school.CachedSchool;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
@@ -13,12 +12,9 @@ import utils.URLUtils;
 import utils.Utils;
 
 import java.net.URL;
-import java.security.PrivilegedAction;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -251,7 +247,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
     @NotNull
     public static AttributeComparison compare(@NotNull Attribute attribute,
                                               @NotNull CreatedSchool incomingSchool,
-                                              @NotNull CachedSchool existingSchool) {
+                                              @NotNull School existingSchool) {
         Object valI = incomingSchool.get(attribute);
         Object valE = existingSchool.get(attribute);
         boolean nullI = attribute.isEffectivelyNull(valI);
@@ -403,7 +399,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
     /**
      * Compare an attribute value for some incoming school to a large set existing schools all at once.
      * <p>
-     * This is identical to {@link #compare(Attribute, CreatedSchool, CachedSchool)}, except that it operates at
+     * This is identical to {@link #compare(Attribute, CreatedSchool, School)}, except that it operates at
      * scale. This allows it to be significantly more efficient when dealing with
      * {@link Attribute#ADDRESS_BASED_ATTRIBUTES address-based} attributes. For all other attributes, it simply calls
      * the default compare method in a loop.
@@ -414,7 +410,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
      */
     public static List<AttributeComparison> compare(@NotNull Attribute attribute,
                                                     @NotNull CreatedSchool incomingSchool,
-                                                    @NotNull List<CachedSchool> existingSchools) {
+                                                    @NotNull List<School> existingSchools) {
         List<AttributeComparison> comparisons = new ArrayList<>();
 
         // Handle address based attributes separately
@@ -424,7 +420,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
 
             // Get the addresses from each cached school
             List<String> addresses = new ArrayList<>();
-            for (CachedSchool school : existingSchools)
+            for (School school : existingSchools)
                 addresses.add(school.getStr(attribute));
 
             // Compare the addresses with the python parser
@@ -461,7 +457,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
 
         } else {
             // Handle all other attributes
-            for (CachedSchool existingSchool : existingSchools)
+            for (School existingSchool : existingSchools)
                 comparisons.add(compare(attribute, incomingSchool, existingSchool));
         }
 

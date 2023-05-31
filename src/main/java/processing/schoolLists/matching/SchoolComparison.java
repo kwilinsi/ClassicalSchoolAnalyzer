@@ -3,7 +3,6 @@ package processing.schoolLists.matching;
 import constructs.District;
 import constructs.Organization;
 import constructs.school.Attribute;
-import constructs.school.CachedSchool;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
@@ -104,7 +103,7 @@ public class SchoolComparison {
          * @return The new comparison instance.
          */
         public SchoolComparison of(@NotNull CreatedSchool incomingSchool) {
-            SchoolComparison comparison = new SchoolComparison(incomingSchool, new CachedSchool());
+            SchoolComparison comparison = new SchoolComparison(incomingSchool, new School());
             comparison.setLevel(this);
             return comparison;
         }
@@ -160,7 +159,7 @@ public class SchoolComparison {
      * The existing school from the database that is being matched against the {@link #incomingSchool}.
      */
     @NotNull
-    private final CachedSchool existingSchool;
+    private final School existingSchool;
 
     /**
      * This map pairs every {@link Attribute Attributes} with the corresponding {@link AttributeComparison} data for
@@ -183,7 +182,7 @@ public class SchoolComparison {
      * @param incomingSchool The {@link #incomingSchool}.
      * @param existingSchool The {@link #existingSchool}.
      */
-    public SchoolComparison(@NotNull CreatedSchool incomingSchool, @NotNull CachedSchool existingSchool) {
+    public SchoolComparison(@NotNull CreatedSchool incomingSchool, @NotNull School existingSchool) {
         this.incomingSchool = incomingSchool;
         this.existingSchool = existingSchool;
     }
@@ -205,7 +204,7 @@ public class SchoolComparison {
     }
 
     @NotNull
-    public CachedSchool getExistingSchool() {
+    public School getExistingSchool() {
         return existingSchool;
     }
 

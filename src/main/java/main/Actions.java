@@ -71,7 +71,7 @@ public class Actions {
 
         // Download all existing schools from the database to create a cache. This will be used for identifying
         // duplicate schools when saving them to the database.
-        List<CachedSchool> schoolsCache;
+        List<School> schoolsCache;
         try {
             schoolsCache = SchoolManager.getSchoolsFromDatabase();
         } catch (SQLException e) {

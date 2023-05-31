@@ -19,15 +19,15 @@ public class SchoolManager {
     private static final Logger logger = LoggerFactory.getLogger(SchoolManager.class);
 
     /**
-     * Get a list of every {@link School} currently in the database as a {@link CachedSchool}.
+     * Get a list of every {@link School} currently in the database.
      *
      * @return A list of cached schools.
      * @throws SQLException If there is an error establishing the SQL connection or executing the query.
      */
     @NotNull
-    public static List<CachedSchool> getSchoolsFromDatabase() throws SQLException {
+    public static List<School> getSchoolsFromDatabase() throws SQLException {
         logger.debug("Retrieving all schools from database...");
-        List<CachedSchool> schools = new ArrayList<>();
+        List<School> schools = new ArrayList<>();
 
         // Execute query
         Connection connection = Database.getConnection();
@@ -35,7 +35,7 @@ public class SchoolManager {
 
         // Convert the resultSet to a list of schools
         while (resultSet.next())
-            schools.add(new CachedSchool(resultSet));
+            schools.add(new School(resultSet));
 
         return schools;
     }

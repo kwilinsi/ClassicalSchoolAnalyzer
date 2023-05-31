@@ -55,7 +55,7 @@ public class CreatedSchool extends School {
      *                     {@link MatchIdentifier#compare(CreatedSchool, List) determining matches}.
      * @throws SQLException If there is an error saving to the database.
      */
-    public void saveToDatabase(List<CachedSchool> schoolsCache) throws SQLException, IllegalArgumentException {
+    public void saveToDatabase(List<School> schoolsCache) throws SQLException, IllegalArgumentException {
         // ---------- ---------- ---------- ---------- ----------
         // Check for a matching school and such
         // ---------- ---------- ---------- ---------- ----------
@@ -172,7 +172,7 @@ public class CreatedSchool extends School {
         }
 
         // Finally, add this new school to the cache
-        schoolsCache.add(new CachedSchool(this));
+        schoolsCache.add(this);
     }
 
     /**
