@@ -40,7 +40,7 @@ def format_error(error: str, message: str = None, stacktrace: str = None) -> str
         The JSON-encoded error message.
     """
 
-    return json.dumps(error_dict(error, message, stacktrace))
+    return json.dumps(error_dict(error, message, stacktrace), indent=2)
 
 
 def define_address(address_line_1: Union[str, None],

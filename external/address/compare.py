@@ -1,191 +1,8 @@
 from typing import OrderedDict, Tuple, Union
 from collections import OrderedDict
-import re
 
-from address_utils import *
-
-from usaddress import tag
-from scourgify import normalize_address_record
-from scourgify.cleaning import pre_clean_addr_str, post_clean_addr_str
-from scourgify.normalize import normalize_state, normalize_city
-
-ADDRESS_PREFIX_REGEX = r'^((mailing?)\s*address[:;\s]*)'
-
-
-def _clean_address(input: Union[str, None]) -> Union[str, None]:
-    """
-    Clean some input address to remove a few possible artifacts. This is done
-    before parsing it.
-
-    Args:
-        input: The address to clean.
-
-    Returns:
-        The cleaned address.
-    """
-
-    # Replace "null" and "none" with None
-    if not input or input.lower() in ['null', 'none']:
-        return None
-    
-    input = input.strip()
-    if not input:
-        return None
-
-    # Look for the prefix "address:" or "mailing address:" and remove it
-    match = re.match(ADDRESS_PREFIX_REGEX, input, re.IGNORECASE)
-    if match:
-        input = input[match.end():].strip()
-
-    return input
-
-
-def _parse_usaddress(address: Union[str, None]) -> OrderedDict[str, Union[str, None]]:
-    """
-    Parse a particularly difficult address with usaddress, coercing it into
-    the scourgify format.
-
-    Args:
-        address: The address to parse.
-
-    Returns:
-        A dictionary with parsed address information. Alternatively, this
-        might throw an exception.
-    """
-
-    tagged, _ = tag(address)
-
-    # If the list of tags is empty, there's no address
-    if len(tagged) == 0:
-        return define_address(None, None, None, None, None)
-
-    # Now take a naive approach to grouping tags. Stick everything on address_line_1 except
-    # for the city, state, and postal code. Also ignore tags after those three, because it's
-    # probably just the country name.
-    parsed = define_address([], [], None, None, None)
-
-    current_line = 1
-    ignore_future_tags = False
-
-    def clean(s):
-        return post_clean_addr_str(pre_clean_addr_str(s.upper()))
-
-    for key, value in tagged.items():
-        if key == 'PlaceName':
-            parsed['city'] = clean(value)
-            ignore_future_tags = True
-        elif key == 'StateName':
-            parsed['state'] = clean(value)
-            ignore_future_tags = True
-        elif key == 'ZipCode':
-            parsed['postal_code'] = clean(value)
-            ignore_future_tags = True
-        elif key == 'Recipient':
-            parsed['address_line_1'].append(clean(value))
-            current_line = 2
-        elif not ignore_future_tags:
-            parsed[f'address_line_{current_line}'].append(clean(value))
-
-    # Combine the arrays
-    for line in ['address_line_1', 'address_line_2']:
-        parsed[line] = join_parts(" ", parsed[line])
-
-    # Normalize the state and city
-    parsed['state'] = normalize_state(parsed['state'])
-    parsed['city'] = normalize_city(parsed['city'])
-
-    return parsed
-
-
-def parse(input: Union[str, None]) -> OrderedDict[str, Union[str, None]]:
-    """
-    Parse an address, and return it as an ordered dictionary. This will always contain the
-    following keys:
-
-    address_line_1: (Nullable) The first line
-    address_line_2: (Nullable) The second line
-    city:           (Nullable) The city
-    state:          (Nullable) The state
-    postal_code:    (Nullable) The postal code
-
-    It may also contain the key 'error', which will contain an error message. If this key
-    is present, then the other keys will all be None.
-
-    Args:
-        input: The address to parse.
-
-    Returns:
-        A dictionary with parsed address information.
-    """
-
-    # First, clean the input
-    cleaned = _clean_address(input)
-
-    # If the input is null or empty, return an empty address record
-    if not cleaned:
-        return define_address(None, None, None, None, None)
-
-    errors = []
-    parsed = None
-
-    # Attempt to parse the adddress with usaddress-scourgify
-    try:
-        parsed = normalize_address_record(cleaned)
-    except Exception as e:
-        errors.append(e)
-
-    # If that fails, parse it with usaddress
-    try:
-        parsed = _parse_usaddress(cleaned)
-    except Exception as e:
-        errors.append(e)
-
-    # If unable to parse, exit
-    if not parsed:
-        return define_address(
-            None, None, None, None, None,
-            f"Failed to parse '{input}': '{errors[0]}' and '{errors[1]}'"
-        )
-
-    # If the address starts with "PO BOX" but with improper spacing, fix it
-    if parsed['address_line_1'] and parsed['address_line_1'].replace(' ', '').startswith('POBOX'):
-        parsed['address_line_1'] = "PO BOX" + \
-            parsed['address_line_1'].split('X', 1)[-1]
-
-    return parsed
-
-
-def normalize(address: OrderedDict[str, Union[str, None]]) -> Union[str, None]:
-    """
-    Write a parsed address in the standard format:
-
-    ADDRESS_LINE_1
-    ADDRESS_LINE_2
-    CITY STATE POSTAL_CODE
-
-    If the given address is None or contains the key 'error', this returns None.
-
-    Args:
-        address: A parsed address.
-
-    Returns:
-        The normalized address in a single string.
-    """
-
-    if not address or 'error' in address:
-        return None
-
-    city_line = join_parts(' ', [
-        address['city'],
-        address['state'],
-        address['postal_code']
-    ])
-
-    return join_parts('\n', [
-        address['address_line_1'],
-        address['address_line_2'],
-        city_line
-    ])
+import utils
+import normalize
 
 
 def compare(addr1: Union[str, None],
@@ -207,12 +24,12 @@ def compare(addr1: Union[str, None],
     """
 
     if not parsed1:
-        parsed1 = parse(addr1)
+        parsed1 = normalize.address(addr1)
 
     if addr1 == addr2:
         return _package_comp_result('EXACT', parsed1, normalize(parsed1))
 
-    parsed2 = parse(addr2)
+    parsed2 = normalize.address(addr2)
 
     # Exit if one or both addresses aren't parseable
     if 'error' in parsed1:
@@ -341,7 +158,7 @@ def _fix_city_spacing(p1: OrderedDict[str, Union[str, None]],
     """
 
     if p1['city'] and p2['city'] and p1['city'] != p2['city'] and p1['city'] in p2['city']:
-        merged_1 = join_parts(
+        merged_1 = utils.join_parts(
             '', [p1['address_line_1'], p1['address_line_2'], p1['city']]
         )
 
