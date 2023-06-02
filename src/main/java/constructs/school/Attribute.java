@@ -12,7 +12,9 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This is the set of attributes for {@link School Schools}. Each school has a map relating each attribute to its value
@@ -37,7 +39,6 @@ public enum Attribute {
     country(String.class, null, 30),
     website_url(URL.class, null, 300),
     website_url_redirect(URL.class, null, 300),
-    has_website(Boolean.TYPE, false),
     contact_name(String.class, null, 100),
     email(String.class, null, 100),
     accs_accredited(Boolean.class, null),
@@ -84,6 +85,31 @@ public enum Attribute {
     public static final List<Attribute> ADDRESS_BASED_ATTRIBUTES = List.of(address, mailing_address);
 
     /**
+     * These are the attributes that contain someone's name. They are all
+     * {@link processing.schoolLists.matching.AttributeComparison#normalize(Attribute, School) normalized} by
+     * making them {@link utils.Utils#titleCase(String) title case}.
+     */
+    public static final List<Attribute> NAME_BASED_ATTRIBUTES = List.of(contact_name, headmaster_name, chairman_name);
+
+    /**
+     * These are all the automated values that can go in {@link Attribute#excluded_reason excluded_reason} if a
+     * school is marked {@link Attribute#is_excluded is_excluded}. They cover all the possible scenarios.
+     * <p>
+     * These are stored via bitwise comparisons on booleans. To get a particular message conveniently, use
+     * {@link #getAutomatedExclusionReason(boolean, boolean) getAutomatedExclusionReason()}.
+     */
+    public static final Map<Integer, String> AUTOMATED_EXCLUSION_REASONS = new HashMap<>() {{
+        put(0b11, "Missing name and website.");
+        put(0b10, "Missing name.");
+        put(0b01, "Missing website.");
+        put(0b00, null);
+    }};
+
+    public static String getAutomatedExclusionReason(boolean noName, boolean noWebsite) {
+        return AUTOMATED_EXCLUSION_REASONS.get((noName ? 0b1 : 0) << 1 | (noWebsite ? 0b1 : 0));
+    }
+
+    /**
      * The data type of the attribute.
      * <p>
      * Note: Some attributes have the {@link URL} type. That doesn't mean they actually use the URL class to store the
@@ -112,17 +138,6 @@ public enum Attribute {
 
     <T> Attribute(Class<T> type, T defaultValue) {
         this(type, defaultValue, -1);
-    }
-
-    /**
-     * This simply returns <code>true</code> if this attribute is {@link #is_excluded} or {@link #excluded_reason}.
-     * Those attributes aren't included in a number of comparisons between schools, and they should only be modified in
-     * the database following explicit instruction from the user.
-     *
-     * @return <code>True</code> if and only if this attribute is related to a school being excluded.
-     */
-    public boolean isExclusionRelated() {
-        return this == is_excluded || this == excluded_reason;
     }
 
     /**

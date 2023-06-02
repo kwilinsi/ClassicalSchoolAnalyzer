@@ -306,8 +306,7 @@ public class SchoolComparison {
      *     {@link #incomingSchool}
      *     <li>Every {@link Organization#getMatchRelevantAttributes() match relevant} attribute for the
      *     {@link #incomingSchool}
-     *     <li>Every {@link #getDifferingAttributes() differing} attribute (including
-     *     {@link Attribute#isExclusionRelated() exclusion} related ones), <i>if and only if</i> there are no
+     *     <li>Every {@link #getDifferingAttributes() differing} attribute, <i>if and only if</i> there are no
      *     more than 5 of these (not counting the ones that are already a part of the indicator/relevant attributes).
      * </ul>
      *

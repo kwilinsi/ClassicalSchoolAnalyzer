@@ -87,13 +87,10 @@ public class Actions {
 
                 // Validate each school and save it to the database. Then add it to the cache for checking the next
                 // school.
+                // TODO add a progress bar while saving to database
                 for (CreatedSchool school : schools)
                     try {
-                        school.validate();
                         school.saveToDatabase(schoolsCache);
-
-                        // TODO add a progress bar while saving to database
-
                     } catch (SQLException e) {
                         logger.error("Failed to save school " + school.name() + " to database.", e);
                     }

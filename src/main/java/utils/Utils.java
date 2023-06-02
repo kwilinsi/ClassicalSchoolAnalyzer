@@ -1,5 +1,6 @@
 package utils;
 
+import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -14,10 +15,7 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Locale;
-import java.util.StringJoiner;
+import java.util.*;
 
 public class Utils {
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
@@ -336,5 +334,30 @@ public class Utils {
             return false;
         else
             return str1.equalsIgnoreCase(str2);
+    }
+
+    /**
+     * Given a {@link List} of {@link Attribute Attributes}, combine their {@link Attribute#name names} into a single
+     * user-readable string separated by commas with the word "and" between the last two. This includes the Oxford
+     * comma.
+     * <p>
+     * The order of the input list is preserved, along with duplicates. However, <code>null</code> elements are skipped.
+     *
+     * @param attributes The list of attributes to combine.
+     * @return The user-readable string (an empty string if the list is empty).
+     */
+    @NotNull
+    public static String listAttributes(@NotNull List<Attribute> attributes) {
+        List<String> names = attributes.stream().filter(Objects::nonNull).map(Attribute::name).toList();
+
+        if (names.size() == 0)
+            return "";
+        else if (names.size() == 1)
+            return names.get(0);
+        else if (names.size() == 2)
+            return names.get(0) + " and " + names.get(1);
+        else
+            return String.join(", ", names.subList(0, names.size() - 1)) +
+                    ", and " + names.get(names.size() - 1);
     }
 }

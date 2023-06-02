@@ -113,10 +113,6 @@ public class ACCSSchoolParser implements Callable<CreatedSchool> {
         school.put(Attribute.website_url, ExtUtils.extHtmlLink(document,
                 "div#school-single h2 a[href]"));
 
-        // If the website URL isn't null, we'll say they have a website for now
-        school.put(Attribute.has_website, school.get(
-                Attribute.website_url) != null);
-
         // Extract other information from the ACCS page
         school.put(Attribute.phone, ExtUtils.extHtmlStr(document,
                 "p:has(strong:contains(phone))"));

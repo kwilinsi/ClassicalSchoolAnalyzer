@@ -8,10 +8,8 @@ import org.slf4j.LoggerFactory;
 import processing.schoolLists.matching.MatchIdentifier;
 import processing.schoolLists.matching.SchoolComparison;
 import database.Database;
-import utils.URLUtils;
 import utils.Utils;
 
-import java.net.URL;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -164,16 +162,19 @@ public class CreatedSchool extends School {
             } else {
                 // Otherwise, get the school and district ids by copying the one from the updated school
                 this.id = comparison.getExistingSchool().getId();
-                logger.info("- Updated existing {} with {} modified attribute(s)",
+                logger.info(
+                        "- Updated existing {} with {} modified attribute{}{}",
                         comparison.getExistingSchool(),
-                        attributes.size());
-
-                // TODO if there are only a few modified attributes, name them
+                        attributes.size(),
+                        attributes.size() == 1 ? "" : "s",
+                        attributes.size() < 5 ? ": " + Utils.listAttributes(attributes) : ""
+                );
             }
         }
 
-        // Finally, add this new school to the cache
-        schoolsCache.add(this);
+        // Finally, if this was an INSERT statement, add this new school to the cache
+        if (insertStmt)
+            schoolsCache.add(this);
     }
 
     /**
@@ -199,83 +200,5 @@ public class CreatedSchool extends School {
                     "Failed to add district organization relation for school " + this + ". District id not set.", e
             );
         }
-    }
-
-    /**
-     * This method iterates through each of the {@link Attribute Attributes} of type {@link URL} and validates them.
-     * This ensures that all URLs in the SQL database are properly formatted.
-     */
-    private void checkURLs() {
-        for (Attribute attribute : attributes.keySet())
-            if (attribute.type == URL.class) {
-                // Get this URL. If it's null, skip this attribute
-                String urlStr = getStr(attribute);
-                if (urlStr == null) continue;
-
-                // Attempt to create a URL object from the url string. If this is successful, overwrite the original
-                // string in case the URL was reformatted to be valid.
-                URL url = URLUtils.createURL(urlStr);
-                if (url == null) {
-                    logger.warn("Failed to parse URL {} for school {}.", urlStr, name());
-                    put(attribute, null);
-                } else {
-                    put(attribute, url.toString());
-                }
-            }
-    }
-
-    /**
-     * Determine whether this {@link School} should be marked {@link Attribute#is_excluded excluded} in the SQL table,
-     * and save the result in the {@link #attributes} map accordingly.
-     * <p>
-     * A school can be automatically excluded for two reasons:
-     * <ol>
-     *     <li>The {@link Attribute#name name} is {@link #isEffectivelyNull(Attribute) effectively null}.
-     *     <li>{@link Attribute#has_website has_website} is <code>false</code>.
-     * </ol>
-     * <p>
-     * If either of these conditions are met (or both), the school is automatically excluded and the
-     * {@link Attribute#excluded_reason excluded_reason} attribute is set appropriately.
-     * <p>
-     * If neither condition is met, this does <b>not</b> change the {@link Attribute#is_excluded is_excluded} or
-     * {@link Attribute#excluded_reason excluded_reason} attributes. They are left as-is.
-     */
-    private void checkExclude() {
-        boolean noName = isEffectivelyNull(Attribute.name);
-        boolean noWebsite = !getBool(Attribute.has_website);
-
-        if (noName && noWebsite) {
-            put(Attribute.is_excluded, true);
-            put(Attribute.excluded_reason, "Name and website_url are missing.");
-        } else if (noName) {
-            put(Attribute.is_excluded, true);
-            put(Attribute.excluded_reason, "Name is missing.");
-        } else if (noWebsite) {
-            put(Attribute.is_excluded, true);
-            put(Attribute.excluded_reason, "Website URL is missing.");
-        }
-    }
-
-    /**
-     * Determine whether this {@link School} has a website. This is done by checking whether the
-     * {@link Attribute#website_url website_url} is {@link #isEffectivelyNull(Attribute) effectively null}. If it is,
-     * {@link Attribute#has_website has_website} is set to <code>false</code>; otherwise it's set to <code>true</code>.
-     */
-    private void checkHasWebsite() {
-        put(Attribute.has_website, !isEffectivelyNull(Attribute.website_url));
-    }
-
-    /**
-     * Run the validation procedures on new schools that are necessary before adding them to the database:
-     * <ol>
-     *     <li>{@link #checkURLs()}
-     *     <li>{@link #checkHasWebsite()}
-     *     <li>{@link #checkExclude()}
-     * </ol>
-     */
-    public void validate() {
-        this.checkURLs();
-        this.checkHasWebsite();
-        this.checkExclude();
     }
 }
