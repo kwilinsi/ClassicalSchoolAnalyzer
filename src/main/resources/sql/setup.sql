@@ -49,7 +49,6 @@ CREATE TABLE IF NOT EXISTS Schools
     country                                 VARCHAR(30),
     website_url                             VARCHAR(300),
     website_url_redirect                    VARCHAR(300),
-    has_website                             BOOL         NOT NULL,
     contact_name                            VARCHAR(100),
     email                                   VARCHAR(100),
     accs_accredited                         BOOL,
