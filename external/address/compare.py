@@ -5,9 +5,9 @@ import utils
 import normalize
 
 
-def compare(addr1: Union[str, None],
-            addr2: Union[str, None],
-            parsed1: OrderedDict[str, Union[str, None]] = None) -> OrderedDict[str, Union[str, None]]:
+def compare_address(addr1: Union[str, None],
+                    addr2: Union[str, None],
+                    parsed1: OrderedDict[str, Union[str, None]] = None) -> OrderedDict[str, Union[str, None]]:
     """
     Compare two addresses to determine whether they're the same. Return the results
     in an ordered dictionary.
@@ -27,7 +27,7 @@ def compare(addr1: Union[str, None],
         parsed1 = normalize.address(addr1)
 
     if addr1 == addr2:
-        return _package_comp_result('EXACT', parsed1, normalize(parsed1))
+        return _package_comp_result('EXACT', parsed1, normalize.format(parsed1))
 
     parsed2 = normalize.address(addr2)
 
@@ -40,17 +40,17 @@ def compare(addr1: Union[str, None],
             )
         else:
             return _package_comp_result(
-                'NONE', parsed2, normalize(parsed2),
+                'NONE', parsed2, normalize.format(parsed2),
                 f"Addr1 not parseable: '{parsed1['error']}'"
             )
     elif 'error' in parsed2:
         return _package_comp_result(
-            'NONE', parsed1, normalize(parsed1),
+            'NONE', parsed1, normalize.format(parsed1),
             f"Addr2 not parseable: '{parsed2['error']}'"
         )
 
-    norm1 = normalize(parsed1)
-    norm2 = normalize(parsed2)
+    norm1 = normalize.format(parsed1)
+    norm2 = normalize.format(parsed2)
 
     # If normalizing made them equal, exit
     if norm1 == norm2:
@@ -136,7 +136,7 @@ def _fix_zip(p1: OrderedDict[str, Union[str, None]],
     if p1['postal_code']:
         if not p2['postal_code'] or p1['postal_code'].startswith(p2['postal_code']):
             p2['postal_code'] = p1['postal_code']
-            return p2, normalize(p2)
+            return p2, normalize.format(p2)
 
     return p2, n2
 
@@ -168,7 +168,7 @@ def _fix_city_spacing(p1: OrderedDict[str, Union[str, None]],
             p2[last_line] += ' ' + p2['city'][:-len(p1['city'])]
             p2['city'] = p1['city']
 
-            return p2, normalize(p2)
+            return p2, normalize.format(p2)
 
     return p2, n2
 
@@ -195,17 +195,17 @@ def _fix_missing_info(p1: OrderedDict[str, Union[str, None]],
     # If p2 is missing the city, add it
     if p1['city'] and not p2['city']:
         p2['city'] = p1['city']
-        n2 = normalize(p2)
+        n2 = normalize.format(p2)
 
     # If p2 is missing the state, add it
     if p1['state'] and not p2['state']:
         p2['state'] = p1['state']
-        n2 = normalize(p2)
+        n2 = normalize.format(p2)
 
     # If p2 has line1 moved to line2, then add the missing line1 to p2
     if p1['address_line_2'] and p1['address_line_2'] == p2['address_line_1']:
         p2['address_line_1'] = p1['address_line_1']
         p2['address_line_2'] = p1['address_line_2']
-        n2 = normalize(p2)
+        n2 = normalize.format(p2)
 
     return p2, n2

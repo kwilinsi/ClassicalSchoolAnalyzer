@@ -147,7 +147,7 @@ def run_compare():
     _validate_args(
         4, 'Missing the second address. See README for documentation.')
 
-    print(json.dumps(compare.compare(sys.argv[2], sys.argv[3])))
+    print(json.dumps(compare.compare_address(sys.argv[2], sys.argv[3])))
 
 
 def run_compare_file():
@@ -166,7 +166,7 @@ def run_compare_file():
     input_data = _parse_json(input_path)
 
     if input_data:
-        output_data = [compare.compare(addr1, address, parsed1)
+        output_data = [compare.compare_address(addr1, address, parsed1)
                        for address in input_data]
     else:
         output_data = None
