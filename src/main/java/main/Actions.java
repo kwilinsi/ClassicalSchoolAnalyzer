@@ -7,19 +7,14 @@ import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import processing.schoolLists.matching.AddressParser;
 import processing.schoolLists.matching.AttributeComparison;
 import utils.Config;
-import database.Database;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -89,8 +84,6 @@ public class Actions {
                     for (int i = 0; i < normalized.size(); i++)
                         schools.get(i).put(attribute, normalized.get(i));
                 }
-
-                // TODO deal with the country and state fields better
 
                 // Validate each school and save it to the database. Then add it to the cache for checking the next
                 // school.
@@ -199,38 +192,5 @@ public class Actions {
      */
     static void test() {
         logger.info("Running test script.");
-
-        // Get all the address values
-        try (Connection connection = Database.getConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("SELECT DISTINCT address FROM Schools");
-
-            ResultSet resultSet = stmt.executeQuery();
-
-            connection.setAutoCommit(false);
-            PreparedStatement insertStmt = connection.prepareStatement(
-                    "INSERT INTO Addresses (raw, normalized) VALUES (?, ?)"
-            );
-
-            List<String> raw = new ArrayList<>();
-
-            while (resultSet.next())
-                raw.add(resultSet.getString(1));
-
-            logger.info("normalizing {} addresses", raw.size());
-            List<String> normalized = AddressParser.normalize(raw);
-
-            for (int i = 0; i < normalized.size(); i++) {
-                insertStmt.setString(1, raw.get(i));
-                insertStmt.setString(2, normalized.get(i));
-                insertStmt.addBatch();
-            }
-
-            insertStmt.executeBatch();
-            logger.info("Added address strings to database.");
-
-            connection.commit();
-        } catch (SQLException e) {
-            logger.error("", e);
-        }
     }
 }

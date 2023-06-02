@@ -17,6 +17,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.StringJoiner;
 
 public class Utils {
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
@@ -283,5 +284,57 @@ public class Utils {
         Throwable throwable = new Throwable();
         throwable.setStackTrace(stackTrace);
         return throwable;
+    }
+
+    /**
+     * Join a set of arguments as if they were terminal commands, putting them in a single string. This is not secure
+     * like the actual {@link ProcessBuilder}, as it will not escape characters or anything. It is only for
+     * approximate reference in log statements. Instead, it does the following:
+     * <ul>
+     *     <li>Replace any newlines with the literal string <code>"\n"</code>.
+     *     <li>Skip <code>null</code> and empty arguments.
+     *     <li>Surround every argument that contains spaces with quotations.
+     *     <li>Combine all arguments with a single space between them.
+     * </ul>
+     *
+     * @param args The list of terminal arguments, which may be <code>null</code>.
+     * @return The combined command, or an empty string if the input is <code>null</code>.
+     */
+    @NotNull
+    public static String joinCommand(@Nullable List<String> args) {
+        StringJoiner s = new StringJoiner(" ");
+
+        if (args != null)
+            for (String arg : args) {
+                if (arg == null || arg.isEmpty()) continue;
+
+                //noinspection RedundantEscapeInRegexReplacement
+                arg = arg.replaceAll("\\n", "\\n");
+
+                if (arg.matches("\\s"))
+                    arg = "\"" + arg + "\"";
+
+                s.add(arg);
+            }
+
+        return s.toString();
+    }
+
+    /**
+     * Call {@link String#equalsIgnoreCase(String) String.equalsIgnoreCase()} on two strings that may be null.
+     * <p>
+     * This is like {@link java.util.Objects#equals(Object, Object) Objects.equals()} for case-insensitive strings.
+     *
+     * @param str1 The first string.
+     * @param str2 The second string.
+     * @return <code>True</code> if and only if the strings are equal (case-insensitive).
+     */
+    public static boolean nullableEqualsIgnoreCase(@Nullable String str1, @Nullable String str2) {
+        if (str1 == null && str2 == null)
+            return true;
+        else if (str1 == null)
+            return false;
+        else
+            return str1.equalsIgnoreCase(str2);
     }
 }

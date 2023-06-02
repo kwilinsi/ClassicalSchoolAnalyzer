@@ -164,9 +164,11 @@ public class CreatedSchool extends School {
             } else {
                 // Otherwise, get the school and district ids by copying the one from the updated school
                 this.id = comparison.getExistingSchool().getId();
-                logger.info("- Updated existing {} with {} modified attributes",
+                logger.info("- Updated existing {} with {} modified attribute(s)",
                         comparison.getExistingSchool(),
                         attributes.size());
+
+                // TODO if there are only a few modified attributes, name them
             }
         }
 

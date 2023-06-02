@@ -1,5 +1,6 @@
 package processing.schoolLists.matching;
 
+import com.google.gson.Gson;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
@@ -15,7 +16,7 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.function.BiPredicate;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 /**
  * This records data associated with comparing the values for a particular {@link #attribute} from two schools, an
@@ -342,7 +343,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
 
         // Check addresses
         if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
-            HashMap<String, String> compare = AddressParser.compare((String) valI, (String) valE);
+            Map<String, String> compare = AddressParser.compare((String) valI, (String) valE);
 
             // If the comparison fails, they don't match
             if (compare == null)
@@ -350,7 +351,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
 
             // Convert the results from the comparison test
             Level level = Level.valueOfSafe(compare.get("match"));
-            String prefNorm = compare.get("preference");
+            String prefNorm = compare.get("normalized");
             Preference pref;
             if (level == Level.NONE && prefNorm == null)
                 pref = Preference.NONE;
@@ -424,7 +425,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
                 addresses.add(school.getStr(attribute));
 
             // Compare the addresses with the python parser
-            List<HashMap<String, String>> results = AddressParser.compare(incomingAddress, addresses);
+            List<Map<String, String>> results = AddressParser.compare(incomingAddress, addresses);
 
             // Process the results for each cached school. Make sure to always return an AttributeComparison for
             // EVERY existing school, even if the parser failed completely and returned an empty list
@@ -432,12 +433,14 @@ public record AttributeComparison(@NotNull Attribute attribute,
                 boolean nullE = attribute.isEffectivelyNull(addresses.get(i));
 
                 // If the comparison fails, they don't match
-                if (i >= results.size() || results.get(i) == null)
+                if (i >= results.size() || results.get(i) == null) {
                     comparisons.add(AttributeComparison.ofNone(attribute, !nullI && !nullE));
+                    continue;
+                }
 
                 // Convert the results from the comparison test
                 Level level = Level.valueOfSafe(results.get(i).get("match"));
-                String prefNorm = results.get(i).get("preference");
+                String prefNorm = results.get(i).get("normalized");
                 Preference pref;
                 if (level == Level.NONE && prefNorm == null)
                     pref = Preference.NONE;
@@ -536,6 +539,42 @@ public record AttributeComparison(@NotNull Attribute attribute,
             }
         }
 
+        if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
+            return AddressParser.normalizeAddress((String) value);
+        }
+
+        if (attribute == Attribute.city || attribute == Attribute.state) {
+            return AddressParser.normalizeCityState(attribute, (String) value, school.getStr(Attribute.address));
+        }
+
+        if (attribute == Attribute.country) {
+            // First, totally ignoring the country, see if the state is a US state, in which case the country is U.S.
+            String state = school.getStr(Attribute.state);
+            if (state != null)
+                for (String stateAbbr : Const.STATE_ABBREVIATIONS)
+                    if (stateAbbr.equalsIgnoreCase(state))
+                        return "United States";
+
+            // Otherwise, for countries, replace "US" with "United States",
+            // and stop all non-countries from being a thing
+            if (value instanceof String s) {
+                // Make it lowercase and remove everything besides letters
+                s = s.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "");
+
+                if (s.equals("us"))
+                    return "United States";
+
+                for (String notACountry : Const.NOT_A_COUNTRY) {
+                    if (s.equals(notACountry)) {
+                        logger.debug("Invalid country {} replaced with null", value);
+                        return null;
+                    }
+                }
+            }
+
+            return value;
+        }
+
         return switch (attribute) {
             case grades_offered -> GradeLevel.normalize(GradeLevel.identifyGrades((String) value));
             case email -> ((String) value).toLowerCase(Locale.ROOT);
@@ -548,7 +587,8 @@ public record AttributeComparison(@NotNull Attribute attribute,
      * Take some attribute and normalize some schools' values for it to a standard form.
      * <p>
      * This bulk normalization process is particularly efficient for {@link Attribute#ADDRESS_BASED_ATTRIBUTES
-     * address-based} attributes. Other attributes are redirected one at a time to
+     * address-based} attributes, along with {@link Attribute#city city}, {@link Attribute#state state}, and
+     * {@link Attribute#country country}. Other attributes are redirected one at a time to
      * {@link #normalize(Attribute, School)}.
      *
      * @param attribute The attribute to normalize.
@@ -557,11 +597,18 @@ public record AttributeComparison(@NotNull Attribute attribute,
      */
     @NotNull
     public static List<?> normalize(@NotNull Attribute attribute, @NotNull List<? extends School> schools) {
-        // If the attribute is an address, use the more efficient bulk normalization process
+        Function<Attribute, List<String>> getStrValues = (Attribute a) -> schools.stream()
+                .map(s -> s.getStr(a))
+                .toList();
+
+        // If the attribute is address-related, use more efficient bulk normalization
         if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
-            return AddressParser.normalize(schools.stream()
-                    .map(s -> s.getStr(attribute))
-                    .collect(Collectors.toList())
+            return AddressParser.normalizeAddress(getStrValues.apply(attribute));
+        } else if (attribute == Attribute.city || attribute == Attribute.state) {
+            return AddressParser.normalizeCityState(
+                    attribute,
+                    getStrValues.apply(Attribute.address),
+                    getStrValues.apply(attribute)
             );
         }
 

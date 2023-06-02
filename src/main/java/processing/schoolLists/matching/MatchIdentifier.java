@@ -169,10 +169,7 @@ public class MatchIdentifier {
                 promptPanel,
                 Option.of("This is not a match. Ignore it.", SchoolComparison.Level.NO_MATCH),
                 Option.of("Add this school to this district.", SchoolComparison.Level.DISTRICT_MATCH),
-                Option.of(
-                        "This school matches one of the schools in this district. Update the existing values.",
-                        SchoolComparison.Level.PARTIAL_MATCH
-                ),
+                Option.of("This school is a match.", SchoolComparison.Level.SCHOOL_MATCH),
                 Option.of("Omit this school entirely. Don't check for other matches.", SchoolComparison.Level.OMIT)
         ));
 

@@ -3,6 +3,7 @@ package processing.schoolLists.matching;
 import com.google.gson.Gson;
 import com.google.gson.JsonIOException;
 import com.google.gson.reflect.TypeToken;
+import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -13,10 +14,7 @@ import utils.Utils;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This class is designed to interface between this Java program and the python script used to parse and
@@ -60,7 +58,7 @@ public class AddressParser {
         allArgs[0] = Config.PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH.get();
         System.arraycopy(args, 0, allArgs, 1, args.length);
         ProcessBuilder builder = new ProcessBuilder(allArgs);
-        logger.debug("Calling python address parser: '{}'", String.join(" ", builder.command()));
+        logger.debug("Calling python address parser: {}'", Utils.joinCommand(builder.command()));
         return builder.start();
     }
 
@@ -78,7 +76,7 @@ public class AddressParser {
         try {
             Process process = newProcess(args);
             InputStreamReader reader = new InputStreamReader(process.getInputStream());
-            HashMap<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
+            Map<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
 
             if (map == null) {
                 logger.warn(
@@ -89,7 +87,9 @@ public class AddressParser {
             }
 
             reader.close();
-            return getOrLogError(map, "output_file");
+            if (map.containsKey("error"))
+                logger.debug("{} — {}: {}", map.get("error"), map.get("message"), map.get("stacktrace"));
+            return map.get("output_file");
         } catch (IOException e) {
             logger.error("Failed to run the python address parser and read its output. " +
                     "Did you compile the executable?", e);
@@ -98,52 +98,50 @@ public class AddressParser {
     }
 
     /**
-     * Attempt to retrieve the specified key from the given {@link HashMap}. However, this first checks whether the
-     * map contains the key <code>"error"</code>, which indicates that it instead contains an error message. In this
-     * case, the error is logged to the console and <code>null</code> is returned.
+     * Normalize a single address.
      * <p>
-     * This makes use of the fact that {@link Map#get(Object) Map.get()} returns <code>null</code> for nonexistent
-     * keys. If the map contains an error message <i>and</i> the specified key, it will log the error and return the
-     * value too.
+     * For more information, and to use the more efficient bulk normalization process, see {@link #normalize(List)}.
      *
-     * @param map The map from the python parser containing the error message.
-     * @param key The key to retrieve, assuming the map doesn't contain an error message.
-     * @return The value {@link HashMap#get(Object) mapped} to the specified key. This will be <code>null</code> if
-     * the given <code>map</code> is <code>null</code>.
+     * @param address The address to normalize.
+     * @return A map containing the parsed and normalized address information. The normalized address is retrievable
+     * via the <code>"normalized"</code> key.
      */
     @Nullable
-    private static String getOrLogError(@Nullable HashMap<String, String> map,
-                                        @NotNull String key) {
-        if (map == null)
-            return null;
-        else if (map.containsKey("error"))
-            logError(map);
+    public static Map<String, String> normalize(@Nullable String address) {
+        logger.debug("Normalizing single address '{}'", address);
 
-        return map.get(key);
-    }
+        try {
+            Process process = newProcess("normalize", address == null ? "null" : address);
+            InputStreamReader reader = new InputStreamReader(process.getInputStream());
+            Map<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
 
-    /**
-     * Assuming the given {@link HashMap} contains an error message, {@link Logger#debug(String) log} that message.
-     *
-     * @param map The map with the error message.
-     */
-    private static void logError(@NotNull HashMap<String, String> map) {
-        logger.debug("{} — {}: {}", map.get("error"), map.get("message"), map.get("stacktrace"));
+            reader.close();
+
+            if (map.containsKey("error")) {
+                logger.debug("Error while normalizing addresses '{}': {}", address, map.get("error"));
+                return null;
+            } else {
+                return map;
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
      * Bulk normalize many addresses at the same time. This is significantly more efficient, as it minimizes the
-     * number of separate calls to the python script, which has a slow start-up time.
+     * number of separate calls to the Python script, which has a slow start-up time.
      * <p>
-     * Addresses that fail the normalization process will be {@link #logError(HashMap) logged} to the console and
-     * returned as <code>null</code>.
+     * Addresses that fail the normalization process will be {@link #logger logged} to the console and returned as
+     * <code>null</code>.
      *
      * @param addresses The list of addresses to normalize.
-     * @return A normalized list of addresses in the same order as the input. If a fatal occurs, this is an empty,
-     * immutable list.
+     * @return A list of all the normalization information returned by the address parsing script. If a fatal
+     * occurs, this is an empty, immutable list.
      */
     @NotNull
-    public static List<String> normalize(@NotNull List<String> addresses) {
+    public static List<Map<String, String>> normalize(@NotNull List<String> addresses) {
         logger.debug("Running bulk normalization on {} addresses", addresses.size());
         String path = saveToFile(addresses, "addresses");
 
@@ -158,23 +156,177 @@ public class AddressParser {
         }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(outputPath))) {
-            List<HashMap<String, String>> normalizedData = new Gson().fromJson(reader, LIST_MAP_TYPE);
-            List<String> output = new ArrayList<>();
+            List<Map<String, String>> maps = new Gson().fromJson(reader, LIST_MAP_TYPE);
+            if (maps == null)
+                logger.error("Failed to read JSON from {}", outputPath);
+            else if (maps.size() != addresses.size())
+                logger.error("Got {} normalized addresses, but input had {} addresses", maps.size(), addresses.size());
+            else
+                return maps;
 
-            if (normalizedData == null) return output;
+            return List.of();
+        } catch (IOException e) {
+            logger.error("Failed to read " + outputPath + " JSON data", e);
+            return List.of();
+        } finally {
+            Utils.deleteFiles(path, outputPath);
+        }
+    }
 
-            int successCount = 0;
-            for (HashMap<String, String> map : normalizedData) {
-                String norm = getOrLogError(map, "normalized");
+    /**
+     * Normalize a single address.
+     * <p>
+     * For more information, and to use the more efficient bulk normalization process, see
+     * {@link #normalizeAddress(List)}.
+     *
+     * @param address The address to normalize.
+     * @return The normalized address.
+     */
+    @Nullable
+    public static String normalizeAddress(@Nullable String address) {
+        // Not strictly necessary, but significantly faster for the relatively likely null input
+        if (address == null) return null;
+
+        Map<String, String> normalized = normalize(address);
+        if (normalized == null)
+            return null;
+        else
+            return normalized.get("normalized");
+    }
+
+    /**
+     * Bulk normalize many addresses at the same time. This is significantly more efficient, as it minimizes the
+     * number of separate calls to the python script, which has a slow start-up time.
+     * <p>
+     * Addresses that fail the normalization process will be {@link #logger logged} to the console and returned as
+     * <code>null</code>.
+     *
+     * @param addresses The list of addresses to normalize.
+     * @return A normalized list of addresses in the same order as the input. If a fatal occurs, this is an empty,
+     * immutable list.
+     */
+    @NotNull
+    public static List<String> normalizeAddress(@NotNull List<String> addresses) {
+        List<Map<String, String>> normalized = normalize(addresses);
+        if (normalized.size() == 0) return List.of();
+
+        List<String> output = new ArrayList<>();
+        int successCount = 0;
+
+        for (int i = 0; i < normalized.size(); i++) {
+            Map<String, String> map = normalized.get(i);
+            if (map == null) {
+                logger.warn("Unexpected null normalization map for address '{}'", addresses.get(i));
+                output.add(null);
+            } else {
+                String norm = map.get("normalized");
+                if (map.containsKey("error"))
+                    logger.debug("Error normalizing '{}': {}", addresses.get(i), map.get("error"));
+
                 output.add(norm);
                 if (norm != null)
                     successCount++;
             }
+        }
 
-            logger.debug("Successfully normalized {}/{} addresses from {} inputs",
-                    successCount, addresses.size(), output.size());
+        logger.debug("Successfully normalized {}/{} addresses from {} inputs",
+                successCount, addresses.size(), output.size());
 
-            return output;
+        return output;
+    }
+
+    /**
+     * Normalize a single city or state value.
+     * <p>
+     * For more information, and to use the more efficient bulk normalization process, see
+     * {@link #normalizeCityState(Attribute, List, List)}.
+     *
+     * @param attribute This must be either {@link Attribute#city city} or {@link Attribute#state state}.
+     * @param value     The city or state value or normalize.
+     * @param address   An optional address to assist in the normalization process.
+     * @return The normalized city or state value.
+     */
+    @Nullable
+    public static String normalizeCityState(@NotNull Attribute attribute,
+                                            @Nullable String value,
+                                            @Nullable String address) {
+        logger.debug("Normalizing single {} '{}' with address {}", attribute.name(), value, address);
+
+        try {
+            Process process = newProcess(
+                    "normalize_" + attribute.name(),
+                    value == null ? "null" : value,
+                    address == null ? "null" : address
+            );
+            InputStreamReader reader = new InputStreamReader(process.getInputStream());
+            Map<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
+
+            reader.close();
+
+            if (map.containsKey("error")) {
+                logger.debug("Error while normalizing {} '{}': {}", attribute.name(), value, map.get("error"));
+                return null;
+            } else {
+                return map.get("normalized");
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Normalize the {@link Attribute#city city} and {@link Attribute#state state} attributes, both of which are
+     * related to the {@link Attribute#address address}.
+     *
+     * @param attribute The particular attribute to normalize (must be the city or state).
+     * @param addresses The list of addresses for a set of schools.
+     * @param values    The current values of the <code>attribute</code> for each school.
+     * @return A list of normalized values, or an empty, immutable list, if some fatal error occurs.
+     * @throws IllegalArgumentException If the length of the addresses and values lists are not the same.
+     */
+    @NotNull
+    public static List<String> normalizeCityState(@NotNull Attribute attribute,
+                                                  @NotNull List<String> addresses,
+                                                  @NotNull List<String> values) throws IllegalArgumentException {
+        if (values.size() != addresses.size())
+            throw new IllegalArgumentException(String.format(
+                    "Array size mismatch. Got %d for address and %d for %s",
+                    addresses.size(), values.size(), attribute.name()
+            ));
+
+        List<Map<String, String>> inputData = new ArrayList<>();
+        for (int i = 0; i < addresses.size(); i++) {
+            Map<String, String> map = new HashMap<>();
+            map.put("value", values.get(i));
+            map.put("address", addresses.get(i));
+            inputData.add(map);
+        }
+
+        String path = saveToFile(inputData, attribute == Attribute.city ? "cities" : "states");
+
+        if (path == null)
+            return List.of();
+
+        String outputPath = runBulkProcess("normalize_" + attribute.name(), path);
+
+        if (outputPath == null) {
+            Utils.deleteFiles(path);
+            return List.of();
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(outputPath))) {
+            List<Map<String, String>> maps = new Gson().fromJson(reader, LIST_MAP_TYPE);
+            if (maps == null)
+                logger.error("Failed to read JSON from {}", outputPath);
+            else if (maps.size() != addresses.size())
+                logger.error("Got {} normalized addresses, but input had {} addresses", maps.size(), addresses.size());
+            else
+                return maps.stream()
+                        .map(m -> m == null ? null : m.get("normalized"))
+                        .toList();
+
+            return List.of();
         } catch (IOException e) {
             logger.error("Failed to read " + outputPath + " JSON data", e);
             return List.of();
@@ -185,7 +337,7 @@ public class AddressParser {
 
     /**
      * Compare two addresses. This returns a single {@link HashMap} with the result. In the event that the parser
-     * script throws an error, it is {@link #logError(HashMap) logged}, and <code>null</code> is returned instead.
+     * script throws an error, it is {@link #logger logged}, and <code>null</code> is returned instead.
      * <p>
      * For more information on the map, see {@link #compare(String, List)}.
      *
@@ -196,18 +348,20 @@ public class AddressParser {
      * @return The result of the comparison, or <code>null</code> if an error is encountered.
      */
     @Nullable
-    public static HashMap<String, String> compare(@Nullable String addr1, @Nullable String addr2) {
+    public static Map<String, String> compare(@Nullable String addr1, @Nullable String addr2) {
+        logger.debug("Running single address comparison on '{}' and '{}'", addr1, addr2);
+
         try {
             Process process = newProcess(
                     "compare", addr1 == null ? "null" : addr1, addr2 == null ? "null" : addr2
             );
             InputStreamReader reader = new InputStreamReader(process.getInputStream());
-            HashMap<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
+            Map<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
 
             reader.close();
 
             if (map.containsKey("error")) {
-                logError(map);
+                logger.debug("Error while comparing addresses '{}' and '{}': {}", addr1, addr2, map.get("error"));
                 return null;
             } else {
                 return map;
@@ -216,7 +370,6 @@ public class AddressParser {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     /**
@@ -228,7 +381,7 @@ public class AddressParser {
      *     <li><code>"info"</code> - Optional additional information primarily for debugging
      * </ul>
      * If a particular address encounters an error while parsing, its hashmap will be <code>null</code>, thus not
-     * containing any keys. The error message is {@link #logError(HashMap) logged}.
+     * containing any keys. The error message is {@link #logger logged}.
      *
      * @param address     The address to compare to everything else. If this is <code>null</code>, it's replaced with
      *                    an empty string.
@@ -237,8 +390,8 @@ public class AddressParser {
      * process fails altogether, this will be an empty, immutable list.
      */
     @NotNull
-    public static List<HashMap<String, String>> compare(@Nullable String address, @NotNull List<String> comparisons) {
-        logger.debug("Running bulk comparison against {} addresses", comparisons.size());
+    public static List<Map<String, String>> compare(@Nullable String address, @NotNull List<String> comparisons) {
+        logger.debug("Running bulk comparison of '{}' against {} addresses", address, comparisons.size());
 
         String path = saveToFile(comparisons, "comp_addresses");
 
@@ -254,14 +407,22 @@ public class AddressParser {
 
         try (BufferedReader reader = new BufferedReader(new FileReader(outputPath))) {
             logger.debug("Parsing '{}' with Gson", outputPath);
-            List<HashMap<String, String>> result = new Gson().fromJson(reader, LIST_MAP_TYPE);
-            List<HashMap<String, String>> output = new ArrayList<>();
+            List<Map<String, String>> result = new Gson().fromJson(reader, LIST_MAP_TYPE);
+            List<Map<String, String>> output = new ArrayList<>();
 
-            if (result == null) return output;
+            if (result == null)
+                return output;
+            else if (result.size() != comparisons.size()) {
+                logger.error("Got {} comparisons, but input had {} addresses", result.size(), comparisons.size());
+                return output;
+            }
 
-            for (HashMap<String, String> map : result) {
+            for (int i = 0; i < result.size(); i++) {
+                Map<String, String> map = result.get(i);
                 if (map.containsKey("error")) {
-                    logError(map);
+                    logger.debug(
+                            "Error comparing address '{}' to '{}': {}", address, comparisons.get(i), map.get("error")
+                    );
                     output.add(null);
                 } else {
                     output.add(map);
