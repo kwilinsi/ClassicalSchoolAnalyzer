@@ -67,7 +67,7 @@ def run_normalize_file():
     Normalize all the addresses in a file.
     """
 
-    input_path = sys.argv[3]
+    input_path = sys.argv[2]
     output_path = _get_output_path(input_path, '_normalized')
 
     input_data = _parse_json(input_path)
@@ -95,7 +95,7 @@ def run_normalize_city_file():
     Normalize many city values by comparring them with addresses.
     """
 
-    input_path = sys.argv[3]
+    input_path = sys.argv[2]
     output_path = _get_output_path(input_path, '_normalized')
 
     input_data = _parse_json(input_path)
@@ -125,7 +125,7 @@ def run_normalize_state_file():
     Normalize many state values by comparring them with addresses.
     """
 
-    input_path = sys.argv[3]
+    input_path = sys.argv[2]
     output_path = _get_output_path(input_path, '_normalized')
 
     input_data = _parse_json(input_path)
