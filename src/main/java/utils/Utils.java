@@ -289,7 +289,7 @@ public class Utils {
      * like the actual {@link ProcessBuilder}, as it will not escape characters or anything. It is only for
      * approximate reference in log statements. Instead, it does the following:
      * <ul>
-     *     <li>Replace any newlines with the literal string <code>"\n"</code>.
+     *     <li>{@link #cleanLineBreaks(String) Replace} any line breaks with the literal string <code>"\n"</code>.
      *     <li>Skip <code>null</code> and empty arguments.
      *     <li>Surround every argument that contains spaces with quotations.
      *     <li>Combine all arguments with a single space between them.
@@ -306,8 +306,7 @@ public class Utils {
             for (String arg : args) {
                 if (arg == null || arg.isEmpty()) continue;
 
-                //noinspection RedundantEscapeInRegexReplacement
-                arg = arg.replaceAll("\\n", "\\n");
+                arg = cleanLineBreaks(arg);
 
                 if (arg.matches("\\s"))
                     arg = "\"" + arg + "\"";
@@ -316,6 +315,22 @@ public class Utils {
             }
 
         return s.toString();
+    }
+
+    /**
+     * Clean a string being printed to the console by replacing any line breaks with the literal string
+     * <code>"\n"</code>.
+     *
+     * @param input The text to clean.
+     * @return The cleaned text.
+     */
+    @Nullable
+    public static String cleanLineBreaks(@Nullable String input) {
+        if (input == null)
+            return null;
+        else
+            //noinspection RedundantEscapeInRegexReplacement
+            return input.replaceAll("\\n", "\\n");
     }
 
     /**

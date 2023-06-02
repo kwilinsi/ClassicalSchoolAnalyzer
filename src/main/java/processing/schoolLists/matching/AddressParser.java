@@ -142,7 +142,7 @@ public class AddressParser {
      */
     @NotNull
     public static List<Map<String, String>> normalize(@NotNull List<String> addresses) {
-        logger.debug("Running bulk normalization on {} addresses", addresses.size());
+        logger.debug("Running bulk normalization on {} address{}", addresses.size(), addresses.size() == 1 ? "" : "es");
         String path = saveToFile(addresses, "addresses");
 
         if (path == null)
@@ -254,7 +254,7 @@ public class AddressParser {
 
         try {
             Process process = newProcess(
-                    "normalize_" + attribute.name(),
+                    "normalize_" + attribute.name() + "_file",
                     value == null ? "null" : value,
                     address == null ? "null" : address
             );
@@ -391,7 +391,8 @@ public class AddressParser {
      */
     @NotNull
     public static List<Map<String, String>> compare(@Nullable String address, @NotNull List<String> comparisons) {
-        logger.debug("Running bulk comparison of '{}' against {} addresses", address, comparisons.size());
+        logger.debug("Running bulk comparison of '{}' against {} address{}",
+                Utils.cleanLineBreaks(address), comparisons.size(), comparisons.size() == 1 ? "" : "es");
 
         String path = saveToFile(comparisons, "comp_addresses");
 

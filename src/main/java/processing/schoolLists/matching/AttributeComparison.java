@@ -271,17 +271,14 @@ public record AttributeComparison(@NotNull Attribute attribute,
             else
                 val = null;
 
-            Preference pref;
-
-            if (Objects.equals(val, valE))
-                pref = Preference.EXISTING;
-            else if (Objects.equals(val, valI))
-                pref = Preference.INCOMING;
-            else
-                pref = Preference.NONE;
+            Preference pref = determinePreference(valI, valE, val, val, Objects::equals);
 
             return AttributeComparison.of(
-                    attribute, Level.INDICATOR, pref, val, false
+                    attribute,
+                    valI == valE ? Level.EXACT : Level.INDICATOR,
+                    pref,
+                    pref == Preference.OTHER ? val : null,
+                    false
             );
         }
 
@@ -308,8 +305,10 @@ public record AttributeComparison(@NotNull Attribute attribute,
             return compareGradesOffered((String) valI, (String) valE);
 
         // Check addresses
-        if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute))
-            return compareAddresses(attribute, (String) valI, (String) valE);
+        if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
+            if (attribute != Attribute.address) logger.debug("Comparing {}:", attribute.name());
+            return compareAddress(attribute, (String) valI, (String) valE);
+        }
 
         if (attribute.type == String.class)
             return compareGenericStrings(attribute, (String) valI, (String) valE);
@@ -340,7 +339,8 @@ public record AttributeComparison(@NotNull Attribute attribute,
 
         // Handle address based attributes separately
         if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
-            comparisons = compareAddresses(attribute, incomingSchool, existingSchools);
+            if (attribute != Attribute.address) logger.debug("Comparing {}:", attribute.name());
+            comparisons = compareAddress(attribute, incomingSchool, existingSchools);
         } else {
             // Handle all other attributes
             comparisons = new ArrayList<>();
@@ -374,7 +374,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
             return AttributeComparison.ofNone(Attribute.is_excluded, true);
 
         // Otherwise, return the proper level and preference
-        boolean prefVal = correctReason.equals("");
+        boolean prefVal = !correctReason.equals("");
         Preference p = determinePreference(valI, valE, prefVal, prefVal, Objects::equals);
         return AttributeComparison.of(
                 Attribute.is_excluded,
@@ -403,6 +403,10 @@ public record AttributeComparison(@NotNull Attribute attribute,
         // If it was un-determinable, exit
         if (correctReason == null)
             return AttributeComparison.ofNone(Attribute.is_excluded, true);
+
+        // If it's an empty string, change that to 'null' for use in the database
+        if (correctReason.equals(""))
+            correctReason = null;
 
         // Otherwise, return the proper level and preference
         Preference p = determinePreference(valI, valE, correctReason, correctReason, Objects::equals);
@@ -563,9 +567,9 @@ public record AttributeComparison(@NotNull Attribute attribute,
      * @return The comparison result.
      */
     @NotNull
-    private static AttributeComparison compareAddresses(@NotNull Attribute attribute,
-                                                        @NotNull String valI,
-                                                        @NotNull String valE) {
+    private static AttributeComparison compareAddress(@NotNull Attribute attribute,
+                                                      @NotNull String valI,
+                                                      @NotNull String valE) {
         Map<String, String> compare = AddressParser.compare(valI, valE);
 
         // If the comparison fails, they don't match
@@ -634,9 +638,9 @@ public record AttributeComparison(@NotNull Attribute attribute,
      * @param incomingSchool  The incoming school.
      * @param existingSchools The list of existing schools to compare to the incoming one.
      */
-    private static List<AttributeComparison> compareAddresses(@NotNull Attribute attribute,
-                                                              @NotNull CreatedSchool incomingSchool,
-                                                              @NotNull List<School> existingSchools) {
+    private static List<AttributeComparison> compareAddress(@NotNull Attribute attribute,
+                                                            @NotNull CreatedSchool incomingSchool,
+                                                            @NotNull List<School> existingSchools) {
         List<AttributeComparison> comparisons = new ArrayList<>();
 
         String incomingAddress = incomingSchool.getStr(attribute);
@@ -760,8 +764,10 @@ public record AttributeComparison(@NotNull Attribute attribute,
         if (attribute == Attribute.excluded_reason)
             return normalizeExcludedReason(school, (String) value);
 
-        if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute))
+        if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
+            if (attribute != Attribute.address) logger.debug("Normalizing {}:", attribute.name());
             return AddressParser.normalizeAddress((String) value);
+        }
 
         if (attribute == Attribute.city || attribute == Attribute.state)
             return AddressParser.normalizeCityState(attribute, (String) value, school.getStr(Attribute.address));
@@ -793,6 +799,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
 
         // If the attribute is address-related, use more efficient bulk normalization
         if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
+            if (attribute != Attribute.address) logger.debug("Normalizing {}:", attribute.name());
             return AddressParser.normalizeAddress(getStrValues.apply(attribute));
         } else if (attribute == Attribute.city || attribute == Attribute.state) {
             return AddressParser.normalizeCityState(

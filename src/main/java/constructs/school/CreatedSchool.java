@@ -63,9 +63,6 @@ public class CreatedSchool extends School {
         SchoolComparison comparison = MatchIdentifier.compare(this, schoolsCache);
         SchoolComparison.Level level = comparison.getLevel();
 
-        // TODO under new system, if updating a school, you need to re-check the validation process to ensure it
-        //  didn't just get a new URL or something
-
         // If the comparison says to omit this school, don't add it to the database, and stop immediately.
         if (level == SchoolComparison.Level.OMIT) {
             logger.debug("Omitting school {}", name());
