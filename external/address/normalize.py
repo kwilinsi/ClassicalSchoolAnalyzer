@@ -164,11 +164,11 @@ def address(input: Union[str, None]) -> OrderedDict[str, Union[str, None]]:
 
 def format(address: OrderedDict[str, Union[str, None]]) -> Union[str, None]:
     """
-    Write a parsed address in the standard format:
+    Write a parsed address in this standard format:
 
     ADDRESS_LINE_1
     ADDRESS_LINE_2
-    CITY STATE POSTAL_CODE
+    CITY, STATE POSTAL_CODE
 
     If the given address is None or contains the key 'error', this returns None.
 
@@ -181,12 +181,9 @@ def format(address: OrderedDict[str, Union[str, None]]) -> Union[str, None]:
 
     if not address or 'error' in address:
         return None
-
-    city_line = utils.join_parts(' ', [
-        address['city'],
-        address['state'],
-        address['postal_code']
-    ])
+    
+    city_line = utils.join_parts(', ', [address['city'], address['state']])
+    city_line = utils.join_parts(' ', [city_line, address['postal_code']])
 
     return utils.join_parts('\n', [
         address['address_line_1'],
