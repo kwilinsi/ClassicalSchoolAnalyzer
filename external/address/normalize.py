@@ -37,6 +37,13 @@ def _clean_address(input: Union[str, None]) -> Union[str, None]:
     if match:
         input = input[match.end():].strip()
 
+    # Replace any line breaks with commas. This seems to fix some parsing errors that result
+    # from parsing, normalizing, and parsing an address again. For example, the address
+    # '1234 SOMEWHERE ROAD, NORTH CHARLESTON SC' and '1234 SOMEWHERE ROAD\nNORTH CHARLESTON SC'
+    # are parsed differently without this step. (The latter makes NORTH part of the road,
+    # rather than part of the city, as it should).
+    input = input.replace("\n", ", ")
+
     return input
 
 
