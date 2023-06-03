@@ -68,7 +68,7 @@ def run_normalize_file():
     """
 
     input_path = sys.argv[2]
-    output_path = _get_output_path(input_path, '_normalized')
+    output_path = _get_output_path(input_path, 'normalized')
 
     input_data = _parse_json(input_path)
 
@@ -96,7 +96,7 @@ def run_normalize_city_file():
     """
 
     input_path = sys.argv[2]
-    output_path = _get_output_path(input_path, '_normalized')
+    output_path = _get_output_path(input_path, 'normalized')
 
     input_data = _parse_json(input_path)
 
@@ -126,7 +126,7 @@ def run_normalize_state_file():
     """
 
     input_path = sys.argv[2]
-    output_path = _get_output_path(input_path, '_normalized')
+    output_path = _get_output_path(input_path, 'normalized')
 
     input_data = _parse_json(input_path)
 
@@ -158,10 +158,13 @@ def run_compare_file():
     _validate_args(4, 'Missing the file path. See README for documentation.')
 
     addr1 = sys.argv[2]
+    if addr1 == 'null':
+        addr1 = None
+        
     parsed1 = normalize.address(addr1)
 
     input_path = sys.argv[3]
-    output_path = _get_output_path(input_path, '_compared')
+    output_path = _get_output_path(input_path, 'compared')
 
     input_data = _parse_json(input_path)
 
