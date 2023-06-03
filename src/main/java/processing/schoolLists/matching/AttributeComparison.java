@@ -516,15 +516,17 @@ public record AttributeComparison(@NotNull Attribute attribute,
         URL urlE = URLUtils.createURL(valE);
         boolean isIndicator = URLUtils.equals(urlI, urlE);
 
-        // Handle INDICATOR and RELATED states in the same conditional via a ternary
         if (isIndicator || URLUtils.hostEquals(urlI, urlE)) {
             String normUrlI = URLUtils.normalize(urlI);
             String normUrlE = URLUtils.normalize(urlE);
             Preference pref = determinePreference(valI, valE, normUrlI, normUrlE, Objects::equals);
 
             return AttributeComparison.of(
-                    attribute, isIndicator ? Level.INDICATOR : Level.RELATED, pref,
-                    pref == Preference.OTHER ? normUrlE : null, true
+                    attribute,
+                    valI.equals(valE) ? Level.EXACT : isIndicator ? Level.INDICATOR : Level.RELATED,
+                    pref,
+                    pref == Preference.OTHER ? normUrlE : null,
+                    true
             );
         }
 
@@ -903,6 +905,8 @@ public record AttributeComparison(@NotNull Attribute attribute,
             for (String stateAbbr : Const.STATE_ABBREVIATIONS)
                 if (stateAbbr.equalsIgnoreCase(state))
                     return "United States";
+
+        // TODO if the state hasn't been set yet, set that
 
         // Otherwise, for countries, replace "US" with "United States",
         // and stop all non-countries from being a thing
