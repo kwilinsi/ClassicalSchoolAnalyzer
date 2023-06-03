@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public enum GradeLevel {
     NURSERY(false, "Nursery School",
@@ -18,7 +19,7 @@ public enum GradeLevel {
 
     PRE_K(true, "PreK",
             "p", "pk", "pre-k", "prek", "pre-kindergarten", "prekindergarten", "pre kindergarten", "preschool",
-            "pre-school", "jk", "jr. k", "jr.k", "jrk", "jr-k"),
+            "pre-school", "pres", "jk", "jr. k", "jr.k", "jrk", "jr-k"),
     VPK(false, "VPK",
             "vpk", "voluntary prekindergarten", "voluntary pre-k", "vol pre-k", "voluntary pre-kindergarten",
             "voluntary prekindergarten education program"),
@@ -51,23 +52,23 @@ public enum GradeLevel {
     TWELFTH(true, "12th",
             "12", "12th", "twelfth", "senior", "seniors", "sen", "sr"),
     HIGHER_ED(false, "Higher ed",
-            "higher ed", "higher edu", "higher education", "higher-ed");
+            "higher ed", "higher edu", "higher education", "higher-ed", "post secondary", "post second");
 
     private static final Logger logger = LoggerFactory.getLogger(GradeLevel.class);
 
-    private final static Pattern GRADE_RANGE_PARENTHETICAL = Pattern.compile("^(.+)(\\(exp.+\\))$");
+    private static final Pattern GRADE_RANGE_PARENTHETICAL = Pattern.compile("^(.+)(\\(exp.+\\))$");
 
     /**
      * This is a subset of {@link #values()} that only includes the {@link #isStandard standard} grade levels.
      */
-    private final static List<GradeLevel> STANDARD_GRADES = Arrays.stream(values())
+    private static final List<GradeLevel> STANDARD_GRADES = Arrays.stream(values())
             .filter(g -> g.isStandard)
             .toList();
 
     /**
-     * This is a list of every recognized {@link #names name} mapped to its corresponding {@link GradeLevel}. The
-     * names are sorted in descending order of length followed by ascending order of grade level. The map looks
-     * something like this:
+     * This is a list of every recognized {@link #names name} mapped to one (or more) corresponding
+     * {@link GradeLevel GradeLevels}. The names are sorted in descending order of length followed by ascending order
+     * of grade level. The map looks something like this:
      * <p>
      * <code>...</code><br>
      * <code>"pre-school": PRE_K</code><br>
@@ -76,6 +77,8 @@ public enum GradeLevel {
      * <code>"preschool": PRE_K</code><br>
      * <code>"sophomore": SOPHOMORES</code><br>
      * <code>"freshmen": NINTH</code><br>
+     * <code>...</code><br>
+     * <code>"hs": NINTH, TENTH, ELEVENTH, TWELFTH</code><br>
      * <code>...</code>
      * <p>
      * This allows {@link utils.Utils#startsWithAny(String, Collection) Utils.startsWithAny()} to identify the
@@ -95,23 +98,29 @@ public enum GradeLevel {
      * Thus, in the input <code>"pre-k"</code> the result would be <code>"pre-k"</code>, not just the letter
      * <code>"p"</code>, even though <code>"p"</code> is one of the names for {@link #PRE_K}.
      */
-    private final static Map<String, GradeLevel> MATCH_STRINGS = new LinkedHashMap<>();
+    private static final Map<String, List<GradeLevel>> MATCH_STRINGS = new LinkedHashMap<>();
 
     static {
-        Arrays.stream(values())
-                .flatMap(grade -> Arrays
-                        .stream(grade.names)
-                        .map(name -> new AbstractMap.SimpleEntry<>(name, grade))
-                )
+        Map<String, List<GradeLevel>> map = new HashMap<>();
+
+        for (GradeLevel level : GradeLevel.values())
+            for (String name : level.names)
+                map.put(name, List.of(level));
+
+        for (GradeRange range : GradeRange.values())
+            for (String name : range.names)
+                map.put(name, range.grades);
+
+        map.entrySet().stream()
                 .sorted(Comparator.comparingInt(entry -> -1 * entry.getKey().length()))
-                .forEach(entry -> MATCH_STRINGS.put(entry.getKey(), entry.getValue()));
+                .forEach(e -> MATCH_STRINGS.put(e.getKey(), e.getValue()));
     }
 
     /**
      * If found in a grades string by {@link #identifyGrades(String)}, these delimiters indicate that we're about to
      * add another grade level, but it's not part of a range.
      */
-    private final static List<String> DELIMITERS = List.of("and", "or", ",", ".", ";", ":");
+    private static final List<String> DELIMITERS = List.of("and", "or", ",", ".", ";", ":", "/", "\\", "+", "&");
 
     /**
      * If found in a grades string by {@link #identifyGrades(String)}, these range indicators suggest that the
@@ -122,13 +131,18 @@ public enum GradeLevel {
      *     <li>"to " has a space to avoid conflicting with {@link #NURSERY NURSERY's} "toddlers".
      * </ul>
      */
-    private final static List<String> RANGE_INDICATORS = List.of("through", "thru", "to ", "-");
+    private static final List<String> RANGE_INDICATORS = List.of("through", "thru", "to ", "-");
 
     /**
      * If found in a grades string by {@link #identifyGrades(String)}, these dummy words don't mean anything and can
      * be safely removed.
      */
-    private final static List<String> DUMMY_WORDS = List.of("school", "grades", "grade", "grds", "grd");
+    private static final List<String> DUMMY_WORDS = List.of("school", "grades", "grade", "grds", "grd");
+
+    /**
+     * This regex pattern simply checks whether a string contains any letters (A–Z or a–z) or numbers.
+     */
+    private static final Pattern LETTERS_NUMBERS_PATTERN = Pattern.compile("[A-Za-z0-9]");
 
     /**
      * The first and primary name, used in {@link #normalize(List) formatted} grade level strings.
@@ -159,6 +173,43 @@ public enum GradeLevel {
         this.isStandard = isStandard;
         this.primaryName = primaryName;
         this.names = names;
+    }
+
+    private enum GradeRange {
+        ELEMENTARY(
+                List.of("elementary", "elem"),
+                List.of(K, FIRST, SECOND, THIRD, FOURTH, FIFTH)
+        ),
+
+        MIDDLE(
+                List.of("middle school", "middle", "junior high", "jr high", "jrh", "jh"),
+                List.of(SIXTH, SEVENTH, EIGHTH)
+        ),
+
+        HIGH(
+                List.of("high school", "high", "hs"),
+                List.of(NINTH, TENTH, ELEVENTH, TWELFTH)
+        ),
+
+        SECONDARY(
+                List.of("elementary", "elem"),
+                List.of(SIXTH, SEVENTH, EIGHTH, NINTH, TENTH, ELEVENTH, TWELFTH)
+        );
+
+        /**
+         * The various aliases for this range.
+         */
+        private final String[] names;
+
+        /**
+         * The list of {@link GradeLevel GradeLevels} that are part of this range.
+         */
+        private final List<GradeLevel> grades;
+
+        GradeRange(List<String> names, List<GradeLevel> grades) {
+            this.names = names.toArray(new String[0]);
+            this.grades = grades;
+        }
     }
 
     /**
@@ -193,6 +244,10 @@ public enum GradeLevel {
 
         // Process the string until it's empty
         while (str.length() > 0) {
+
+            // If the remainder of the string has no letters or numbers, exit here
+            if (!LETTERS_NUMBERS_PATTERN.matcher(str).find())
+                break;
 
             // If the next character/word is a delimiter, there is no range. Remove it move on
             String match = Utils.startsWithAny(str, DELIMITERS);
@@ -232,13 +287,13 @@ public enum GradeLevel {
                 // If it's a letter, remove all upcoming letters.
                 // If some other recognized symbol (punctuation), remove all upcoming recognized symbols.
                 // Otherwise, since it's not recognized, remove all upcoming unrecognized characters.
+                List<Character> punctuation = List.of(',', ';', ':', '.', '-', '/', '\\', '+', '&');
                 if (c >= '0' && c <= '9')
                     condition = s -> (s.length() > 0 && s.charAt(0) >= '0' && s.charAt(0) <= '9');
                 else if (c >= 'a' && c <= 'z')
                     condition = s -> (s.length() > 0 && s.charAt(0) >= 'a' && s.charAt(0) <= 'z');
-                else if (c == ',' || c == ';' || c == ':' || c == '.' || c == '-')
-                    condition = s -> (s.length() > 0 && (s.charAt(0) == ',' || s.charAt(0) == ';' ||
-                            s.charAt(0) == ':' || s.charAt(0) == '.' || s.charAt(0) == '-'));
+                else if (punctuation.contains(c))
+                    condition = s -> (s.length() > 0 && punctuation.contains(s.charAt(0)));
                 else
                     condition = s -> (s.length() > 0) && !isRecognizedChar(s.charAt(0));
 
@@ -251,10 +306,10 @@ public enum GradeLevel {
 
             // Add the grade level (or range of levels) to the list
             if (inRange && lastElement != null) {
-                grades.addAll(getRange(lastElement, MATCH_STRINGS.get(match)));
+                grades.addAll(getRange(List.of(lastElement), MATCH_STRINGS.get(match)));
             } else {
-                lastElement = MATCH_STRINGS.get(match);
-                grades.add(lastElement);
+                lastElement = Collections.max(MATCH_STRINGS.get(match), Comparator.comparingInt(GradeLevel::ordinal));
+                grades.addAll(MATCH_STRINGS.get(match));
             }
 
             str = str.substring(match.length()).trim();
@@ -303,6 +358,29 @@ public enum GradeLevel {
     }
 
     /**
+     * Get a list of every {@link GradeLevel#isStandard isStandard} {@link GradeLevel} in a range.
+     * <p>
+     * This is an extension of {@link #getRange(GradeLevel, GradeLevel)} that allows providing lists of grades. Every
+     * grade level included in either list is returned. In additional, the highest and lowest {@link #ordinal()
+     * ordinals} are determined, and every standard grade level between those ordinals is added as well.
+     *
+     * @param first  The first list of grade levels (the order doesn't matter).
+     * @param second The second list of grade levels.
+     * @return The list of all grade levels shared between the two, as well as any intermediate grades (inclusive).
+     */
+    public static List<GradeLevel> getRange(@NotNull List<GradeLevel> first, @NotNull List<GradeLevel> second) {
+        List<GradeLevel> combined = Stream.concat(first.stream(), second.stream())
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+
+        if (combined.size() >= 2)
+            combined.addAll(getRange(combined.get(0), combined.get(combined.size() - 1)));
+
+        return combined;
+    }
+
+    /**
      * Check whether the given character is recognized by the grade level {@link #identifyGrades(String) parser}.
      * <p>
      * In other words, check whether it is one of the following:
@@ -310,7 +388,7 @@ public enum GradeLevel {
      *     <li>A number 0-9
      *     <li>A letter a-z or A-Z
      *     <li>A space
-     *     <li>A comma, semicolon, colon, or period
+     *     <li>A comma, semicolon, colon, period, slash, backslash, plus, or ampersand
      *     <li>A hyphen
      * </ul>
      *
@@ -322,7 +400,7 @@ public enum GradeLevel {
                 (c >= 'a' && c <= 'z') ||
                 (c >= 'A' && c <= 'Z') ||
                 c == ' ' ||
-                c == ',' || c == ';' || c == ':' || c == '.' ||
+                c == ',' || c == ';' || c == ':' || c == '.' || c == '/' || c == '\\' || c == '+' || c == '&' ||
                 c == '-';
     }
 
