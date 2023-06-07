@@ -681,6 +681,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
      * @param attribute The attribute being displayed. This determines the type of component used.
      * @return The new component.
      */
+    @NotNull
     private static Component createAttributeValueCompSchool(@NotNull School school, @NotNull Attribute attribute) {
         return createAttributeValueComp(attribute, school.get(attribute));
     }
@@ -695,9 +696,10 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
      * @return The new component.
      * @see #createAttributeValueCompSchool(School, Attribute)
      */
+    @NotNull
     private static Component createAttributeValueComp(@NotNull Attribute attribute, @Nullable Object value) {
         if (attribute.type == URL.class)
-            return SpecializedButtons.Link.of(String.valueOf(value));
+            return SpecializedButtons.Link.of((String) value);
         else
             return new Label(value == null ? "" : String.valueOf(value));
     }

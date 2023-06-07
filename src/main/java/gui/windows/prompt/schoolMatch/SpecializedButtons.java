@@ -137,8 +137,7 @@ public class SpecializedButtons {
          * @param text The new URL text.
          */
         public void setUrl(@Nullable String text) {
-            text = text == null ? "" : text;
-            setLabel(text);
+            setLabel(text == null ? "" : text);
 
             if (Attribute.website_url.isEffectivelyNull(text)) {
                 uri = null;

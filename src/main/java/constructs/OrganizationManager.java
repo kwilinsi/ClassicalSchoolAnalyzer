@@ -31,7 +31,7 @@ public class OrganizationManager {
             "https://classicalchristian.org",
             "https://classicalchristian.org/find-a-school/",
             indAttr(Attribute.accs_page_url),
-            relAttr(),
+            relAttr(Attribute.grades_offered),
             new ACCSExtractor()
     );
 
@@ -66,7 +66,7 @@ public class OrganizationManager {
             "https://greathearts.institute",
             "https://static.batchgeo.com/map/json/f0a726285be76dc6dc336e561b0726e6/1654008594?_=1660413403330",
             indAttr(Attribute.latitude, Attribute.longitude),
-            relAttr(),
+            relAttr(Attribute.grades_offered),
             new GHIExtractor()
     );
 
