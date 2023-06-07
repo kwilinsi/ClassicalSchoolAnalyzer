@@ -30,8 +30,8 @@ public class URLUtils {
      *     <li>Hostnames are case-insensitive.
      * </ul>
      *
-     * @param urlA The first URL to compare.
-     * @param urlB The second URL to compare.
+     * @param urlA The first Link to compare.
+     * @param urlB The second Link to compare.
      * @return <code>True</code> if and only if the URLs are equal; <code>false</code> otherwise.
      */
     public static boolean equals(@Nullable URL urlA, @Nullable URL urlB) {
@@ -73,8 +73,8 @@ public class URLUtils {
      * Determine whether two {@link URL URLs} have the same domain (host and subdomains). This is case-insensitive and
      * ignores the '<code>www.</code>' prefix.
      *
-     * @param urlA The first URL as a string.
-     * @param urlB The second URL as a string.
+     * @param urlA The first Link as a string.
+     * @param urlB The second Link as a string.
      * @return <code>True</code> if and only if the URLs have the same host; <code>false</code> otherwise.
      */
     public static boolean hostEquals(@Nullable URL urlA, @Nullable URL urlB) {
@@ -98,17 +98,17 @@ public class URLUtils {
     }
 
     /**
-     * This method takes a URL as a {@link String} and attempts to coerce it into a proper {@link URL} object.
+     * This method takes a Link as a {@link String} and attempts to coerce it into a proper {@link URL} object.
      * Sometimes, this may result in a {@link MalformedURLException}. In that case, various attempts are made to fix the
-     * url. If this is successful, a URL object is returned; otherwise <code>null</code> is returned. This method will
+     * url. If this is successful, a Link object is returned; otherwise <code>null</code> is returned. This method will
      * not throw exceptions.
      * <p>
      * This method performs the following steps:
      * <ol>
-     *     <li>If the URL is <code>null</code> or a {@link String#isBlank() blank} string, return <code>null</code>.
-     *     <li>If the URL starts with multiple protocols (http/https), attempt to remove the outer ones.
-     *     <li>Attempt to parse the URL. If this fails, check for a missing protocol. Add https:// if missing.
-     *     <li>Attempt again to parse the URL. If this fails, return <code>null</code>.
+     *     <li>If the Link is <code>null</code> or a {@link String#isBlank() blank} string, return <code>null</code>.
+     *     <li>If the Link starts with multiple protocols (http/https), attempt to remove the outer ones.
+     *     <li>Attempt to parse the Link. If this fails, check for a missing protocol. Add https:// if missing.
+     *     <li>Attempt again to parse the Link. If this fails, return <code>null</code>.
      * </ol>
      *
      * @param url The url as a string. If this is <code>null</code>, <code>null</code> is immediately returned.
@@ -118,7 +118,7 @@ public class URLUtils {
     public static URL createURL(@Nullable String url) {
         if (url == null || url.isBlank()) return null;
 
-        // A URL with multiple protocols will process correctly. So check for this first, and remove the outer
+        // A Link with multiple protocols will process correctly. So check for this first, and remove the outer
         // protocol(s) if more than one are present.
         while (MULTIPLE_PROTOCOLS_PATTERN.matcher(url).find()) {
             url = MULTIPLE_PROTOCOLS_PATTERN.matcher(url).replaceAll("");
@@ -143,19 +143,19 @@ public class URLUtils {
     }
 
     /**
-     * Attempt to normalize a URL to a relatively standard format. Though this method may semantically change the
-     * URL, this is deemed necessary, as most URLs are malformed on the original organization pages anyway.
+     * Attempt to normalize a Link to a relatively standard format. Though this method may semantically change the
+     * Link, this is deemed necessary, as most URLs are malformed on the original organization pages anyway.
      * <p>
-     * The following steps are performed to normalize the input URL:
+     * The following steps are performed to normalize the input Link:
      * <ol>
      *     <li>Make the hostname lowercase
      *     <li>Change <code>"http://"</code> to <code>"https://"</code>
      *     <li>Remove <code>"www."</code> on hostnames
      * </ol>
-     * It's suggested to first convert the URL from a string with {@link #createURL(String)}.
+     * It's suggested to first convert the Link from a string with {@link #createURL(String)}.
      *
-     * @param url The URL to normalize.
-     * @return The normalized URL, or <code>null</code> if the input is <code>null</code>.
+     * @param url The Link to normalize.
+     * @return The normalized Link, or <code>null</code> if the input is <code>null</code>.
      */
     @Nullable
     public static String normalize(@Nullable URL url) {

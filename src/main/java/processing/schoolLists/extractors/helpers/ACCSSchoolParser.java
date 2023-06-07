@@ -26,7 +26,7 @@ public class ACCSSchoolParser implements Callable<CreatedSchool> {
     private static final Pattern SCHOOL_NAME_PATTERN = Pattern.compile("^(.*?)(?:\\s\\((.*)\\))?$");
 
     /**
-     * This is the URL of the school's personalized page on the ACCS website.
+     * This is the Link of the school's personalized page on the ACCS website.
      */
     private final String accs_page_url;
 
@@ -37,7 +37,7 @@ public class ACCSSchoolParser implements Callable<CreatedSchool> {
     private final boolean useCache;
 
     /**
-     * Create a new ACCSSchoolParser by providing the URL of the ACCS page with information about this school.
+     * Create a new ACCSSchoolParser by providing the Link of the ACCS page with information about this school.
      *
      * @param accs_page_url See {@link #accs_page_url}.
      * @param useCache      See {@link #useCache}.
@@ -48,7 +48,7 @@ public class ACCSSchoolParser implements Callable<CreatedSchool> {
     }
 
     /**
-     * Get the ACCS page URL.
+     * Get the ACCS page Link.
      *
      * @return The {@link #accs_page_url}.
      */

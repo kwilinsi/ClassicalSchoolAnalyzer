@@ -5,7 +5,6 @@ import com.googlecode.lanterna.gui2.Direction;
 import com.googlecode.lanterna.gui2.LinearLayout;
 import com.googlecode.lanterna.gui2.Panel;
 import gui.windows.MyBaseWindow;
-import gui.windows.prompt.attribute.AttributePrompt;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
 import org.jetbrains.annotations.NotNull;
@@ -15,8 +14,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * This is the generic superclass for both {@link SelectionPrompt} and {@link AttributePrompt}. It represents a window
- * that is displayed to the user and contains three parts:
+ * This is a generic prompt implementation used by {@link SelectionPrompt}. It represents a window that is displayed
+ * to the user and contains three parts:
  * <ul>
  *     <li>A title.
  *     <li>A prompt message contained in a {@link Component}.

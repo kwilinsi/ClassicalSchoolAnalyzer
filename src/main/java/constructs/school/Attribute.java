@@ -112,8 +112,8 @@ public enum Attribute {
     /**
      * The data type of the attribute.
      * <p>
-     * Note: Some attributes have the {@link URL} type. That doesn't mean they actually use the URL class to store the
-     * data. Instead, it means that the value is a {@link String}, but it represents a URL; therefore two values of this
+     * Note: Some attributes have the {@link URL} type. That doesn't mean they actually use the Link class to store the
+     * data. Instead, it means that the value is a {@link String}, but it represents a Link; therefore two values of this
      * type should be
      * {@link processing.schoolLists.matching.AttributeComparison#compare(Attribute, CreatedSchool, List) compared}
      * differently than regular strings.

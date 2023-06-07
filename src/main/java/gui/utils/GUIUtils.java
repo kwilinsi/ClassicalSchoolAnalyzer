@@ -3,9 +3,11 @@ package gui.utils;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import com.googlecode.lanterna.SGR;
 import com.googlecode.lanterna.TextColor;
+import com.googlecode.lanterna.bundle.LanternaThemes;
+import com.googlecode.lanterna.graphics.PropertyTheme;
+import com.googlecode.lanterna.graphics.Theme;
 import com.googlecode.lanterna.gui2.*;
 import constructs.school.Attribute;
-import constructs.District;
 import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 import processing.schoolLists.matching.AttributeComparison;
@@ -35,7 +37,6 @@ public class GUIUtils {
      *
      * @param text The text to display in the header.
      * @return The header label.
-     * @see #warningHeader(String)
      */
     @NotNull
     public static Label header(@NotNull String text) {
@@ -47,18 +48,41 @@ public class GUIUtils {
     }
 
     /**
-     * This is identical to {@link #header(String)}, except that the text is {@link TextColor.ANSI#RED RED} to indicate
-     * a warning message.
+     * Get a formatted {@link Label} with the given {@link Attribute Attribute} {@link Attribute#name() name}
+     * followed by a colon. The label is colored {@link TextColor.ANSI#BLUE BLUE}.
      *
-     * @param text The text to display in the warning header.
-     * @return The warning header label.
+     * @param attribute The attribute to put in the label.
+     * @return The newly created label.
      */
     @NotNull
-    public static Label warningHeader(@NotNull String text) {
-        Label header = new Label(text);
-        header.setForegroundColor(TextColor.ANSI.RED);
-        header.setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center));
-        return header;
+    public static Label attributeLabel(@NotNull Attribute attribute) {
+        return attributeLabel(attribute.name(), true);
+    }
+
+    /**
+     * Formats the same as {@link #attributeLabel(Attribute)}, but accepts any text. Useful for the
+     * {@link School#getId() id} pseudo-attribute.
+     *
+     * @param text      The text to put in the label.
+     * @param withColon <code>True</code> to add a colon to the end of the text.
+     * @return The newly created label.
+     */
+    public static Label attributeLabel(@NotNull String text, boolean withColon) {
+        return new Label(withColon ? text + ":" : text)
+                .setForegroundColor(TextColor.ANSI.BLUE);
+    }
+
+    /**
+     * Get an attribute comparison {@link AttributeComparison.Level Level's}
+     * {@link AttributeComparison.Level#abbreviation() abbreviation} as a formatted {@link Label}.
+     *
+     * @param level The level to use.
+     * @return The newly created label.
+     */
+    public static Label attributeAbbreviationLabel(@NotNull AttributeComparison.Level level) {
+        return new Label(String.valueOf(level.abbreviation()))
+                .setForegroundColor(TextColor.ANSI.BLUE)
+                .addStyle(SGR.BOLD);
     }
 
     /**
@@ -154,82 +178,54 @@ public class GUIUtils {
     }
 
     /**
-     * Generate a nicely formatted {@link Panel} containing a list of {@link Attribute Attributes} for a given
-     * {@link School}.
-     * <p>
-     * The panel is formatted as a {@link GridLayout} containing the given attributes and their corresponding values for
-     * the school. The name of each attribute is prefixed by its corresponding {@link AttributeComparison.Level Level}
-     * {@link AttributeComparison.Level#getPrefix() prefix}.
-     * <p>
-     * The <code>attributes</code> list is automatically sorted according to the natural order of attribute enums in the
-     * {@link Attribute} class. If <code>includeId</code> is true, indicating that the school's
-     * {@link School#getId() id} should be included, it will be placed first in the list.
+     * Get a new {@link Theme} with the given background color. This method basically just exists because I couldn't
+     * figure out how to get {@link com.googlecode.lanterna.graphics.SimpleTheme SimpleTheme} to do what I wanted.
+     * It's pretty dubious.
      *
-     * @param school     The school from which to retrieve the attribute values.
-     * @param attributes A map of every attribute to include in the panel and the corresponding comparisons.
-     * @param includeId  Whether to include the school's {@link School#getId() id} as a pseudo-attribute in the panel.
-     * @return A nicely formatted panel displaying some of the school's attributes.
+     * @param color The color to use.
+     * @return The new theme.
      */
-    @NotNull
-    public static Panel formatSchoolAttributes(@NotNull School school,
-                                               Map<Attribute, AttributeComparison.Level> attributes,
-                                               boolean includeId) {
-        // Create a copy of the attributes list, sorted according to their natural order
-        LinkedHashMap<Attribute, AttributeComparison.Level> sortedAttributes = new LinkedHashMap<>();
-        attributes.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEachOrdered(e -> sortedAttributes.put(e.getKey(), e.getValue()));
+    public static Theme getThemeWithBackgroundColor(TextColor.ANSI color) {
+        Properties properties = (Properties) DefaultThemeCopy.properties.clone();
+        String name = color.name().toLowerCase();
+        properties.forEach((key, value) -> {
+            if (((String) key).contains("background") && "white".equals(value)) {
+                properties.setProperty((String) key, name);
+            }
+        });
 
-        // Initialize the panel with two columns: attributes and values
-        Panel panel = new Panel(new GridLayout(2));
-
-        // If including the id, add it first
-        if (includeId) {
-            panel.addComponent(new Label("id:").setForegroundColor(TextColor.ANSI.BLUE));
-            panel.addComponent(new Label(String.valueOf(school.getId())));
-        }
-
-        // Add each attribute
-        for (Attribute a : sortedAttributes.keySet()) {
-            panel.addComponent(
-                    new Label(sortedAttributes.get(a).getPrefix() + a.name() + ":")
-                            .setForegroundColor(TextColor.ANSI.BLUE)
-            );
-            panel.addComponent(new Label(String.valueOf(school.get(a))));
-        }
-
-        return panel;
+        return new PropertyTheme(properties);
     }
 
     /**
-     * Create a nicely formatted {@link Panel} representing a {@link District}. The panel is formatted as a
-     * {@link GridLayout}. It contains the district's {@link District#getId() id}, {@link District#getName() name}, and
-     * {@link District#getWebsiteURL() website URL}.
+     * Get the {@link LanternaThemes#getDefaultTheme() default theme} but with the specified modifications.
      *
-     * @param district The district to format.
-     * @return A formatted panel with the district's attributes.
-     * @see #formatSchoolAttributes(School, Map, boolean)
+     * @param keysAndValues A list of keys and values to add to the default theme {@link DefaultThemeCopy#properties
+     *                      properties}. This must be an even number of strings in the format
+     *                      <code>"setTheme(key, value, key, value...)"</code>. None of these should be
+     *                      <code>null</code>.
+     * @return The new theme.
+     * @throws IllegalArgumentException If an odd number of elements are given.
      */
-    @NotNull
-    public static Panel formatDistrictAttributes(@NotNull District district) {
-        // Initialize the panel with two columns: attributes and values
-        Panel panel = new Panel(new GridLayout(2));
+    public static Theme getNewTheme(@NotNull String... keysAndValues) throws IllegalArgumentException {
+        if (keysAndValues.length % 2 != 0)
+            throw new IllegalArgumentException("Invalid number of keys and values: " + keysAndValues.length);
 
-        // Add the id
-        panel.addComponent(new Label("id:").setForegroundColor(TextColor.ANSI.BLUE));
-        panel.addComponent(new Label(String.valueOf(district.getId())));
+        Properties properties = (Properties) DefaultThemeCopy.properties.clone();
+        for (int i = 0; i < keysAndValues.length; i += 2)
+            properties.setProperty(keysAndValues[i], keysAndValues[i + 1]);
 
-        // Add the name
-        panel.addComponent(new Label("name:").setForegroundColor(TextColor.ANSI.BLUE));
-        panel.addComponent(new Label(district.getName()));
+        return new PropertyTheme(properties);
+    }
 
-        // Add the website URL
-        panel.addComponent(new Label("url:").setForegroundColor(TextColor.ANSI.BLUE));
-        panel.addComponent(
-                new Label(district.getWebsiteURL() == null ? "null" : district.getWebsiteURL())
-                        .setForegroundColor(TextColor.ANSI.RED)
-        );
-
-        return panel;
+    /**
+     * Add the specified number of {@link EmptySpace} components to the given {@link Panel}.
+     *
+     * @param panel The panel.
+     * @param count The number of components to add.
+     */
+    public static void addEmptyComponents(@NotNull Panel panel, int count) {
+        for (int i = 0; i < count; i++)
+            panel.addComponent(new EmptySpace(panel.getTheme().getDefaultDefinition().getNormal().getBackground()));
     }
 }

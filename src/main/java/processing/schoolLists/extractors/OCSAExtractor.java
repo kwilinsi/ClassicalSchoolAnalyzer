@@ -61,7 +61,7 @@ public class OCSAExtractor implements Extractor {
         // Get the school name
         school.put(Attribute.name, ExtUtils.validateName(ExtUtils.extHtmlStrAll(el, "a")));
 
-        // Get the website URL
+        // Get the website Link
         school.put(Attribute.website_url, ExtUtils.extHtmlLink(el, "a"));
 
         List<TextNode> nodes = new ArrayList<>(el.textNodes());

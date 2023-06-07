@@ -50,7 +50,7 @@ public class GHIExtractor implements Extractor {
             // This includes the latitude and longitude of each school.
             jsonSchoolMap = rootObj.getAsJsonArray("mapRS");
         } catch (IndexOutOfBoundsException | JsonParseException | IllegalStateException e) {
-            logger.error("Failed to extract ICE schools.", e);
+            logger.error("Failed to extract GHI schools.", e);
             return list;
         }
 
@@ -77,13 +77,13 @@ public class GHIExtractor implements Extractor {
 
                 // Make sure these values correspond. If they don't, log a warning and skip this school
                 if (!Objects.equals(name, name2)) {
-                    logger.warn("ICE school name mismatch: '{}' != '{}'. Skipping school.", name, name2);
+                    logger.warn("GHI school name mismatch: '{}' != '{}'. Skipping school.", name, name2);
                     continue;
                 } else if (!Objects.equals(address, address2)) {
-                    logger.warn("ICE school address mismatch: '{}' != '{}'. Skipping school.", address, address2);
+                    logger.warn("GHI school address mismatch: '{}' != '{}'. Skipping school.", address, address2);
                     continue;
                 } else if (!Objects.equals(servingGrades, servingGrades2)) {
-                    logger.warn("ICE school serving grades mismatch: '{}' != '{}'. Skipping school.",
+                    logger.warn("GHI school serving grades mismatch: '{}' != '{}'. Skipping school.",
                             servingGrades, servingGrades2);
                     continue;
                 }
@@ -113,14 +113,14 @@ public class GHIExtractor implements Extractor {
                 school.put(Attribute.longitude, longitude);
                 school.put(Attribute.lat_long_accuracy, latLongAccuracy);
 
-                logger.debug("Added ICE school: " + school.name());
+                logger.debug("Added GHI school: " + school.name());
                 list.add(school);
             } catch (IndexOutOfBoundsException | IllegalStateException | ClassCastException | NullPointerException e) {
-                logger.debug("Failed to parse ICE school at index " + i + ".", e);
+                logger.debug("Failed to parse GHI school at index " + i + ".", e);
             }
         }
 
-        logger.info("Extracted " + list.size() + " ICE schools.");
+        logger.info("Extracted " + list.size() + " GHI schools.");
         return list;
     }
 }

@@ -1,5 +1,6 @@
 package utils;
 
+import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.Connection;
@@ -124,7 +125,21 @@ public enum Config {
      */
     PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH(
             Paths.get("external", "address", "dist", "address.exe").toAbsolutePath()
-    );
+    ),
+
+    /**
+     * This is the maximum number of {@link constructs.school.Attribute Attributes} that will be shown for a school when
+     * putting it in a {@link gui.windows.prompt.schoolMatch.SchoolMatchDisplay SchoolMatchDisplay} GUI window.
+     * <p>
+     * Note that this is a soft maximum. If it's necessary to show more attributes, because there are some that
+     * necessitate user input, those will still be shown.
+     * <p>
+     * This should never be larger than the number of {@link Attribute} enums. To disable the limit altogether, set
+     * this to <code>-1</code>. To use the fewest possible attributes in all cases, set this to <code>0</code>.
+     * <p>
+     * <b>Default:</b> <code>15</code>
+     */
+    MAX_SCHOOL_COMPARISON_GUI_ATTRIBUTES(15);
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
 

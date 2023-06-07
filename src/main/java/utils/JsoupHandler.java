@@ -22,10 +22,10 @@ public class JsoupHandler {
     private static final Logger logger = LoggerFactory.getLogger(JsoupHandler.class);
 
     /**
-     * {@link #download(String, DownloadConfig) Download} a {@link Document} from a URL with JSoup (or load from a
+     * {@link #download(String, DownloadConfig) Download} a {@link Document} from a Link with JSoup (or load from a
      * cache, if enabled). Save this document to the specified file, and then return it.
      *
-     * @param url       The URL to download.
+     * @param url       The Link to download.
      * @param config    The configuration to use for how the download behaves.
      * @param cacheFile The path to the destination file for saving the document.
      *
@@ -57,7 +57,7 @@ public class JsoupHandler {
      * Additionally, if <code>useCache</code> is enabled, the Cache table will be checked for a cached version of the
      * page before downloading it.
      *
-     * @param url    The URL to download.
+     * @param url    The Link to download.
      * @param config Configuration to control the download behavior.
      *
      * @return The website as a Jsoup Document, paired with a boolean indicating whether the website was actually
@@ -73,7 +73,7 @@ public class JsoupHandler {
             logger.debug("Searching for Cache of {}.", url);
             String path = null;
             try (java.sql.Connection connection = Database.getConnection()) {
-                // Check Cache table for record with matching URL
+                // Check Cache table for record with matching Link
                 PreparedStatement statement = connection.prepareStatement(
                         "SELECT file_path FROM Cache WHERE url = ?");
                 statement.setString(1, url);
@@ -93,7 +93,7 @@ public class JsoupHandler {
         }
 
         // If caching is disabled or didn't work, download with JSoup
-        logger.info("Downloading URL with Jsoup: {}.", url);
+        logger.info("Downloading Link with Jsoup: {}.", url);
 
         Connection connection = Jsoup.connect(url);
         connection.ignoreContentType(config.ignoreContentType);
@@ -127,7 +127,7 @@ public class JsoupHandler {
             if (Config.STRICT_HTTP.getBool()) throw e;
 
             // Otherwise, log the error and retry the connection
-            logger.debug("Encountered an HTTP error at URL " + url + ". Retrying connection", e);
+            logger.debug("Encountered an HTTP error at Link " + url + ". Retrying connection", e);
             connection.ignoreHttpErrors(true);
             return new Pair<>(connection.get(), true);
         }
@@ -137,7 +137,7 @@ public class JsoupHandler {
      * Convenience method for {@link #downloadAndResults(String, DownloadConfig)} that drops the returned {@link
      * Boolean} indicating whether a cache was used.
      *
-     * @param url    The URL to download.
+     * @param url    The Link to download.
      * @param config Configuration to control the download behavior.
      *
      * @return The website as a Jsoup Document.
@@ -153,7 +153,7 @@ public class JsoupHandler {
      * Parse an HTML file using {@link Jsoup} to obtain a {@link Document}. The file is parsed with the UTF-8 charset.
      *
      * @param file The file to parse.
-     * @param url  The URL corresponding to that file (used for resolving relative links).
+     * @param url  The Link corresponding to that file (used for resolving relative links).
      *
      * @return The parsed document.
      * @throws IOException If there is an error while parsing the file or the file doesn't exist.
@@ -259,7 +259,7 @@ public class JsoupHandler {
         /**
          * If this is enabled, the download may not make a Jsoup request to the target server. Instead, it will first
          * check the Cache table in the {@link Database} for a cached version of the page. If a cached version isn't
-         * found, <i>then</i> the page will be downloaded from the URL.
+         * found, <i>then</i> the page will be downloaded from the Link.
          * <p>
          * <b>Default:</b> <code>false</code>
          */

@@ -67,30 +67,26 @@ public record AttributeComparison(@NotNull Attribute attribute,
         NONE(' ');
 
         /**
-         * The prefix to indicate this match level, obtainable via {@link #getPrefix()}.
+         * A single character prefix to concisely indicate this match level. For {@link #NONE}, this is just a space.
          */
-        private final char prefix;
+        private final char abbreviation;
 
         /**
-         * Instantiate a {@link Level Level} by providing the prefix.
+         * Instantiate a {@link Level Level} by providing the abbreviation.
          *
-         * @param prefix The {@link #prefix}.
+         * @param abbreviation The {@link #abbreviation}.
          */
-        Level(char prefix) {
-            this.prefix = prefix;
+        Level(char abbreviation) {
+            this.abbreviation = abbreviation;
         }
 
         /**
-         * Get the formatted prefix for this {@link Level Level}. If this is the level {@link #NONE}, an empty string
-         * is returned. Otherwise, the prefix is enclosed in parentheses and returned as a string.
-         * <p>
-         * For example, calling this method on {@link #INDICATOR} returns <code>"(I) "</code>.
+         * Get the abbreviation for this {@link Level Level}.
          *
-         * @return The prefix for this match level.
+         * @return The {@link #abbreviation}.
          */
-        @NotNull
-        public String getPrefix() {
-            return this == NONE ? "" : "(" + prefix + ") ";
+        public char abbreviation() {
+            return abbreviation;
         }
 
         /**
@@ -224,10 +220,12 @@ public record AttributeComparison(@NotNull Attribute attribute,
     /**
      * Create and return a new {@link AttributeComparison} instance with the given {@link Preference}.
      *
-     * @param preference The new {@link #preference}.
+     * @param preference  The new {@link #preference}.
+     * @param otherOption The {@link #otherOption}, necessary if the preference is {@link Preference#OTHER OTHER}.
      * @return The new comparison instance.
      */
-    public AttributeComparison newPreference(@NotNull Preference preference) {
+    public AttributeComparison newPreference(@NotNull Preference preference,
+                                             @Nullable Object otherOption) {
         return new AttributeComparison(attribute, level, preference, otherOption, nonNullValues);
     }
 
@@ -424,7 +422,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
      * combining two schools.
      * <p>
      * For example, if the existing school is excluded for missing a {@link Attribute#website_url website_url}, but
-     * the incoming school has a website URL, then this will return an empty string, indicating that the school
+     * the incoming school has a website Link, then this will return an empty string, indicating that the school
      * should no longer be marked excluded.
      *
      * @param incomingSchool The incoming school.
@@ -827,7 +825,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
         URL url = URLUtils.createURL(value);
 
         if (url == null) {
-            logger.warn("Failed to parse URL '{}' from {}; setting it to null", value, school);
+            logger.warn("Failed to parse Link '{}' from {}; setting it to null", value, school);
             return null;
         } else {
             return URLUtils.normalize(url);

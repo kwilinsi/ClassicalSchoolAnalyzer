@@ -15,6 +15,7 @@ import java.util.List;
 /**
  * This utility class contains methods that are designed to create {@link CreatedSchool Schools} from each organization.
  */
+@SuppressWarnings("unused")
 public class SchoolManager {
     private static final Logger logger = LoggerFactory.getLogger(SchoolManager.class);
 

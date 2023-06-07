@@ -67,7 +67,6 @@ public class GUI implements Runnable {
      *
      * @param prompt The prompt to add to the GUI.
      * @param <T>    The type of value that the prompt returns.
-     *
      * @return The user's selection.
      */
     public <T> T showPrompt(Prompt<T> prompt) {

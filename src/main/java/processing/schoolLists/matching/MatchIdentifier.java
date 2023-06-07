@@ -1,26 +1,17 @@
 package processing.schoolLists.matching;
 
-import com.googlecode.lanterna.gui2.*;
 import constructs.*;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
-import gui.utils.GUIUtils;
-import gui.windows.prompt.attribute.AttributeOption;
-import gui.windows.prompt.attribute.AttributePrompt;
-import gui.windows.prompt.selection.Option;
-import gui.windows.prompt.selection.SelectionPrompt;
+import gui.windows.prompt.schoolMatch.SchoolMatchDisplay;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import processing.schoolLists.matching.AttributeComparison.Level;
-import processing.schoolLists.matching.AttributeComparison.Preference;
-
 import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * The methods contained in this class are used to determine whether a given {@link School}, just obtained from some
@@ -142,97 +133,6 @@ public class MatchIdentifier {
     }
 
     /**
-     * Given some incoming {@link CreatedSchool} and a {@link District} that might match the school, prompt the user to
-     * determine what to do. If the user chooses to act on the match in some way, return the appropriate
-     * {@link SchoolComparison}. Otherwise, if the user ignores the match, return <code>null</code> to check other
-     * possible matches.
-     *
-     * @param incomingSchool  The {@link CreatedSchool} to match.
-     * @param district        The {@link District} that might match the incoming school.
-     * @param districtSchools A list of {@link SchoolComparison} objects corresponding to cached {@link School
-     *                        Schools} in the district.
-     * @return A {@link SchoolComparison} indicating the result of the match, or <code>null</code> if the user chose to
-     * ignore the match.
-     */
-    @Nullable
-    private static SchoolComparison processDistrictMatch(@NotNull CreatedSchool incomingSchool,
-                                                         @NotNull District district,
-                                                         @NotNull List<SchoolComparison> districtSchools) {
-        // Get the prompt panel
-        Panel promptPanel = createDistrictMatchGUIPanel(incomingSchool, district, districtSchools);
-
-        // TODO add some "back" buttons in all these dialogs
-
-        // Construct and execute the prompt
-        SchoolComparison.Level choice = Main.GUI.showPrompt(SelectionPrompt.of(
-                "Match Resolution",
-                promptPanel,
-                Option.of("This is not a match. Ignore it.", SchoolComparison.Level.NO_MATCH),
-                Option.of("Add this school to this district.", SchoolComparison.Level.DISTRICT_MATCH),
-                Option.of("This school is a match.", SchoolComparison.Level.SCHOOL_MATCH),
-                Option.of("Omit this school entirely. Don't check for other matches.", SchoolComparison.Level.OMIT)
-        ));
-
-        // Handle NO_MATCH, DISTRICT_MATCH, and OMIT selections
-        if (choice == SchoolComparison.Level.NO_MATCH)
-            return null;
-        else if (choice == SchoolComparison.Level.DISTRICT_MATCH)
-            return districtSchools.get(0).setLevel(SchoolComparison.Level.DISTRICT_MATCH);
-        else if (choice == SchoolComparison.Level.OMIT)
-            return choice.of(incomingSchool);
-
-        // Otherwise, handle PARTIAL_MATCH with a GUI
-
-        // TODO in the GUI, indicate which of the schools is incoming and which already exists
-
-        SchoolComparison match;
-
-        // If there are multiple schools, prompt the user to pick one
-        if (districtSchools.size() == 1)
-            match = districtSchools.get(0);
-        else
-            match = Main.GUI.showPrompt(SelectionPrompt.of(
-                    "School Selection",
-                    "Select the school to update.",
-                    districtSchools.stream()
-                            .map(m -> Option.of(m.getExistingSchool().toString(), m))
-                            .collect(Collectors.toList())
-            ));
-
-        if (match == null) {
-            logger.error("Unreachable state: selected school match is null.");
-            return SchoolComparison.Level.OMIT.of(incomingSchool);
-        }
-
-        // Give a prompt asking exactly which attributes to change
-        List<Attribute> attributesToOverwrite = Main.GUI.showPrompt(
-                AttributePrompt.of(
-                        "Select the attributes to overwrite:",
-                        match.getDifferingAttributes().stream()
-                                .sorted()
-                                .map(a -> AttributeOption.of(
-                                        a,
-                                        match.getAttributeComparison(a),
-                                        incomingSchool.get(a),
-                                        match.getExistingSchool().get(a)
-                                ))
-                                .collect(Collectors.toList()),
-                        incomingSchool,
-                        match.getExistingSchool()
-                )
-        );
-
-        // Mark each of these attributes going in favor of the INCOMING school
-        for (Attribute attribute : attributesToOverwrite)
-            match.putAttributeComparison(
-                    attribute,
-                    match.getAttributeComparison(attribute).newPreference(Preference.INCOMING)
-            );
-
-        return match;
-    }
-
-    /**
      * Extract a list of {@link District Districts} from the {@link SchoolComparison#getExistingSchool() existing}
      * schools in a list of {@link SchoolComparison SchoolComparisons}. Pair each of these districts
      * with a list of school match objects for each of its member schools.
@@ -275,74 +175,38 @@ public class MatchIdentifier {
     }
 
     /**
-     * Create the {@link Panel} that wil become the <code>contentPanel</code> in a {@link SelectionPrompt}. This
-     * consists of a list of {@link Attribute Attributes} and their corresponding values for the
-     * <code>incomingSchool</code>, the {@link District}, and each of the district's member {@link School Schools}.
-     * <p>
-     * Note that this does not include the list of {@link Option Options} that are shown to the user. This is only the
-     * message asking the user to choose one of those options.
+     * Given some incoming {@link CreatedSchool} and a {@link District} that might match the school, prompt the user to
+     * determine what to do. If the user chooses to act on the match in some way, return the appropriate
+     * {@link SchoolComparison}. Otherwise, if the user ignores the match, return <code>null</code> to check other
+     * possible matches.
      *
-     * @param incomingSchool  The {@link CreatedSchool} which might match one of the schools in the district.
-     * @param district        The {@link District} that was flagged as a possible match with the incoming school.
-     * @param districtSchools A list of {@link SchoolComparison} objects corresponding to the schools already in the
-     *                        district. This must contain at least one object.
-     * @return A {@link Panel} containing a neatly formatted prompt message.
+     * @param incomingSchool  The {@link CreatedSchool} to match.
+     * @param district        The {@link District} that might match the incoming school.
+     * @param districtSchools A list of {@link SchoolComparison} objects corresponding to cached {@link School
+     *                        Schools} in the district.
+     * @return One of the following:<ul>
+     * <li><code>null</code> if the user chose {@link SchoolComparison.Level#NO_MATCH NO_MATCH}, indicating that
+     * the incoming school does not match anything in the district.
+     * <li>A dummy comparison instance with level {@link SchoolComparison.Level#OMIT OMIT} if the incoming school
+     * should be omit entirely.
+     * <li>An arbitrary one of the comparison instances set to level
+     * {@link SchoolComparison.Level#DISTRICT_MATCH DISTRICT_MATCH} if the incoming school matches the district
+     * generally without matching any particular school.
+     * <li>A particular {@link SchoolComparison} set to level {@link SchoolComparison.Level#SCHOOL_MATCH
+     * SCHOOL_MATCH} if the incoming school matches one of the existing schools.
+     * </ul>
      */
-    @NotNull
-    private static Panel createDistrictMatchGUIPanel(@NotNull CreatedSchool incomingSchool,
-                                                     @NotNull District district,
-                                                     @NotNull List<SchoolComparison> districtSchools) {
-        // Get the list of attributes to display for the incoming school. This is simply an aggregate of all
-        // attributes that will be displayed for each school in the district. They're paired with Level NONE to
-        // make this a map.
-        Map<Attribute, Level> incomingAttributes = districtSchools.stream()
-                .map(SchoolComparison::getRelevantDisplayAttributes)
-                .flatMap(m -> m.keySet().stream())
-                .distinct()
-                .map(a -> new AbstractMap.SimpleEntry<>(a, Level.NONE))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    @Nullable
+    private static SchoolComparison processDistrictMatch(@NotNull CreatedSchool incomingSchool,
+                                                         @NotNull District district,
+                                                         @NotNull List<SchoolComparison> districtSchools) {
+        SchoolMatchDisplay prompt = SchoolMatchDisplay.of(incomingSchool, district, districtSchools);
 
-        Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
-
-        // Add a header
-        panel.addComponent(GUIUtils.warningHeader("Alert: Possible Match Identified!"));
-        panel.addComponent(new EmptySpace());
-
-        // Add the info for the incoming school
-        panel.addComponent(new Label("Incoming school:"));
-        panel.addComponent(
-                GUIUtils.formatSchoolAttributes(incomingSchool, incomingAttributes, false)
-        );
-        panel.addComponent(new EmptySpace());
-
-        // Add the info for the district
-        panel.addComponent(new Label("District:"));
-        panel.addComponent(GUIUtils.formatDistrictAttributes(district));
-        panel.addComponent(new EmptySpace());
-
-        // TODO if there's more than, say 2 member schools, put them in a widget with a scroll bar
-
-        // TODO also maybe highlight attributes that are non-null EXACT matches
-
-        // TODO Add a button somewhere to open the school's page in the browser, or maybe just put the link in the
-        //  console so I can click it easily
-
-        // Add the info for the district's member schools
-        for (int i = 0; i < districtSchools.size(); i++) {
-            SchoolComparison match = districtSchools.get(i);
-            panel.addComponent(new EmptySpace());
-            panel.addComponent(new Label("District School " + (i + 1) + ":"));
-            panel.addComponent(GUIUtils.formatSchoolAttributes(
-                    match.getExistingSchool(),
-                    match.getRelevantDisplayAttributes(),
-                    true
-            ));
-            panel.addComponent(new EmptySpace());
-        }
-
-        // Add the final prompt message
-        panel.addComponent(new Label("What would you like to do with this school?"));
-
-        return panel;
+        return switch (Main.GUI.showPrompt(prompt)) {
+            case NO_MATCH -> null;
+            case OMIT -> SchoolComparison.Level.OMIT.of(incomingSchool);
+            case DISTRICT_MATCH -> districtSchools.get(0).setLevel(SchoolComparison.Level.DISTRICT_MATCH);
+            case SCHOOL_MATCH -> prompt.getSelectedComparison();
+        };
     }
 }

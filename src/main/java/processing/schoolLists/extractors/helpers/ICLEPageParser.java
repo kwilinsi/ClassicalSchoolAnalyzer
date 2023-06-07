@@ -90,7 +90,7 @@ public class ICLEPageParser implements Callable<List<CreatedSchool>> {
             String ICLEUrl = ExtUtils.extHtmlLink(schoolElement, "h2 a");
 
             if (ICLEUrl == null) {
-                logger.error("Skipping school {} because it has no ICLE page URL.", school.name());
+                logger.error("Skipping school {} because it has no ICLE page Link.", school.name());
                 continue;
             }
 

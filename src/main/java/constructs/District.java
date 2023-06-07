@@ -29,14 +29,14 @@ public class District extends BaseConstruct {
     private final String name;
 
     /**
-     * The URL of this district's main website. This is typically the same as the associated {@link School school's}
+     * The Link of this district's main website. This is typically the same as the associated {@link School school's}
      * url.
      */
     @Nullable
     private final String website_url;
 
     /**
-     * Create a new District by providing the name, URL, and id.
+     * Create a new District by providing the name, Link, and id.
      *
      * @param id          The {@link #id}.
      * @param name        The {@link #name}.
@@ -59,7 +59,7 @@ public class District extends BaseConstruct {
     }
 
     /**
-     * Create a new District by providing the name and URL. The {@link #id} is set to the default value, -1.
+     * Create a new District by providing the name and Link. The {@link #id} is set to the default value, -1.
      *
      * @param name        The {@link #name}.
      * @param website_url The {@link #website_url}.
@@ -104,7 +104,7 @@ public class District extends BaseConstruct {
     }
 
     /**
-     * Get the website URL of this district.
+     * Get the website Link of this district.
      *
      * @return The {@link #website_url}.
      */

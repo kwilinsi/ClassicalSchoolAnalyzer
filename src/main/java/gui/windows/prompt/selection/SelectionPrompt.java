@@ -14,8 +14,8 @@ import java.util.List;
 /**
  * Create a prompt window asking the user make a choice from a list of {@link Option Options}.
  */
+@SuppressWarnings("unused")
 public class SelectionPrompt<T> extends Prompt<T> {
-
     /**
      * This is the {@link ActionListBox} that contains the list of {@link Option Options} presented to the user.
      */
@@ -29,7 +29,7 @@ public class SelectionPrompt<T> extends Prompt<T> {
      * @param promptComponent The {@link Component} that contains the prompt message for the user.
      * @param options         The list of {@link Option Options} to present to the user.
      */
-    private SelectionPrompt(@Nullable String windowTitle,
+    public SelectionPrompt(@Nullable String windowTitle,
                             @NotNull Component promptComponent,
                             @NotNull List<Option<T>> options) {
         super(windowTitle, promptComponent, new Panel());

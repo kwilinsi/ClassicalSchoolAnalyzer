@@ -6,9 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -285,6 +283,18 @@ public class Utils {
     }
 
     /**
+     * Extract the {@link Throwable#getStackTrace() stacktrace} from a {@link Throwable} and convert it to a string.
+     *
+     * @param throwable The throwable from which to get the stacktrace.
+     * @return The stacktrace as a string.
+     */
+    public static String getStackTraceAsString(@NotNull Throwable throwable) {
+        StringWriter sw = new StringWriter();
+        throwable.printStackTrace(new PrintWriter(sw));
+        return sw.toString();
+    }
+
+    /**
      * Join a set of arguments as if they were terminal commands, putting them in a single string. This is not secure
      * like the actual {@link ProcessBuilder}, as it will not escape characters or anything. It is only for
      * approximate reference in log statements. Instead, it does the following:
@@ -331,24 +341,6 @@ public class Utils {
         else
             //noinspection RedundantEscapeInRegexReplacement
             return input.replaceAll("\\n", "\\n");
-    }
-
-    /**
-     * Call {@link String#equalsIgnoreCase(String) String.equalsIgnoreCase()} on two strings that may be null.
-     * <p>
-     * This is like {@link java.util.Objects#equals(Object, Object) Objects.equals()} for case-insensitive strings.
-     *
-     * @param str1 The first string.
-     * @param str2 The second string.
-     * @return <code>True</code> if and only if the strings are equal (case-insensitive).
-     */
-    public static boolean nullableEqualsIgnoreCase(@Nullable String str1, @Nullable String str2) {
-        if (str1 == null && str2 == null)
-            return true;
-        else if (str1 == null)
-            return false;
-        else
-            return str1.equalsIgnoreCase(str2);
     }
 
     /**

@@ -1,7 +1,6 @@
 package processing.schoolLists.matching;
 
 import constructs.District;
-import constructs.Organization;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
@@ -12,7 +11,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * This class contains all the information for matching an {@link #incomingSchool incoming} school (the school to
@@ -171,6 +169,11 @@ public class SchoolComparison {
     }
 
     @NotNull
+    public CreatedSchool getIncomingSchool() {
+        return incomingSchool;
+    }
+
+    @NotNull
     public School getExistingSchool() {
         return existingSchool;
     }
@@ -191,19 +194,33 @@ public class SchoolComparison {
     }
 
     /**
+     * Get the frequencies of each {@link AttributeComparison} {@link AttributeComparison.Level Level} in the
+     * {@link #attributes} map.
+     *
+     * @return An array of integer frequencies in the same order as the match level
+     * {@link AttributeComparison.Level#ordinal() ordinals}.
+     */
+    public int[] getLevelFreq() {
+        int[] freq = new int[4];
+
+        for (AttributeComparison comparison : attributes.values())
+            freq[comparison.level().ordinal()]++;
+
+        return freq;
+    }
+
+    /**
      * Log some summary information related to the match to the console.
      *
      * @param info Some small bit of information to include in the log message.
      */
     public void logMatchInfo(String info) {
-        int[] freq = new int[4];
+        int[] freq = getLevelFreq();
         int nonNull = 0;
 
-        for (AttributeComparison comparison : attributes.values()) {
-            freq[comparison.level().ordinal()]++;
+        for (AttributeComparison comparison : attributes.values())
             if (comparison.nonNullValues())
                 nonNull++;
-        }
 
         logger.debug(
                 "Comp {} to {} ({}): attributes — {} E, {} I, {} R, {} N; {} resolvable; {} non-null; out of {}",
@@ -222,8 +239,30 @@ public class SchoolComparison {
      * @param attribute The desired attribute.
      * @return The comparison instance.
      */
+    @Nullable
     public AttributeComparison getAttributeComparison(@NotNull Attribute attribute) {
         return attributes.get(attribute);
+    }
+
+    /**
+     * Attempt to {@link #getAttributeComparison(Attribute) get} the {@link AttributeComparison} for the given
+     * {@link Attribute} from the {@link #attributes} map as normal.
+     * <p>
+     * If there is no comparison for this attribute for some reason, return a new comparison instance with
+     * {@link AttributeComparison.Level Level} {@link AttributeComparison.Level#NONE NONE},
+     * {@link AttributeComparison.Preference Preference} {@link AttributeComparison.Preference#NONE NONE}, and
+     * {@link AttributeComparison#nonNullValues() nonNullValues()} <code>false</code>.
+     * <p>
+     * This is useful when you <i>know</i> that the attributes map has a comparison for every attribute and thus this
+     * won't be <code>null</code> anyway.
+     *
+     * @param attribute The desired attribute.
+     * @return The comparison instance.
+     */
+    @NotNull
+    public AttributeComparison getAttributeComparisonNonNull(@NotNull Attribute attribute) {
+        AttributeComparison comp = getAttributeComparison(attribute);
+        return comp == null ? AttributeComparison.ofNone(attribute, false) : comp;
     }
 
     /**
@@ -245,6 +284,45 @@ public class SchoolComparison {
             resolvableAttributes++;
 
         attributes.put(attribute, comparison);
+    }
+
+    /**
+     * Get the value that should be used for a particular {@link Attribute}. This is determined based on the
+     * {@link AttributeComparison.Preference Preference} as follows:
+     * <ul>
+     *     <li>{@link AttributeComparison.Preference#EXISTING EXISTING} — The {@link #existingSchool existing} school
+     *     value.
+     *     <li>{@link AttributeComparison.Preference#INCOMING INCOMING} — The {@link #incomingSchool incoming} school
+     *     value.
+     *     <li>{@link AttributeComparison.Preference#OTHER OTHER} — The {@link AttributeComparison#otherOption() other}
+     *     specified value.
+     *     <li>{@link AttributeComparison.Preference#NONE NONE} — Invalid state. This should have been resolved by
+     *     the user.
+     * </ul>
+     *
+     * @param attribute The attribute for which to get the value.
+     * @return The value that should be used.
+     * @throws IllegalArgumentException If no {@link AttributeComparison} is stored for the attribute.
+     * @throws IllegalStateException    If the preference for the given attribute is
+     *                                  {@link AttributeComparison.Preference#NONE NONE}.
+     */
+    @Nullable
+    public Object getAttributeValue(@NotNull Attribute attribute)
+            throws IllegalArgumentException, IllegalStateException {
+        AttributeComparison comparison = attributes.get(attribute);
+
+        if (comparison == null)
+            throw new IllegalArgumentException("No argument comparison stored for attribute " + attribute.name());
+
+        return switch (comparison.preference()) {
+            case EXISTING -> existingSchool.get(attribute);
+            case INCOMING -> incomingSchool.get(attribute);
+            case OTHER -> comparison.otherOption();
+            default -> throw new IllegalStateException(String.format(
+                    "Attribute %s preference %s should have been manually resolved for schools %s and %s",
+                    attribute, comparison.preference(), incomingSchool, existingSchool
+            ));
+        };
     }
 
     /**
@@ -296,42 +374,6 @@ public class SchoolComparison {
     }
 
     /**
-     * Get a list of {@link Attribute Attributes} (and their corresponding match {@link AttributeComparison.Level
-     * Levels} from the {@link #attributes} map) that may be useful for manually comparing the
-     * {@link #existingSchool} and {@link #incomingSchool}.
-     * <p>
-     * Attributes are included in the list from the following sources:
-     * <ul>
-     *     <li>Every {@link Organization#getMatchIndicatorAttributes() match indicator} attribute for the
-     *     {@link #incomingSchool}
-     *     <li>Every {@link Organization#getMatchRelevantAttributes() match relevant} attribute for the
-     *     {@link #incomingSchool}
-     *     <li>Every {@link #getDifferingAttributes() differing} attribute, <i>if and only if</i> there are no
-     *     more than 5 of these (not counting the ones that are already a part of the indicator/relevant attributes).
-     * </ul>
-     *
-     * @return A map of {@link Attribute Attributes} and match {@link AttributeComparison.Level Levels}.
-     */
-    @NotNull
-    public Map<Attribute, AttributeComparison.Level> getRelevantDisplayAttributes() {
-        List<Attribute> indicator = List.of(incomingSchool.getOrganization().getMatchIndicatorAttributes());
-        List<Attribute> relevant = List.of(incomingSchool.getOrganization().getMatchRelevantAttributes());
-
-        // Retrieve the differing attributes. If there's more than 5, don't include any of them.
-        List<Attribute> differing = getDifferingAttributes().stream()
-                .filter(a -> !indicator.contains(a) && !relevant.contains(a))
-                .collect(Collectors.toList());
-        differing = differing.size() <= 5 ? differing : Collections.emptyList();
-
-        // Combine all attribute sources into a single list
-        return Stream.of(indicator, relevant, differing)
-                .flatMap(List::stream)
-                .distinct()
-                .map(a -> new AbstractMap.SimpleEntry<>(a, attributes.get(a).level()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    /**
      * Get a list of {@link Attribute Attributes} from the {@link #attributes} map that have their
      * {@link AttributeComparison.Preference Preference} set to anything besides
      * {@link AttributeComparison.Preference#EXISTING EXISTING}. These are attributes that must be updated in the
@@ -347,35 +389,16 @@ public class SchoolComparison {
     }
 
     /**
-     * Get the value that should be used for a particular {@link Attribute}. This is determined based on the
-     * {@link AttributeComparison.Preference Preference} as follows:
-     * <ul>
-     *     <li>{@link AttributeComparison.Preference#EXISTING EXISTING} — The {@link #existingSchool existing} school
-     *     value.
-     *     <li>{@link AttributeComparison.Preference#INCOMING INCOMING} — The {@link #incomingSchool incoming} school
-     *     value.
-     *     <li>{@link AttributeComparison.Preference#OTHER OTHER} — The {@link AttributeComparison#otherOption() other}
-     *     specified value.
-     *     <li>{@link AttributeComparison.Preference#NONE NONE} — Invalid state. This should have been resolved by
-     *     the user.
-     * </ul>
+     * Get a list of {@link Attribute Attributes} from the {@link #attributes} map that have their
+     * {@link AttributeComparison.Preference Preference} set to {@link AttributeComparison.Preference#NONE NONE},
+     * indicating that the program could not automatically determine a preference. These require user input.
      *
-     * @param attribute The attribute for which to get the value.
-     * @return The value that should be used.
-     * @throws IllegalStateException If the preference for the given attribute is
-     *                               {@link AttributeComparison.Preference#NONE NONE}.
+     * @return The list of attributes.
      */
-    @Nullable
-    public Object getAttributeValue(@NotNull Attribute attribute) throws IllegalStateException {
-        AttributeComparison comparison = attributes.get(attribute);
-        return switch (comparison.preference()) {
-            case EXISTING -> existingSchool.get(attribute);
-            case INCOMING -> incomingSchool.get(attribute);
-            case OTHER -> comparison.otherOption();
-            default -> throw new IllegalStateException(String.format(
-                    "Attribute %s preference %s should have been manually resolved for schools %s and %s",
-                    attribute, comparison.preference(), incomingSchool, existingSchool
-            ));
-        };
+    @NotNull
+    public List<Attribute> getNonResolvableAttributes() {
+        return attributes.keySet().stream()
+                .filter(a -> attributes.get(a).preference() == AttributeComparison.Preference.NONE)
+                .collect(Collectors.toList());
     }
 }

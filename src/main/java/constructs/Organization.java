@@ -47,13 +47,13 @@ public class Organization extends BaseConstruct {
     private final String name_abbr;
 
     /**
-     * This is the URL pointing to the homepage of the organization.
+     * This is the Link pointing to the homepage of the organization.
      */
     @NotNull
     private final String homepage_url;
 
     /**
-     * This is the URL pointing to the organization's list of member schools.
+     * This is the Link pointing to the organization's list of member schools.
      */
     @NotNull
     private final String school_list_url;
@@ -159,7 +159,7 @@ public class Organization extends BaseConstruct {
     }
 
     /**
-     * Get the URL of this organization's homepage.
+     * Get the Link of this organization's homepage.
      *
      * @return The {@link #homepage_url}.
      */
@@ -169,7 +169,7 @@ public class Organization extends BaseConstruct {
     }
 
     /**
-     * Get the URL of this organization's school list page.
+     * Get the Link of this organization's school list page.
      *
      * @return The {@link #school_list_url}.
      */
