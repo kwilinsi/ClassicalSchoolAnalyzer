@@ -124,6 +124,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
          *
          * @param threshold The least-exact match {@link Level Level} that will still return <code>true</code>.
          * @return <code>True</code> if and only if the values match.
+         * @see #matches()
          */
         public boolean matchesAt(Level threshold) {
             return ordinal() <= threshold.ordinal();

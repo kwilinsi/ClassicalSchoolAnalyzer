@@ -30,12 +30,12 @@ public class SelectionPrompt<T> extends Prompt<T> {
      * @param options         The list of {@link Option Options} to present to the user.
      */
     public SelectionPrompt(@Nullable String windowTitle,
-                            @NotNull Component promptComponent,
-                            @NotNull List<Option<T>> options) {
+                           @NotNull Component promptComponent,
+                           @NotNull List<Option<T>> options) {
         super(windowTitle, promptComponent, new Panel());
 
         this.actions = new ActionListBox();
-        this.optionsPanel.addComponent(this.actions);
+        this.optionsPanel.addComponent(new Panel(new GridLayout(1)).addComponent(this.actions));
 
         // Create the list of actions
         for (int i = 0; i < options.size(); i++) {
@@ -60,7 +60,6 @@ public class SelectionPrompt<T> extends Prompt<T> {
      * If the input is not a number key, the call is passed up the class hierarchy via <code>super()</code>.
      *
      * @param key The keyboard input to handle.
-     *
      * @return True if the input was handled; <code>false</code> otherwise.
      */
     @Override
@@ -101,7 +100,6 @@ public class SelectionPrompt<T> extends Prompt<T> {
      * @param promptComponent The {@link Component} that contains the prompt message for the user.
      * @param options         The list of options to show the user.
      * @param <T>             The type of the {@link Option#getValue() value} returned by the options.
-     *
      * @return The new prompt.
      * @see #of(String, String, List)
      * @see #of(String, String, Option[])
@@ -120,7 +118,6 @@ public class SelectionPrompt<T> extends Prompt<T> {
      * @param promptComponent The {@link Component} that contains the prompt message for the user.
      * @param options         The list of options to show the user.
      * @param <T>             The type of the {@link Option#getValue() value} returned by the options.
-     *
      * @return The new prompt.
      * @see #of(String, String, List)
      * @see #of(String, Component, List)
@@ -140,7 +137,6 @@ public class SelectionPrompt<T> extends Prompt<T> {
      * @param text        The prompt message.
      * @param options     The list of options to show the user.
      * @param <T>         The type of the {@link Option#getValue() value} returned by the options.
-     *
      * @return The new prompt.
      * @see #of(String, Component, List)
      * @see #of(String, String, Option[])
@@ -162,7 +158,6 @@ public class SelectionPrompt<T> extends Prompt<T> {
      * @param text        The prompt message.
      * @param options     The list of options to show the user.
      * @param <T>         The type of the {@link Option#getValue() value} returned by the options.
-     *
      * @return The new prompt.
      * @see #of(String, String, List)
      * @see #of(String, Component, List)

@@ -1,6 +1,5 @@
-package processing.schoolLists.matching;
+package processing.schoolLists.matching.data;
 
-import constructs.District;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
@@ -8,6 +7,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import processing.schoolLists.matching.AttributeComparison;
+import processing.schoolLists.matching.MatchIdentifier;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -17,101 +18,16 @@ import java.util.stream.Collectors;
  * add to the database) and some already {@link #existingSchool existing} school (a particular school already in the
  * database).
  * <p>
- * This class stores the degree (or {@link Level Level}) to which the schools' {@link Attribute Attributes} match
+ * This class stores the degree (or {@link Level Level}) to which the schools' {@link Attribute Attributes}
+ * match
  * with each other, as well as which attribute should be preferred in cases where they conflict.
  * <p>
  * One of these instances is automatically created for every existing school every time a new school is being
  * added to the database. This is done by {@link MatchIdentifier#compare(CreatedSchool, List)}. That method
  * will return just <i>one</i> instance of this class, or it will return <code>null</code> if there is no match.
  */
-public class SchoolComparison {
+public class SchoolComparison extends MatchData {
     private static final Logger logger = LoggerFactory.getLogger(SchoolComparison.class);
-
-    /**
-     * These are the levels or degrees to which the incoming school can match (or not match) an existing school.
-     */
-    public enum Level {
-        /**
-         * There is no match. A new {@link District} should be created, and the incoming school should be added to it.
-         */
-        NO_MATCH,
-
-        /**
-         * Don't do anything with the incoming school. It might match something, but it should be ignored and the
-         * database shouldn't be changed in any way.
-         */
-        OMIT,
-
-        /**
-         * The incoming school matches the existing school. Some attributes from the existing school might need to be
-         * updated.
-         * <p>
-         * <b>Result:</b> separately assess whether the existing school in the database needs updating by examining
-         * the {@link #attributes}.
-         */
-        SCHOOL_MATCH,
-
-        /**
-         * The incoming school comes from the same district as this school but is not a direct match of this school.
-         * <p>
-         * <b>Result:</b> add the incoming school as a new school to the database. Add a record to the
-         * DistrictOrganizations table for the matched district, in case the incoming school comes from a different
-         * Organization.
-         */
-        DISTRICT_MATCH;
-
-        /**
-         * Create a new dummy {@link SchoolComparison} instance based on this {@link Level}. The
-         * {@link #existingSchool existing} school is a new, empty {@link School} object.
-         *
-         * @param incomingSchool The {@link #incomingSchool}.
-         * @return The new comparison instance.
-         */
-        public SchoolComparison of(@NotNull CreatedSchool incomingSchool) {
-            SchoolComparison comparison = new SchoolComparison(incomingSchool, new School());
-            comparison.setLevel(this);
-            return comparison;
-        }
-
-        /**
-         * Check whether this {@link Level Level} means that the incoming school matched either an existing School or
-         * an existing District. In that case, the <code>DistrictOrganization</code> table must be updated by adding
-         * another relation, in case the incoming school came from a new Organization.
-         * <p>
-         * This is true for:
-         * <ul>
-         *     <li>{@link #DISTRICT_MATCH DISTRICT_MATCH}
-         *     <li>{@link #SCHOOL_MATCH SCHOOL_MATCH}
-         * </ul>
-         *
-         * @return Whether to add a new <code>DistrictOrganization</code> relation.
-         */
-        public boolean isAddDistrictOrganization() {
-            return this == DISTRICT_MATCH || this == SCHOOL_MATCH;
-        }
-
-        /**
-         * Check whether a SQL <code>INSERT</code> statement should be used for the incoming School.
-         * <p>
-         * This is true for:
-         * <ul>
-         *     <li>{@link Level#NO_MATCH NO_MATCH}
-         *     <li>{@link Level#DISTRICT_MATCH DISTRICT_MATCH}
-         * </ul>
-         *
-         * @return Whether a SQL <code>INSERT</code> statement is required for this level.
-         */
-        public boolean usesInsertStmt() {
-            return this == Level.NO_MATCH || this == Level.DISTRICT_MATCH;
-        }
-    }
-
-    /**
-     * This is the {@link Level Level} of the match. It starts out set to {@link Level#NO_MATCH NO_MATCH}, and if a
-     * match is detected, its state is updated accordingly.
-     */
-    @NotNull
-    private Level level = Level.NO_MATCH;
 
     /**
      * The school which is under consideration for adding to the database. It's being matched against some
@@ -141,20 +57,21 @@ public class SchoolComparison {
      */
     private int resolvableAttributes = 0;
 
-    /**
-     * Create a {@link SchoolComparison} from the incoming created school and a particular existing cached school.
-     *
-     * @param incomingSchool The {@link #incomingSchool}.
-     * @param existingSchool The {@link #existingSchool}.
-     */
-    public SchoolComparison(@NotNull CreatedSchool incomingSchool, @NotNull School existingSchool) {
+    private SchoolComparison(@NotNull CreatedSchool incomingSchool, @NotNull School existingSchool) {
+        super(Level.NO_MATCH);
         this.incomingSchool = incomingSchool;
         this.existingSchool = existingSchool;
     }
 
-    @NotNull
-    public Level getLevel() {
-        return level;
+    /**
+     * Create a {@link SchoolComparison} from the incoming created school and a particular existing cached school.
+     * This uses the default match level {@link Level#NO_MATCH NO_MATCH}.
+     *
+     * @param incomingSchool The {@link #incomingSchool}.
+     * @param existingSchool The {@link #existingSchool}.
+     */
+    public static SchoolComparison of(@NotNull CreatedSchool incomingSchool, @NotNull School existingSchool) {
+        return new SchoolComparison(incomingSchool, existingSchool);
     }
 
     /**
@@ -213,8 +130,9 @@ public class SchoolComparison {
      * Log some summary information related to the match to the console.
      *
      * @param info Some small bit of information to include in the log message.
+     * @return This comparison instance, for chaining.
      */
-    public void logMatchInfo(String info) {
+    public SchoolComparison logMatchInfo(String info) {
         int[] freq = getLevelFreq();
         int nonNull = 0;
 
@@ -231,6 +149,8 @@ public class SchoolComparison {
                 nonNull,
                 Attribute.values().length
         );
+
+        return this;
     }
 
     /**
@@ -263,6 +183,34 @@ public class SchoolComparison {
     public AttributeComparison getAttributeComparisonNonNull(@NotNull Attribute attribute) {
         AttributeComparison comp = getAttributeComparison(attribute);
         return comp == null ? AttributeComparison.ofNone(attribute, false) : comp;
+    }
+
+    /**
+     * Return whether the schools match for the given {@link Attribute} at
+     * {@link AttributeComparison.Level#matchesAt(AttributeComparison.Level) at least} the given
+     * {@link AttributeComparison.Level Level}.
+     * <p>
+     * If the {@link #attributes} map does not yet contain an {@link AttributeComparison} for the given attribute,
+     * this will throw an exception.
+     *
+     * @param attribute The attribute to check.
+     * @param level     The minimum match level to return <code>true</code>.
+     * @return <code>True</code> if and only if the attributes map contains a comparison for the given attribute and
+     * that comparison is at least the given match level.
+     * @throws IllegalArgumentException If the given attribute is not found in the attributes map, meaning the
+     *                                  schools have not yet been compared for that attribute.
+     */
+    public boolean matchesAt(@NotNull Attribute attribute,
+                             @NotNull AttributeComparison.Level level) throws IllegalArgumentException {
+        AttributeComparison comparison = attributes.get(attribute);
+
+        if (comparison == null)
+            throw new IllegalArgumentException(String.format(
+                    "No attribute comparison found for %s between schools %s and %s",
+                    attribute.name(), incomingSchool, existingSchool
+            ));
+
+        return comparison.level().matchesAt(level);
     }
 
     /**

@@ -8,9 +8,7 @@ import org.slf4j.LoggerFactory;
 import database.Database;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class District extends BaseConstruct {
     private static final Logger logger = LoggerFactory.getLogger(District.class);
@@ -24,16 +22,20 @@ public class District extends BaseConstruct {
     /**
      * The name of this district. This is typically the name of the first {@link School} in the district. After a second
      * school is added to the district, the user is given the option to rename the district.
+     * <p>
+     * This can only be changed by {@link #updateDatabase(String, String) updateDatabase()}.
      */
     @Nullable
-    private final String name;
+    private String name;
 
     /**
      * The Link of this district's main website. This is typically the same as the associated {@link School school's}
      * url.
+     * <p>
+     * This can only be changed by {@link #updateDatabase(String, String) updateDatabase()}.
      */
     @Nullable
-    private final String website_url;
+    private String website_url;
 
     /**
      * Create a new District by providing the name, Link, and id.
@@ -73,7 +75,6 @@ public class District extends BaseConstruct {
      * that "<code>SELECT *</code>" was used, and so the resultSet contains every column.
      *
      * @param resultSet The result set of the query.
-     *
      * @throws SQLException if there is any error parsing the <code>resultSet</code>.
      */
     public District(@NotNull ResultSet resultSet) throws SQLException {
@@ -117,15 +118,14 @@ public class District extends BaseConstruct {
      * if and only if they have exactly the same {@link #id}, {@link #name}, and {@link #website_url}.
      *
      * @param obj The other {@link District} to compare to.
-     *
      * @return <code>True</code> if the two {@link District Districts} are equal; <code>false</code> otherwise.
      */
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof District d) {
             return id == d.id &&
-                   Objects.equals(name, d.name) &&
-                   Objects.equals(website_url, d.website_url);
+                    Objects.equals(name, d.name) &&
+                    Objects.equals(website_url, d.website_url);
         }
 
         return false;
@@ -183,18 +183,59 @@ public class District extends BaseConstruct {
     }
 
     /**
+     * Update the {@link #name} and {@link #website_url} in the database for this district. If the given values to
+     * update are already the values of this district, nothing happens. If only one of them is different, only that
+     * value is updated.
+     *
+     * @param name        The new district name.
+     * @param website_url The new district website URL.
+     * @throws SQLException If there is an error establishing the database connection or executing the command.
+     */
+    public void updateDatabase(@Nullable String name, @Nullable String website_url) throws SQLException {
+        LinkedHashMap<String, String> map = new LinkedHashMap<>();
+
+        if (!Objects.equals(this.name, name))
+            map.put("name", name);
+
+        if (!Objects.equals(this.website_url, website_url))
+            map.put("website_url", website_url);
+
+        if (map.size() == 0)
+            return;
+
+        // Open database connection
+        try (Connection connection = Database.getConnection()) {
+            PreparedStatement statement = connection.prepareStatement(
+                    "UPDATE Districts SET %s WHERE id = ?;".formatted(
+                            String.join(", ", map.keySet().stream().map(k -> k + " = ?").toList()))
+            );
+
+            ArrayList<String> values = new ArrayList<>(map.values());
+            for (int i = 0; i < values.size(); i++)
+                statement.setString(i + 1, values.get(i));
+
+            statement.setInt(values.size() + 1, id);
+            statement.executeUpdate();
+
+            this.name = name;
+            this.website_url = website_url;
+
+            logger.debug("Updated district {}: name {} and website {}", id, name, website_url);
+        }
+    }
+
+    /**
      * Add a link between this district and the specified {@link Organization} to the <code>DistrictOrganizations
      * </code> table in the database.
      *
      * @param organization The organization to link to this district.
-     *
      * @throws SQLException If there is any error interacting with the database.
      */
     public void addOrganizationRelation(@NotNull Organization organization) throws SQLException {
         try (Connection connection = Database.getConnection()) {
             PreparedStatement statement = connection.prepareStatement(
                     "INSERT INTO DistrictOrganizations (organization_id, district_id) VALUES (?, ?) " +
-                    "ON DUPLICATE KEY UPDATE organization_id = organization_id;"
+                            "ON DUPLICATE KEY UPDATE organization_id = organization_id;"
             );
             statement.setInt(1, organization.getId());
             statement.setInt(2, id);

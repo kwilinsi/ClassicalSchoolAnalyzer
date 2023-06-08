@@ -11,6 +11,7 @@ import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import processing.schoolLists.matching.AttributeComparison.Preference;
+import processing.schoolLists.matching.data.SchoolComparison;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -44,7 +45,7 @@ class PreferenceComboBox extends ComboBox<Preference> {
      * This {@link BiConsumer} is {@link BiConsumer#accept(Object, Object) run} whenever the user changes the
      * preference. It is given the current {@link Preference} and {@link #otherOption}.
      * <p>
-     * It can be used to save that change in a corresponding {@link processing.schoolLists.matching.SchoolComparison
+     * It can be used to save that change in a corresponding {@link SchoolComparison
      * SchoolComparison} instance.
      * <p>
      * If this is <code>null</code>, nothing is run.

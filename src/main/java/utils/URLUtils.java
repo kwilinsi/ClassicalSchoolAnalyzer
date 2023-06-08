@@ -73,8 +73,8 @@ public class URLUtils {
      * Determine whether two {@link URL URLs} have the same domain (host and subdomains). This is case-insensitive and
      * ignores the '<code>www.</code>' prefix.
      *
-     * @param urlA The first Link as a string.
-     * @param urlB The second Link as a string.
+     * @param urlA The first URL.
+     * @param urlB The second URL.
      * @return <code>True</code> if and only if the URLs have the same host; <code>false</code> otherwise.
      */
     public static boolean hostEquals(@Nullable URL urlA, @Nullable URL urlB) {
@@ -95,6 +95,30 @@ public class URLUtils {
         while (hostB.startsWith("www.")) hostB = hostB.substring(4);
 
         return hostA.equals(hostB);
+    }
+
+    /**
+     * Extract just the domain from a URL. This excludes subdomains.
+     * <p>
+     * The extraction is done by removing any match for the following Regex from the hostname:
+     * <br><code>"^.*\.(?=.*\.)"</code>
+     * <p>
+     * Note that for URLs like <code>"alice.blogs.website.k12.us"</code> this will return <code>"k12.us"</code>, even
+     * though <code>"website.k12.us"</code> might be desired.
+     *
+     * @param urlStr The URL from which to extract the domain.
+     * @return The domain, or <code>null</code> if the input is <code>null</code>, {@link #createURL(String)
+     * un-parseable}, or has no {@link URL#getHost() host}.
+     */
+    @Nullable
+    public static String getDomain(@Nullable String urlStr) {
+        URL url = createURL(urlStr);
+        if (url == null) return null;
+
+        String host = url.getHost();
+        if (host == null) return null;
+
+        return host.toLowerCase(Locale.ROOT).replaceAll("^.*\\.(?=.*\\.)", "");
     }
 
     /**
@@ -143,6 +167,28 @@ public class URLUtils {
     }
 
     /**
+     * Attempt to strip the page and query data from a URL, returning just the protocol and hostname.
+     *
+     * @param urlStr The URL to strip.
+     * @return The stripped URL, or <code>null</code> if the input is <code>null</code> or {@link #createURL(String)
+     * un-parseable}.
+     */
+    @Nullable
+    public static String stripPageData(@Nullable String urlStr) {
+        URL url = createURL(urlStr);
+        if (url == null) return null;
+
+        // Recreate the URL without the file data
+        try {
+            url = new URL(url.getProtocol(), url.getHost(), url.getPort(), "");
+        } catch (MalformedURLException e) {
+            logger.warn("Unexpected error while stripping page data from '" + url + "'", e);
+        }
+
+        return url.toExternalForm();
+    }
+
+    /**
      * Attempt to normalize a Link to a relatively standard format. Though this method may semantically change the
      * Link, this is deemed necessary, as most URLs are malformed on the original organization pages anyway.
      * <p>
@@ -180,7 +226,6 @@ public class URLUtils {
 
         } catch (MalformedURLException e) {
             logger.warn("Unexpected error while recreating '" + url + "' during normalization", e);
-            return url.toString();
         }
 
         return url.toExternalForm();

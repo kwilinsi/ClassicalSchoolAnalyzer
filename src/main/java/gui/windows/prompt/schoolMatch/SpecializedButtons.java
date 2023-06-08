@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.URLUtils;
 import utils.Utils;
 
 import java.awt.*;
@@ -235,8 +236,8 @@ public class SpecializedButtons {
         }
 
         /**
-         * Create a {@link URI} from the given text. If this fails for any reason, an error message is
-         * {@link #logger logged} at the debug level, and <code>null</code> is returned.
+         * {@link URLUtils#createURL(String) Create} a {@link URI} from the given text. If this fails for any reason,
+         * an error message is {@link #logger logged} at the debug level, and <code>null</code> is returned.
          *
          * @param text The text to convert to a URI.
          * @return The converted text, or <code>null</code> if it cannot be converted.
@@ -244,10 +245,18 @@ public class SpecializedButtons {
         private static URI makeUri(@Nullable String text) {
             if (text == null) return null;
 
-            try {
-                return new URL(text).toURI();
-            } catch (IOException | URISyntaxException ignored) {
+            URL url = URLUtils.createURL(text);
+            if (url == null) {
                 logger.debug("Cannot create a URL from {}; link button reverting to default", text);
+                return null;
+            }
+
+            try {
+                return url.toURI();
+            } catch (URISyntaxException e) {
+                logger.debug(String.format(
+                        "Cannot get URI from URL %s parsed from %s; link button reverting to default",
+                        url, text), e);
                 return null;
             }
         }

@@ -5,7 +5,7 @@ import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 import processing.schoolLists.matching.AttributeComparison;
 import processing.schoolLists.matching.AttributeComparison.Preference;
-import processing.schoolLists.matching.SchoolComparison;
+import processing.schoolLists.matching.data.SchoolComparison;
 
 import java.util.ArrayList;
 import java.util.List;

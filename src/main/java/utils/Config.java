@@ -1,5 +1,6 @@
 package utils;
 
+import constructs.District;
 import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -139,7 +140,18 @@ public enum Config {
      * <p>
      * <b>Default:</b> <code>15</code>
      */
-    MAX_SCHOOL_COMPARISON_GUI_ATTRIBUTES(15);
+    MAX_SCHOOL_COMPARISON_GUI_ATTRIBUTES(15),
+
+    /**
+     * This is the typical domain used by {@link constructs.OrganizationManager#GHI GHI} schools for their websites.
+     * The schools each have a subdomain on this page. This is relavent when setting District
+     * {@link District#getWebsiteURL() website URLs}. See {@link processing.schoolLists.matching.MatchIdentifier
+     * MatchIdentifier}.
+     * <p>
+     * <b>Default:</b> <code>"greatheartsamerica.org"</code>
+     */
+    @SuppressWarnings("SpellCheckingInspection")
+    STANDARD_GHI_WEBSITE_DOMAIN("greatheartsamerica.org");
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
 

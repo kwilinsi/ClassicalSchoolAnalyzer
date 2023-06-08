@@ -228,4 +228,51 @@ public class GUIUtils {
         for (int i = 0; i < count; i++)
             panel.addComponent(new EmptySpace(panel.getTheme().getDefaultDefinition().getNormal().getBackground()));
     }
+
+    /**
+     * Create a {@link LinearLayout} panel containing a single label. The panel is filled with the given color and
+     * set to {@link LinearLayout.GrowPolicy Grow} horizontally to fill available space.
+     * The header text is generated as a centered, {@link SGR#BOLD bold}, {@link TextColor.ANSI#WHITE_BRIGHT
+     * white_bright} label.
+     *
+     * @param text   The header text
+     * @param color  The background color.
+     * @param height The height of the panel, set by adding {@link EmptySpace} components. The header text is
+     *               vertically centered within this height.
+     * @return The new panel containing the header.
+     */
+    public static Panel createFilledHeader(@NotNull String text,
+                                           @NotNull TextColor.ANSI color,
+                                           int height) {
+        Panel panel = new Panel()
+                .setLayoutManager(new GridLayout(1)
+                        .setLeftMarginSize(0)
+                        .setRightMarginSize(0)
+                )
+                .setLayoutData(
+                        GridLayout.createLayoutData(
+                                GridLayout.Alignment.FILL,
+                                GridLayout.Alignment.FILL,
+                                true,
+                                false,
+                                1,
+                                height
+                        )
+                )
+                .addComponent(new Label(text)
+                        .setForegroundColor(TextColor.ANSI.WHITE_BRIGHT)
+                        .addStyle(SGR.BOLD)
+                        .setLayoutData(
+                                GridLayout.createLayoutData(
+                                        GridLayout.Alignment.CENTER,
+                                        GridLayout.Alignment.CENTER,
+                                        true,
+                                        true
+                                )
+                        )
+                );
+
+        panel.setTheme(getThemeWithBackgroundColor(color));
+        return panel;
+    }
 }

@@ -53,7 +53,6 @@ public class School extends BaseConstruct {
      * "<code>SELECT *</code>" was used, and so the resultSet contains every {@link Attribute}/column.
      *
      * @param resultSet The result set of the query.
-     *
      * @throws SQLException if there is any error parsing the resultSet.
      */
     public School(@NotNull ResultSet resultSet) throws SQLException {
@@ -91,6 +90,15 @@ public class School extends BaseConstruct {
      */
     public int getDistrictId() {
         return district_id;
+    }
+
+    /**
+     * Set this school's district id.
+     *
+     * @param district_id The {@link #district_id}.
+     */
+    public void setDistrictId(int district_id) {
+        this.district_id = district_id;
     }
 
     /**
@@ -133,7 +141,6 @@ public class School extends BaseConstruct {
      * map.
      *
      * @param attribute The attribute to retrieve.
-     *
      * @return The current value of that attribute.
      */
     @Nullable
@@ -145,7 +152,6 @@ public class School extends BaseConstruct {
      * {@link #get(Attribute) Get} the value of some {@link Attribute} as a {@link String}.
      *
      * @param attribute The attribute to retrieve.
-     *
      * @return The current value of that attribute, or <code>null</code> if the attribute is not a string type.
      */
     @Nullable
@@ -157,7 +163,6 @@ public class School extends BaseConstruct {
      * This is a wrapper for {@link #get(Attribute)} that returns a boolean instead of a generic {@link Object}.
      *
      * @param attribute The attribute to retrieve (must be type {@link Boolean#TYPE}).
-     *
      * @return The current value of that attribute, or <code>null</code> if the attribute is not a boolean type.
      */
     public boolean getBool(@NotNull Attribute attribute) {
@@ -170,7 +175,6 @@ public class School extends BaseConstruct {
      * <code>null</code>, or because it matches some null-like default value for that attribute.
      *
      * @param attribute The attribute to consider.
-     *
      * @return True if and only if the current value of that attribute is effectively null.
      */
     public boolean isEffectivelyNull(@NotNull Attribute attribute) {

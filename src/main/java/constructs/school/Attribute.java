@@ -12,9 +12,8 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * This is the set of attributes for {@link School Schools}. Each school has a map relating each attribute to its value
@@ -113,7 +112,8 @@ public enum Attribute {
      * The data type of the attribute.
      * <p>
      * Note: Some attributes have the {@link URL} type. That doesn't mean they actually use the Link class to store the
-     * data. Instead, it means that the value is a {@link String}, but it represents a Link; therefore two values of this
+     * data. Instead, it means that the value is a {@link String}, but it represents a Link; therefore two values of
+     * this
      * type should be
      * {@link processing.schoolLists.matching.AttributeComparison#compare(Attribute, CreatedSchool, List) compared}
      * differently than regular strings.
@@ -138,6 +138,19 @@ public enum Attribute {
 
     <T> Attribute(Class<T> type, T defaultValue) {
         this(type, defaultValue, -1);
+    }
+
+    /**
+     * Convert a collection of {@link Attribute Attributes} to a list of their {@link #name() names}.
+     *
+     * @param attributes The attributes.
+     * @return The list of names, or an empty immutable list if the input is <code>null</code>.
+     */
+    @NotNull
+    public static List<String> toNames(@Nullable Collection<Attribute> attributes) {
+        return attributes == null ? List.of() : attributes.stream()
+                .map(Attribute::name)
+                .collect(Collectors.toList());
     }
 
     /**

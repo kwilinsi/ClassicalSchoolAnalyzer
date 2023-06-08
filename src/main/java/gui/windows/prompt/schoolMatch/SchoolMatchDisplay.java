@@ -19,10 +19,14 @@ import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import processing.schoolLists.matching.AttributeComparison;
 import processing.schoolLists.matching.AttributeComparison.Preference;
-import processing.schoolLists.matching.SchoolComparison;
-import processing.schoolLists.matching.SchoolComparison.Level;
+import processing.schoolLists.matching.data.DistrictMatch;
+import processing.schoolLists.matching.data.MatchData;
+import processing.schoolLists.matching.data.SchoolComparison;
+import processing.schoolLists.matching.data.MatchData.Level;
 import utils.Config;
 import utils.Utils;
 
@@ -37,9 +41,17 @@ import java.util.*;
  * conflicts need to be manually resolved.
  */
 public class SchoolMatchDisplay extends SelectionPrompt<Level> {
+    private static final Logger logger = LoggerFactory.getLogger(SchoolMatchDisplay.class);
+
     /**
-     * The list of comparisons between the incoming school and the schools in the possibly matching district. At least
-     * one of these schools triggered the match.
+     * The district that may match the incoming school.
+     */
+    @NotNull
+    private final District district;
+
+    /**
+     * The list of comparisons between the incoming school and the schools in the possibly matching {@link #district}.
+     * At least one of these schools triggered the match.
      * <p>
      * This is guaranteed to contain at least one comparison instance.
      */
@@ -70,14 +82,12 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
     /**
      * <b>GUI Object</b>
      * <p>
-     * This is the header label displayed above the existing school's attribute list.
+     * This is the header displayed above the existing school's attribute list.
      */
     @NotNull
-    private final Label existingSchoolHeader = new Label("")
-            .setForegroundColor(TextColor.ANSI.WHITE_BRIGHT)
-            .setBackgroundColor(TextColor.ANSI.BLACK_BRIGHT)
-            .addStyle(SGR.BOLD)
-            .setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center));
+    private final Panel existingSchoolHeader = GUIUtils.createFilledHeader(
+            "", TextColor.ANSI.BLACK_BRIGHT, 3
+    );
 
     /**
      * <b>GUI Object</b>
@@ -124,21 +134,31 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
      */
     private final List<PreferenceComboBox> guiAttributePreferences = new ArrayList<>();
 
-    private SchoolMatchDisplay(@NotNull List<SchoolComparison> schoolComparisons) throws IllegalArgumentException {
+    /**
+     * This is a {@link DistrictMatch} instance that is only set if the user selects and approves the
+     * {@link MatchData.Level#DISTRICT_MATCH DISTRICT_MATCH} level. It contains possible new values for the district
+     * name and website.
+     */
+    @Nullable
+    private DistrictMatch districtMatchData;
+
+    private SchoolMatchDisplay(@NotNull District district,
+                               @NotNull List<SchoolComparison> schoolComparisons) throws IllegalArgumentException {
         super(
                 null,
                 new Panel(new GridLayout(1).setVerticalSpacing(1).setBottomMarginSize(1)),
                 List.of(
-                        Option.of("Not a match.", Level.NO_MATCH),
-                        Option.of("This is a match.", Level.SCHOOL_MATCH),
-                        Option.of("Add to this district.", Level.DISTRICT_MATCH),
-                        Option.of("Omit this school.", Level.OMIT)
+                        Option.of("Not a match.", MatchData.Level.NO_MATCH),
+                        Option.of("This is a match.", MatchData.Level.SCHOOL_MATCH),
+                        Option.of("Add to this district.", MatchData.Level.DISTRICT_MATCH),
+                        Option.of("Omit this school.", MatchData.Level.OMIT)
                 )
         );
 
         if (schoolComparisons.size() == 0)
             throw new IllegalArgumentException("Must have at least one school comparison to check.");
 
+        this.district = district;
         this.schoolComparisons = schoolComparisons;
 
         this.displayedAttributes = identifyBestDisplayAttributes(schoolComparisons);
@@ -158,7 +178,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                                         @NotNull District district,
                                         @NotNull List<SchoolComparison> schoolComparisons)
             throws IllegalArgumentException {
-        SchoolMatchDisplay display = new SchoolMatchDisplay(schoolComparisons);
+        SchoolMatchDisplay display = new SchoolMatchDisplay(district, schoolComparisons);
 
         for (int i = 0; i < schoolComparisons.size(); i++)
             display.schoolInfos.add(
@@ -221,7 +241,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
 
     /**
      * Get the {@link #currentDisplayedSchool currently} selected school {@link #schoolComparisons comparison}. If
-     * the user has selected the match level {@link SchoolComparison.Level#SCHOOL_MATCH SCHOOL_MATCH}, this will
+     * the user has selected the match level {@link Level#SCHOOL_MATCH SCHOOL_MATCH}, this will
      * contain the matching school.
      *
      * @return The currently displayed school comparison.
@@ -229,6 +249,17 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
     @NotNull
     public SchoolComparison getSelectedComparison() {
         return schoolComparisons.get(currentDisplayedSchool);
+    }
+
+    /**
+     * Get the district match data, which will only be set if the user has selected the
+     * {@link MatchData.Level#DISTRICT_MATCH DISTRICT_MATCH} level.
+     *
+     * @return The {@link #districtMatchData}.
+     */
+    @Nullable
+    public DistrictMatch getDistrictMatchData() {
+        return districtMatchData;
     }
 
     /**
@@ -246,20 +277,14 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         // Add a header
         // --------------------------------------------------
 
-        Panel districtHeader = new Panel()
-                .setLayoutManager(new LinearLayout(Direction.VERTICAL))
-                .addComponent(new EmptySpace(TextColor.ANSI.BLUE_BRIGHT));
-        districtHeader.setTheme(GUIUtils.getThemeWithBackgroundColor(TextColor.ANSI.BLUE_BRIGHT));
-
-        new Label(String.format(
-                "Matched %d School%s in District %d",
-                schoolComparisons.size(), schoolComparisons.size() == 1 ? "" : "s", district.getId()
-        ))
-                .setForegroundColor(TextColor.ANSI.WHITE_BRIGHT)
-                .addStyle(SGR.BOLD)
-                .setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center))
-                .setBackgroundColor(TextColor.ANSI.BLUE_BRIGHT)
-                .addTo(districtHeader);
+        Panel districtHeader = GUIUtils.createFilledHeader(
+                String.format(
+                        "Matched %d School%s in District %d",
+                        schoolComparisons.size(), schoolComparisons.size() == 1 ? "" : "s", district.getId()
+                ),
+                TextColor.ANSI.BLUE_BRIGHT,
+                3
+        );
 
         // --------------------------------------------------
         // Add the district info
@@ -337,16 +362,6 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         );
 
         // --------------------------------------------------
-        // Add existing school header
-        // --------------------------------------------------
-
-        Panel existingHeader = new Panel()
-                .setLayoutManager(new LinearLayout(Direction.VERTICAL))
-                .addComponent(new EmptySpace(TextColor.ANSI.BLACK_BRIGHT))
-                .addComponent(existingSchoolHeader);
-        existingHeader.setTheme(GUIUtils.getThemeWithBackgroundColor(TextColor.ANSI.BLACK_BRIGHT));
-
-        // --------------------------------------------------
         // Add existing school carousel
         // --------------------------------------------------
 
@@ -406,12 +421,10 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                 .addComponent(districtHeader)
                 .addComponent(districtInfo)
                 .addComponent(incomingPanel)
-                .addComponent(existingHeader)
+                .addComponent(existingSchoolHeader)
                 .addComponent(existingCarousel);
 
         int width = getPreferredSize().getColumns();
-        districtHeader.setPreferredSize(new TerminalSize(width, 3));
-        existingHeader.setPreferredSize(new TerminalSize(width, 3));
         existingCarousel.setPreferredSize(
                 new TerminalSize(width, existingCarousel.getPreferredSize().getRows() + 1)
         );
@@ -424,7 +437,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
     private void updateSchoolView() {
         SchoolInfo info = schoolInfos.get(currentDisplayedSchool);
 
-        existingSchoolHeader.setText(info.header());
+        ((Label) existingSchoolHeader.getChildrenList().get(0)).setText(info.header());
         guiExistingId.setText(String.valueOf(info.id()));
 
         for (int i = 0; i < displayedAttributes.size(); i++) {
@@ -445,16 +458,13 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
     }
 
     /**
-     * {@link #savePreferences() Save} the current info and switch the view to show a different existing school from the
-     * {@link #schoolInfos} list.
+     * Switch the view to show a different existing school from the {@link #schoolInfos} list.
      *
      * @param next <code>True</code> to go to the next school in the list (incrementing the
      *             {@link #currentDisplayedSchool} counter); <code>False</code> to go to the previous school
      *             (decrementing the counter).
      */
     private void switchSchoolView(boolean next) {
-        savePreferences();
-
         currentDisplayedSchool = currentDisplayedSchool + (next ? 1 : -1);
         if (currentDisplayedSchool == -1) currentDisplayedSchool = schoolInfos.size() - 1;
         if (currentDisplayedSchool == schoolInfos.size()) currentDisplayedSchool = 0;
@@ -462,46 +472,75 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
     }
 
     /**
-     * Save the {@link #guiAttributePreferences} to the current {@link #schoolInfos}'s list of
-     * {@link SchoolInfo#attributePreferences() preferences}. This is typically done before
-     * {@link #switchSchoolView(boolean) changing} the school view.
+     * {@inheritDoc}
+     * <br>--
+     * <p>
+     * This overrides the default implementation to add some checks before closing the window:
+     * <p>
+     * If the user chooses the {@link MatchData.Level#SCHOOL_MATCH SCHOOL_MATCH} option, the preferences are checked
+     * for the {@link #currentDisplayedSchool current} {@link SchoolComparison} to ensure that none of them are still
+     * {@link AttributeComparison.Preference#NONE NONE} (which indicates that user action is required).
+     * <p>
+     * If the user chooses the {@link MatchData.Level#DISTRICT_MATCH DISTRICT_MATCH} option, they are first given the
+     * option via a popup to set a new name and website for the district in the database.
+     *
+     * @param value The user's choice.
      */
-    private void savePreferences() {
-        SchoolInfo info = schoolInfos.get(currentDisplayedSchool);
-        for (int i = 0; i < guiAttributePreferences.size(); i++) {
-            info.attributePreferences().set(i, guiAttributePreferences.get(i).getSelectedItem());
-            info.attributePreferenceOthers().set(i, guiAttributePreferences.get(i).getOtherOption());
-        }
-    }
-
     @Override
     protected void closeAndSet(@Nullable Level value) {
-        if (value != Level.SCHOOL_MATCH) {
-            super.closeAndSet(value);
-            return;
+        if (value == null) return;
+
+        switch (value) {
+            case DISTRICT_MATCH -> {
+                SchoolComparison schoolComparison = schoolComparisons.get(currentDisplayedSchool);
+                DistrictUpdateDialog dialog = DistrictUpdateDialog.of(
+                        district, schoolComparison.getIncomingSchool(), schoolComparison.getExistingSchool()
+                );
+                MessageDialogButton selection = dialog.show(Main.GUI.getWindowGUI());
+
+                switch (selection) {
+                    case Abort -> {
+                        logger.debug("Aborted " + value + " selection");
+                        return;
+                    }
+                    case Cancel -> districtMatchData = DistrictMatch.of(district);
+                    case OK -> districtMatchData = DistrictMatch.of(
+                            district, dialog.getSelectedName(), dialog.getSelectedUrl()
+                    );
+                    default -> throw new IllegalArgumentException(
+                            "Unreachable: unexpected selection " + selection + " from district update dialog."
+                    );
+                }
+
+                super.closeAndSet(value);
+            }
+
+            case SCHOOL_MATCH -> {
+                // Before marking this a match and exiting the prompt, make sure all the preferences have been resolved
+                SchoolInfo info = schoolInfos.get(currentDisplayedSchool);
+                List<Preference> preferences = info.attributePreferences();
+                List<Attribute> unresolved = new ArrayList<>();
+                for (int i = 0; i < preferences.size(); i++)
+                    if (preferences.get(i) == Preference.NONE)
+                        unresolved.add(displayedAttributes.get(i));
+
+                if (unresolved.size() == 0) {
+                    super.closeAndSet(value);
+                    return;
+                }
+
+                MessageDialog.showMessageDialog(
+                        Main.GUI.getWindowGUI(),
+                        "Error: Unresolved Attributes",
+                        "The following attributes have Preference \"NONE\":\n" + Utils.listAttributes(unresolved) +
+                                "\n\nYou must first resolve those attributes before selecting a match with this " +
+                                "school.",
+                        MessageDialogButton.OK
+                );
+            }
+
+            default -> super.closeAndSet(value);
         }
-
-        // Before marking this a match and exiting the prompt, make sure all the preferences have been resolved
-        savePreferences();
-        SchoolInfo info = schoolInfos.get(currentDisplayedSchool);
-        List<Preference> preferences = info.attributePreferences();
-        List<Attribute> unresolved = new ArrayList<>();
-        for (int i = 0; i < preferences.size(); i++)
-            if (preferences.get(i) == Preference.NONE)
-                unresolved.add(displayedAttributes.get(i));
-
-        if (unresolved.size() == 0) {
-            super.closeAndSet(value);
-            return;
-        }
-
-        MessageDialog.showMessageDialog(
-                Main.GUI.getWindowGUI(),
-                "Error: Unresolved Attributes",
-                "The following attributes have Preference \"NONE\":\n" + Utils.listAttributes(unresolved) +
-                        "\n\nYou must first resolve those attributes before selecting a match with this school.",
-                MessageDialogButton.OK
-        );
     }
 
     /**
