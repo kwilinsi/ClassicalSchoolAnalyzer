@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
+import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.SchoolManager;
@@ -23,7 +24,7 @@ public class GHIExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(GHIExtractor.class);
 
     /**
-     * Extract schools from the {@link constructs.OrganizationManager#GHI Great Hearts Institute} website.
+     * Extract schools from the {@link OrganizationManager#GHI Great Hearts Institute} website.
      *
      * @param document The HTML document from which to extract the list.
      *

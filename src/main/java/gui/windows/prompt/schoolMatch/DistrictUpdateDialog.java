@@ -5,7 +5,7 @@ import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
-import constructs.District;
+import constructs.district.District;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
@@ -328,7 +328,6 @@ public class DistrictUpdateDialog extends MyBaseWindow {
         return obj == null ? "" : obj.toString();
     }
 
-    @SuppressWarnings("UnnecessaryUnicodeEscape")
     private static class RadioButton extends Button {
         /**
          * The appearance of the button when it's not selected.

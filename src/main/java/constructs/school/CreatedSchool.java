@@ -1,7 +1,7 @@
 package constructs.school;
 
-import constructs.District;
-import constructs.Organization;
+import constructs.district.District;
+import constructs.organization.Organization;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

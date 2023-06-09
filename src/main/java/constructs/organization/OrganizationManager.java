@@ -1,4 +1,4 @@
-package constructs;
+package constructs.organization;
 
 import constructs.school.Attribute;
 import gui.windows.prompt.selection.Option;

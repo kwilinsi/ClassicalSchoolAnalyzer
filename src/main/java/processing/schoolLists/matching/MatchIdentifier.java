@@ -1,6 +1,8 @@
 package processing.schoolLists.matching;
 
-import constructs.*;
+import constructs.district.District;
+import constructs.organization.Organization;
+import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;

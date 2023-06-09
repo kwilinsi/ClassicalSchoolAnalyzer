@@ -1,6 +1,7 @@
 package main;
 
-import constructs.*;
+import constructs.organization.Organization;
+import constructs.organization.OrganizationManager;
 import constructs.school.*;
 import database.DatabaseManager;
 import gui.windows.prompt.selection.Option;

@@ -1,5 +1,6 @@
 package processing.schoolLists.extractors;
 
+import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.SchoolManager;
@@ -19,7 +20,7 @@ public class HillsdaleExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(HillsdaleExtractor.class);
 
     /**
-     * Extract schools from the {@link constructs.OrganizationManager#HILLSDALE Hillsdale K-12 Education} website.
+     * Extract schools from the {@link OrganizationManager#HILLSDALE Hillsdale K-12 Education} website.
      *
      * @param document The HTML document from which to extract the list.
      *

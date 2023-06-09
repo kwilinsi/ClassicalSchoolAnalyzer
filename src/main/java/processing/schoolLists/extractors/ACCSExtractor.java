@@ -1,5 +1,6 @@
 package processing.schoolLists.extractors;
 
+import constructs.organization.OrganizationManager;
 import constructs.school.CreatedSchool;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
@@ -25,7 +26,7 @@ public class ACCSExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(ACCSExtractor.class);
 
     /**
-     * Extract schools from the {@link constructs.OrganizationManager#ACCS Association of Classical Christian Schools}
+     * Extract schools from the {@link OrganizationManager#ACCS Association of Classical Christian Schools}
      * website.
      *
      * @param document The HTML document from which to extract the list.

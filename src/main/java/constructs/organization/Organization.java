@@ -1,5 +1,6 @@
-package constructs;
+package constructs.organization;
 
+import constructs.BaseConstruct;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import processing.schoolLists.extractors.Extractor;

@@ -1,5 +1,6 @@
 package constructs;
 
+import constructs.organization.Organization;
 import constructs.school.School;
 import utils.Config;
 

@@ -1,6 +1,6 @@
 package processing.schoolLists.extractors;
 
-import constructs.OrganizationManager;
+import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +21,7 @@ public class OCSAExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(OCSAExtractor.class);
 
     /**
-     * Extract schools from the {@link constructs.OrganizationManager#OCSA Orthodox Christian School Association}
+     * Extract schools from the {@link OrganizationManager#OCSA Orthodox Christian School Association}
      * website.
      *
      * @param document The HTML document from which to extract the list.

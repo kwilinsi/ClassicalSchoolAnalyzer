@@ -1,6 +1,6 @@
 package processing.schoolLists.extractors;
 
-import constructs.OrganizationManager;
+import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import org.jetbrains.annotations.NotNull;
@@ -26,7 +26,7 @@ public class CCLEExtractor implements Extractor {
     private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile("(\\(?\\d{3}\\)?\\D\\d{3}\\D\\d{4})");
 
     /**
-     * Extract schools from the {@link constructs.OrganizationManager#CCLE Consortium for Classical Lutheran Education}
+     * Extract schools from the {@link OrganizationManager#CCLE Consortium for Classical Lutheran Education}
      * website.
      *
      * @param document The HTML document from which to extract the list.

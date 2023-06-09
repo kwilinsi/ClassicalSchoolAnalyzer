@@ -1,6 +1,7 @@
 package processing.schoolLists.extractors.helpers;
 
-import constructs.*;
+import constructs.organization.Organization;
+import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.SchoolManager;

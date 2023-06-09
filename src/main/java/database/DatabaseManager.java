@@ -1,7 +1,7 @@
 package database;
 
-import constructs.District;
-import constructs.OrganizationManager;
+import constructs.district.District;
+import constructs.organization.OrganizationManager;
 import constructs.school.School;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.RunnableOption;

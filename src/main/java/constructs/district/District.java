@@ -1,5 +1,7 @@
-package constructs;
+package constructs.district;
 
+import constructs.BaseConstruct;
+import constructs.organization.Organization;
 import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -1,6 +1,6 @@
 package processing.schoolLists.extractors;
 
-import constructs.OrganizationManager;
+import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import org.jetbrains.annotations.NotNull;
@@ -27,7 +27,7 @@ public class ASAExtractor implements Extractor {
     );
 
     /**
-     * Extract schools from the {@link constructs.OrganizationManager#ASA Anglican School Association} website.
+     * Extract schools from the {@link OrganizationManager#ASA Anglican School Association} website.
      *
      * @param document The HTML document from which to extract the list.
      *

@@ -1,6 +1,6 @@
 package processing.schoolLists.matching.data;
 
-import constructs.District;
+import constructs.district.District;
 import org.jetbrains.annotations.NotNull;
 
 /**

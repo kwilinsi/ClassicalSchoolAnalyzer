@@ -2,7 +2,8 @@ package utils;
 
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.dialogs.TextInputDialogBuilder;
-import constructs.District;
+import constructs.district.District;
+import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
@@ -146,7 +147,7 @@ public enum Config {
     MAX_SCHOOL_COMPARISON_GUI_ATTRIBUTES(15, false),
 
     /**
-     * This is the typical domain used by {@link constructs.OrganizationManager#GHI GHI} schools for their websites.
+     * This is the typical domain used by {@link OrganizationManager#GHI GHI} schools for their websites.
      * The schools each have a subdomain on this page. This is relavent when setting District
      * {@link District#getWebsiteURL() website URLs}. See {@link processing.schoolLists.matching.MatchIdentifier
      * MatchIdentifier}.

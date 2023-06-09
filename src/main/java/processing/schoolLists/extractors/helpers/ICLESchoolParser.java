@@ -1,7 +1,7 @@
 package processing.schoolLists.extractors.helpers;
 
 import constructs.school.CreatedSchool;
-import constructs.OrganizationManager;
+import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.nodes.Document;

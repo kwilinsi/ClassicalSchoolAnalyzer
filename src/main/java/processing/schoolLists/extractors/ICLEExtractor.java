@@ -1,5 +1,6 @@
 package processing.schoolLists.extractors;
 
+import constructs.organization.OrganizationManager;
 import constructs.school.CreatedSchool;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
@@ -23,7 +24,7 @@ public class ICLEExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(ICLEExtractor.class);
 
     /**
-     * Extract schools from the {@link constructs.OrganizationManager#ICLE Institute for Catholic Liberal Education}
+     * Extract schools from the {@link OrganizationManager#ICLE Institute for Catholic Liberal Education}
      * website.
      *
      * @param document The HTML document from which to extract the list.
