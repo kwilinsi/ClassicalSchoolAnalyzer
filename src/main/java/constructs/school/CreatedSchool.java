@@ -172,8 +172,9 @@ public class CreatedSchool extends School {
             // Execute the finished statement
             statement.execute();
 
-            // Finally, set the school id by copying it from the updated school
-            this.id = existingSchool.id;
+            // Updated the already cached existing school
+            comparison.updateExistingSchoolAttributes();
+
             logger.info(
                     "- Updated existing {} with {} modified attribute{}{}",
                     existingSchool,
@@ -181,9 +182,6 @@ public class CreatedSchool extends School {
                     attributes.size() == 1 ? "" : "s",
                     attributes.size() < 5 ? ": " + Utils.listAttributes(attributes) : ""
             );
-
-            // TODO update the attributes of the old cached school, or replace it with this one
-
         }
     }
 

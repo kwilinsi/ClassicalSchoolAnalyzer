@@ -337,6 +337,29 @@ public class SchoolComparison extends MatchData {
     }
 
     /**
+     * For each of the {@link #getAttributesToUpdate() attributes to update}, change the values in the
+     * {@link #existingSchool existing} school to the new values.
+     * <p>
+     * The actual {@link School} object should be the same Java object in memory that's in the list of cached schools.
+     * Thus, updating the existing school here will allow the cached list to accurately reflect the database without
+     * the need for SQL queries or separately replacing the object in the cache.
+     *
+     * @throws IllegalArgumentException This should be unreachable, but it's thrown if an attribute comparison
+     *                                  doesn't exist for any of the attributes to update (which doesn't make sense,
+     *                                  because then it wouldn't be considered an attribute to update).
+     * @throws IllegalStateException    If any of the attributes to update have the
+     *                                  {@link AttributeComparison.Preference Preference}
+     *                                  {@link AttributeComparison.Preference#NONE NONE}, indicating
+     *                                  that they require manual user action before they can be resolved.
+     * @see #getAttributesToUpdate()
+     * @see #getAttributeValue(Attribute)
+     */
+    public void updateExistingSchoolAttributes() throws IllegalArgumentException, IllegalStateException {
+        for (Attribute attribute : getAttributesToUpdate())
+            existingSchool.put(attribute, getAttributeValue(attribute));
+    }
+
+    /**
      * Get a list of {@link Attribute Attributes} from the {@link #attributes} map that have their
      * {@link AttributeComparison.Preference Preference} set to {@link AttributeComparison.Preference#NONE NONE},
      * indicating that the program could not automatically determine a preference. These require user input.

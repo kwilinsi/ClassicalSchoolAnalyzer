@@ -223,8 +223,6 @@ public enum GradeLevel {
     public static List<GradeLevel> identifyGrades(@Nullable String gradesStr) {
         if (gradesStr == null) return new ArrayList<>();
 
-        // TODO check whether the database can actually handle en and em dashes
-
         LinkedHashSet<GradeLevel> grades = new LinkedHashSet<>();
 
         // Trim the string and make it lowercase. Replace all dash forms with hyphens

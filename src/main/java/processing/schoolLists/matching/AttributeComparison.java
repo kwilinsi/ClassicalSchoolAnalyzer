@@ -905,8 +905,6 @@ public record AttributeComparison(@NotNull Attribute attribute,
                 if (stateAbbr.equalsIgnoreCase(state))
                     return "United States";
 
-        // TODO if the state hasn't been set yet, set that
-
         // Otherwise, for countries, replace "US" with "United States",
         // and stop all non-countries from being a thing
         // Make it lowercase and remove everything besides letters
