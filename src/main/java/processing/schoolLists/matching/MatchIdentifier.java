@@ -234,20 +234,9 @@ public class MatchIdentifier {
                     continue;
 
                 // Check whether the names indicate a district match
-                String nameE = existingSchool.getStr(Attribute.name);
-                String nameI = incomingSchool.getStr(Attribute.name);
-                if (nameE == null || nameI == null || nameE.isBlank() || nameI.isBlank())
-                    continue;
-
-                String[] splitE = nameE.toLowerCase(Locale.ROOT).split("\\s+");
-                String[] splitI = nameI.toLowerCase(Locale.ROOT).split("\\s+");
-
-                String name = null;
-                if (splitE[0].equals(splitI[0]) || splitE[0].equals(splitI[splitI.length - 1]))
-                    name = splitE[0];
-                else if (splitE[splitE.length - 1].equals(splitI[0]) ||
-                        splitE[splitE.length - 1].equals(splitI[splitI.length - 1]))
-                    name = splitE[splitE.length - 1];
+                String name = findCommonPrefixOrSuffix(
+                        existingSchool.getStr(Attribute.name), incomingSchool.getStr(Attribute.name)
+                );
 
                 if (name == null)
                     continue;
@@ -273,7 +262,7 @@ public class MatchIdentifier {
                 logger.info("- District match for {} and GHI school {}; using name district {}",
                         existingSchool, incomingSchool, name);
 
-                return DistrictMatch.of(district, Utils.titleCase(name), url);
+                return DistrictMatch.of(district, Utils.titleCase(name + " - Great Hearts"), url);
             }
         }
 
@@ -371,5 +360,123 @@ public class MatchIdentifier {
         throw new IllegalArgumentException(String.format(
                 "Unexpected match data %s for level %s", matchData.getClass(), matchData.getLevel()
         ));
+    }
+
+    /**
+     * Attempt to find a common prefix or suffix between two other strings based on words. If there is such a
+     * matching substring, that substring is returned; otherwise, <code>null</code> is returned. This method will
+     * also return <code>null</code> if either input is <code>null</code>. Note that all comparisons are
+     * case-insensitive and trimmed before comparison.
+     * <p>
+     * This requires the match to be a substring. If the strings have the same number of words and all the words
+     * match, this will return <code>null</code>, because the match is not a substring of either string.
+     * <p>
+     * Some positive examples of matches identified by this method:
+     * <ul>
+     *     <li><code>"the quick brown fox"</code> and <code>"the quick red dog"</code> match with the substring
+     *     <code>"the quick"</code>. Note that here there is also a valid substring <code>"the"</code>, but this
+     *     method will always choose the largest available substring.
+     *     <li><code>"lorem ipsum dolor sit amet"</code> and <code>"filler text lorem ipsum"</code> match with the
+     *     substring <code>"lorem ipsum"</code>.
+     * </ul>
+     * Some negative examples:
+     * <ul>
+     *     <li><code>"this is a phrase"</code> and <code>"what is a word"</code> do <b>not</b> match with the
+     *     substring <code>"is a"</code>, because matches must come from the start or end of the string.
+     *     <li><code>"something string"</code> and <code>"somewhere phrase"</code> do <b>not</b> match, because the
+     *     smallest unit of comparison is a word, not a letter, so the match <code>"some"</code> is not identified.
+     *     <li>Identical strings, like <code>"alice bob"</code> and <code>"alice bob"</code> will never match.
+     * </ul>
+     *
+     * @param str1 The first string.
+     * @param str2 The second string.
+     * @return The positive matching substring if one is found, or <code>null</code> if the strings do not match or
+     * match exactly. Note that in the event of a match, the returned substring will be all lowercase, and any series of multiple
+     * spaces will have been replaced with a single space. For example, if the strings match with
+     * <code>"Some&nbsp;&nbsp;&nbsp;Text"</code>, the result will be <code>"some text"</code>.
+     */
+    @Nullable
+    private static String findCommonPrefixOrSuffix(@Nullable String str1, @Nullable String str2) {
+        if (str1 == null || str2 == null) return null;
+
+        str1 = str1.trim();
+        str2 = str2.trim();
+
+        // Separate the strings into words
+        String[] words1 = str1.toLowerCase(Locale.ROOT).split("\\s+");
+        String[] words2 = str2.toLowerCase(Locale.ROOT).split("\\s+");
+
+        // If one of them turns out to be empty, exit
+        if (Arrays.equals(words1, words2))
+            return null;
+
+        // Only check for exactly equal strings now, so that the result can be lowercase with condensed spaces
+        if (str1.equalsIgnoreCase(str2))
+            return String.join(" ", words1);
+
+        int maxWords = Math.min(words1.length, words2.length);
+
+        // Find the longest match from str1 prefix and str2 prefix
+        int longestPrefixPrefix = 0;
+        while (longestPrefixPrefix < maxWords && words1[longestPrefixPrefix].equals(words2[longestPrefixPrefix]))
+            longestPrefixPrefix++;
+
+        // Exit if the maximum possible size was found
+        if (longestPrefixPrefix == maxWords)
+            return String.join(" ", Arrays.copyOfRange(words1, 0, maxWords));
+
+        // Find the longest match from str1 suffix and str2 suffix
+        int longestSuffixSuffix = 0;
+        while (longestSuffixSuffix < maxWords && words1[words1.length - 1 - longestSuffixSuffix]
+                .equals(words2[words2.length - 1 - longestSuffixSuffix]))
+            longestSuffixSuffix++;
+
+        // Exit if the maximum possible size was found
+        if (longestSuffixSuffix == maxWords)
+            return String.join(" ", Arrays.copyOfRange(words1, words1.length - maxWords, words1.length));
+
+        // Find the longest match from str1 prefix and str2 suffix
+        int longestPrefixSuffix = 0;
+        for (int i = 1; i < maxWords; i++) {
+            boolean isMatch = true;
+
+            for (int j = 0; j < i; j++)
+                if (!words1[j].equals(words2[words2.length - i + j])) {
+                    isMatch = false;
+                    break;
+                }
+
+            if (isMatch) longestPrefixSuffix = i;
+        }
+
+        // Exit if the maximum possible size was found
+        if (longestPrefixSuffix == maxWords)
+            return String.join(" ", Arrays.copyOfRange(words1, 0, maxWords));
+
+        // Find the longest match from str1 suffix and str2 prefix
+        int longestSuffixPrefix = 0;
+        for (int i = 1; i < maxWords; i++) {
+            boolean isMatch = true;
+
+            for (int j = 0; j < i; j++)
+                if (!words1[words1.length - i + j].equals(words2[j])) {
+                    isMatch = false;
+                    break;
+                }
+
+            if (isMatch) longestSuffixPrefix = i;
+        }
+
+        // It's not possible to have a max length find here, because that would have triggered prefix-prefix
+
+        int max = Math.max(Math.max(longestPrefixPrefix, longestPrefixSuffix),
+                Math.max(longestSuffixPrefix, longestSuffixSuffix));
+
+        if (max == 0) return null;
+
+        if (longestPrefixPrefix == max || longestPrefixSuffix == max)
+            return String.join(" ", Arrays.copyOfRange(words1, 0, max));
+        else
+            return String.join(" ", Arrays.copyOfRange(words1, words1.length - max, words1.length));
     }
 }

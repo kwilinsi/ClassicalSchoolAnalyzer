@@ -132,7 +132,7 @@ public class SchoolComparison extends MatchData {
      * @param info Some small bit of information to include in the log message.
      * @return This comparison instance, for chaining.
      */
-    public SchoolComparison logMatchInfo(String info) {
+    public SchoolComparison logMatchInfo(@NotNull String info) {
         int[] freq = getLevelFreq();
         int nonNull = 0;
 
