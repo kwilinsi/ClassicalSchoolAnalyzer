@@ -12,6 +12,27 @@ import scourgify.cleaning as sc_clean
 ADDRESS_PREFIX_REGEX = r'^((mailing)?\s*address[:;\s]*)'
 
 
+def _clean_input(input: Union[str, None]) -> Union[str, None]:
+    """
+    Clean any input given to this program. This replaces the strings
+    "none" and "null" with None. All other strings are returned
+    stripped and otherwise unchanged.
+
+    Args:
+        input: The input to clean.
+
+    Returns:
+        The cleaned input.
+    """
+
+    # Replace "null" and "none" with None
+    if not input or input.lower() in ['null', 'none']:
+        return None
+    
+    input = input.strip()
+    return input if input else None
+
+
 def _clean_address(input: Union[str, None]) -> Union[str, None]:
     """
     Clean some input address to remove a few possible artifacts. This is done
@@ -24,11 +45,9 @@ def _clean_address(input: Union[str, None]) -> Union[str, None]:
         The cleaned address.
     """
 
-    # Replace "null" and "none" with None
-    if not input or input.lower() in ['null', 'none']:
-        return None
+    # First clean the input generally
+    input = _clean_input(input)
 
-    input = input.strip()
     if not input:
         return None
 
@@ -221,10 +240,11 @@ def city(city: Union[str, None],
         An OrderedDict with the normalization output.
     """
 
+    city = _clean_input(city)
     parsed = address(addr)
     parsed_city = parsed['city']
     parsed_norm = format(parsed)
-    norm_city = sc_norm.normalize_city(sc_clean.clean_upper(city) if city else None)
+    norm_city = sc_norm.normalize_city(sc_clean.clean_upper(city)) if city else None
 
     # If there's no normalized state, use the one from the address
     if not norm_city:
@@ -258,10 +278,11 @@ def state(state: Union[str, None],
         An OrderedDict with the normalization output.
     """
 
+    state = _clean_input(state)
     parsed = address(addr)
     parsed_state = parsed['state']
     parsed_norm = format(parsed)
-    norm_state = sc_norm.normalize_state(state)
+    norm_state = sc_norm.normalize_state(state) if state else None
 
     # If there's no normalized state, use the one from the address
     if not norm_state:
