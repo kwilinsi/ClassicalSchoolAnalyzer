@@ -1,7 +1,10 @@
 package utils;
 
+import com.googlecode.lanterna.TerminalSize;
+import com.googlecode.lanterna.gui2.dialogs.TextInputDialogBuilder;
 import constructs.District;
 import constructs.school.Attribute;
+import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.Connection;
@@ -11,9 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Properties;
-import java.util.Scanner;
 
 public enum Config {
 
@@ -23,7 +26,7 @@ public enum Config {
      * <p>
      * <b>Default:</b> <code>true</code>
      */
-    USE_USERAGENT(true),
+    USE_USERAGENT(true, false),
 
     /**
      * The user agent to {@link #USE_USERAGENT use} when making {@link Jsoup} requests.
@@ -32,14 +35,14 @@ public enum Config {
      * Chrome/74.0.3729.169 Safari/537.36"</code>
      */
     USERAGENT("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit 537.36 (KHTML, like Gecko) " +
-            "Chrome/102.0.5005.136 Safari/537.36"),
+            "Chrome/102.0.5005.136 Safari/537.36", false),
 
     /**
      * The timeout in milliseconds to wait for a {@link Jsoup} request to complete.
      * <p>
      * <b>Default:</b> <code>30000</code>
      */
-    CONNECTION_TIMEOUT(30000),
+    CONNECTION_TIMEOUT(30000, false),
 
     /**
      * Whether {@link Jsoup} should be allowed to use {@link Connection#ignoreHttpErrors(boolean)} when making requests.
@@ -47,7 +50,7 @@ public enum Config {
      * <p>
      * <b>Default:</b> <code>false</code>
      */
-    STRICT_HTTP(false),
+    STRICT_HTTP(false, false),
 
     // Database configuration
     /**
@@ -55,35 +58,35 @@ public enum Config {
      * <p>
      * <b>Default:</b> <code>null</code>
      */
-    DATABASE_IP(null),
+    DATABASE_IP(null, false),
 
     /**
      * The port for connections to the MySQL database.
      * <p>
      * <b>Default:</b> <code>3306</code>
      */
-    DATABASE_PORT(3306),
+    DATABASE_PORT(3306, false),
 
     /**
      * The name of the database in the MySQL server.
      * <p>
      * <b>Default:</b> <code>"classical"</code>
      */
-    DATABASE_NAME("classical"),
+    DATABASE_NAME("classical", false),
 
     /**
      * The username to use when connecting to the MySQL database.
      * <p>
      * <b>Default:</b> <code>null</code>
      */
-    DATABASE_USERNAME(null),
+    DATABASE_USERNAME(null, false),
 
     /**
      * The password to use when connecting to the MySQL database.
      * <p>
      * <b>Default:</b> <code>null</code>
      */
-    DATABASE_PASSWORD(null),
+    DATABASE_PASSWORD(null, true),
 
     // General configuration
 
@@ -92,7 +95,7 @@ public enum Config {
      * <p>
      * <b>Default:</b> <code>null</code>
      */
-    DATA_DIRECTORY(null),
+    DATA_DIRECTORY(null, false),
 
     /**
      * The name to use for HTML files from each organization that contain their school list, when downloading them to
@@ -100,21 +103,21 @@ public enum Config {
      * <p>
      * <b>Default:</b> <code>"school_list.html"</code>
      */
-    SCHOOL_LIST_FILE_NAME("school_list.html"),
+    SCHOOL_LIST_FILE_NAME("school_list.html", false),
 
     /**
      * The maximum number of threads to use while downloading school pages from each organization.
      * <p>
      * <b>Default:</b> <code>15</code>
      */
-    MAX_THREADS_ORGANIZATIONS(15),
+    MAX_THREADS_ORGANIZATIONS(15, false),
 
     /**
      * The default name to assign to schools whose name can't be determined.
      * <p>
      * <b>Default:</b> <code>"MISSING NAME"</code>
      */
-    MISSING_NAME_SUBSTITUTION("MISSING NAME"),
+    MISSING_NAME_SUBSTITUTION("MISSING NAME", false),
 
     /**
      * The path to the Python executable that parses addresses with <code>usaddress-scourgify</code>.
@@ -125,7 +128,7 @@ public enum Config {
      * <b>Default:</b> <code>"external/address/dist/address-parser.exe"</code> (with platform-dependent slashes)
      */
     PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH(
-            Paths.get("external", "address", "dist", "address.exe").toAbsolutePath()
+            Paths.get("external", "address", "dist", "address.exe").toAbsolutePath(), false
     ),
 
     /**
@@ -140,7 +143,7 @@ public enum Config {
      * <p>
      * <b>Default:</b> <code>15</code>
      */
-    MAX_SCHOOL_COMPARISON_GUI_ATTRIBUTES(15),
+    MAX_SCHOOL_COMPARISON_GUI_ATTRIBUTES(15, false),
 
     /**
      * This is the typical domain used by {@link constructs.OrganizationManager#GHI GHI} schools for their websites.
@@ -151,14 +154,23 @@ public enum Config {
      * <b>Default:</b> <code>"greatheartsamerica.org"</code>
      */
     @SuppressWarnings("SpellCheckingInspection")
-    STANDARD_GHI_WEBSITE_DOMAIN("greatheartsamerica.org");
+    STANDARD_GHI_WEBSITE_DOMAIN("greatheartsamerica.org", false);
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
 
     /**
      * The name of the file that stores these configuration settings.
+     * <p>
+     * Note that this file is cached via {@link #PROPERTIES}, and thus it cannot be safely modified manually during
+     * program execution. Changes will either be ignored, overwritten, or both.
      */
     private static final String FILE_NAME = "config.properties";
+
+    /**
+     * This is a cache of the {@link Properties} file obtained from {@link #FILE_NAME config.properties} by
+     * {@link #getRaw()} upon requesting a config setting.
+     */
+    private static Properties PROPERTIES;
 
     /**
      * The default value for each configuration setting.
@@ -167,12 +179,20 @@ public enum Config {
     private final Object defaultValue;
 
     /**
-     * Instantiate a new {@link Config} setting with the given default value.
+     * If this is <code>true</code>, then if the user is prompted to enter a value for it via {@link #getRaw()}, the
+     * input box will be configured for {@link TextInputDialogBuilder#setPasswordInput(boolean) password} input.
+     */
+    private final boolean isPassword;
+
+    /**
+     * Instantiate a new {@link Config} setting.
      *
      * @param defaultValue The {@link #defaultValue}.
+     * @param isPassword   If it {@link #isPassword}.
      */
-    Config(@Nullable Object defaultValue) {
+    Config(@Nullable Object defaultValue, boolean isPassword) {
         this.defaultValue = defaultValue;
+        this.isPassword = isPassword;
     }
 
     /**
@@ -213,63 +233,72 @@ public enum Config {
     }
 
     /**
-     * Get the value of this config setting. Initially, the config.properties resource file is checked. If the setting
-     * is not there, its default value is used. If that default value is null, then the user is prompted to provide a
-     * value for the setting, which is then stored in the config.properties file.
+     * Get the value of this config setting.
+     * <p>
+     * If the config {@link #PROPERTIES} are already loaded (i.e. not <code>null</code>), the value is retrieved from
+     * there.
+     * <p>
+     * Otherwise, the {@link #FILE_NAME config.properties} resource file is
+     * {@link Utils#getInstallationFile(String) loaded} and cached. If the setting is not there, its default value is
+     * used. If that default value is null, then the user is prompted to provide a value for the setting, which is
+     * then stored in the <code>config.properties</code> file.
      *
      * @return The current value of this setting.
+     * @throws RuntimeException If an error occurs while opening the properties file.
      */
     @Nullable
     public String getRaw() {
-        File configFile = Utils.getInstallationFile(FILE_NAME);
-        Properties properties = new Properties();
+        // If the properties file isn't cached yet, cache it now
+        if (PROPERTIES == null || PROPERTIES.size() == 0) {
+            File configFile = Utils.getInstallationFile(FILE_NAME);
+            PROPERTIES = new Properties();
 
-        try {
-            properties.load(new FileInputStream(configFile));
-        } catch (IOException e) {
-            logger.error("Failed to load " +
-                    configFile.getAbsolutePath() + " to Properties object. Everything will now break.", e);
-            return null;
+            try {
+                PROPERTIES.load(new FileInputStream(configFile));
+            } catch (IOException e) {
+                throw new RuntimeException(
+                        "Failed to load " + configFile.getAbsolutePath() + " to Properties object.", e
+                );
+            }
         }
 
         // Check the properties file for the config setting
-        String prop = properties.getProperty(this.key());
+        String prop = PROPERTIES.getProperty(this.key());
 
         // If a matching property is found in the config file, return it
         if (prop != null) return prop;
 
-        String val = String.valueOf(this.defaultValue);
+        // Otherwise, use the default value. If that doesn't exist, ask the user to provide one
+        File configFile = Utils.getInstallationFile(FILE_NAME);
+        String val;
 
-        // TODO update this to use the new prompt interface with the GUI
-
-        // If no value is found anywhere, ask the user to provide one
         if (this.defaultValue == null) {
-            System.out.printf(
-                    "Missing a required configuration setting. Please provide the following:%n%s = ",
-                    this.key()
-            );
+            // Set the prompt size to match the width of the description string
+            String description = "\nMissing a required configuration setting.\nPlease provide the " + this.key() + ":";
+            int width = Arrays.stream(description.split("\n")).mapToInt(String::length).max().orElse(40);
 
-            Scanner in = new Scanner(System.in);
-            val = in.nextLine();
+            val = new TextInputDialogBuilder()
+                    .setTitle("Configuration Required")
+                    .setDescription(description)
+                    .setPasswordInput(this.isPassword)
+                    .setTextBoxSize(new TerminalSize(width, isPassword ? 1 : 3))
+                    .build()
+                    .showDialog(Main.GUI.getWindowGUI());
+        } else {
+            val = String.valueOf(this.defaultValue);
         }
 
         // Save the new value (whether from the Config enum itself or from the user) to the properties file
-        properties.put(this.key(), val);
-        logger.debug("Saving properties to " + configFile.getAbsolutePath() + ".");
-
-        OutputStream out;
         try {
-            out = new FileOutputStream(configFile);
+            PROPERTIES.put(this.key(), val);
+            logger.debug("Saving properties to " + configFile.getAbsolutePath() + ".");
+            OutputStream out = new FileOutputStream(configFile);
+            PROPERTIES.store(out, null);
         } catch (FileNotFoundException e) {
-            logger.warn("Failed to create output stream for " +
-                    configFile.getAbsolutePath() + ". Couldn't save properties.", e);
-            return val;
-        }
-
-        try {
-            properties.store(out, null);
+            logger.warn("Failed to create output stream for " + configFile.getAbsolutePath() +
+                    ". Couldn't save properties.", e);
         } catch (IOException e) {
-            logger.warn("Failed to save properties to " + configFile.getAbsolutePath() + ".", e);
+            logger.warn("Failed to store updated config properties to " + configFile.getAbsolutePath(), e);
         }
 
         return val;
@@ -283,5 +312,4 @@ public enum Config {
     public String key() {
         return this.name().toLowerCase(Locale.ROOT);
     }
-
 }
