@@ -157,6 +157,10 @@ public enum Attribute {
      * Clean the given value according to the constraints imposed by this attribute within SQL. This is used to fix the
      * length of strings to their {@link #maxLength}. If a value is changed by this method, a warning is logged to the
      * console.
+     * <p>
+     * Note that this is different from
+     * {@link processing.schoolLists.matching.AttributeComparison#normalize(Attribute, School) normalizing} the
+     * value, in that this only corrects values for SQL restrictions.
      *
      * @param input  The value to clean.
      * @param school The school to which the value belongs. This is used exclusively for logging purposes.

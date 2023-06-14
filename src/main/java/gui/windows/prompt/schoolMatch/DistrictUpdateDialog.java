@@ -54,7 +54,14 @@ public class DistrictUpdateDialog extends MyBaseWindow {
     private final TextBox urlCustomBox = new TextBox();
 
     /**
+     * The {@link MessageDialogButton#OK OK} button, stored here for setting focus.
+     */
+    private Button okButton;
+
+    /**
      * The button the user chose to close the window.
+     *
+     * @see #show(WindowBasedTextGUI)
      */
     private MessageDialogButton selectedButton;
 
@@ -66,17 +73,7 @@ public class DistrictUpdateDialog extends MyBaseWindow {
         setComponent(formatPanel(district, incomingSchool, existingSchool));
 
         // Set focus on the last child of the last child - the Ok button
-        Component component = getComponent();
-        do {
-            if (component instanceof Panel p) {
-                List<Component> children = p.getChildrenList();
-                component = children.size() > 0 ? children.get(children.size() - 1) : null;
-            } else {
-                if (component instanceof Interactable i)
-                    setFocusedInteractable(i);
-                return;
-            }
-        } while (component != null);
+        setFocusedInteractable(okButton);
     }
 
     /**
@@ -124,8 +121,8 @@ public class DistrictUpdateDialog extends MyBaseWindow {
     /**
      * Show this dialog, and wait for the user to select one of the buttons.
      *
-     * @param gui The main GUI interface to which this window should be added.
-     * @return The user's selection: either {@link MessageDialogButton#OK} or {@link MessageDialogButton#Cancel}.
+     * @param gui The main GUI to which this window should be added.
+     * @return The user's selection.
      */
     public MessageDialogButton show(WindowBasedTextGUI gui) {
         gui.addWindow(this);
@@ -240,6 +237,8 @@ public class DistrictUpdateDialog extends MyBaseWindow {
         nameCustomBox.setTextChangeListener((text, user) -> onButtonSelected(true, 3, false));
         urlCustomBox.setTextChangeListener((text, user) -> onButtonSelected(false, 3, false));
 
+        okButton = makeWindowButton("Ok", this::onOk);
+
         // Build and return the entire GUI in one line cause who cares about readability
         return new Panel()
                 .setLayoutManager(new GridLayout(1)
@@ -294,7 +293,7 @@ public class DistrictUpdateDialog extends MyBaseWindow {
                         .setLayoutData(GridLayout.createHorizontallyEndAlignedLayoutData(1))
                         .addComponent(makeWindowButton("Abort", this::onAbort))
                         .addComponent(makeWindowButton("Cancel", this::onCancel))
-                        .addComponent(makeWindowButton("Ok", this::onOk))
+                        .addComponent(okButton)
                 );
     }
 

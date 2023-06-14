@@ -7,6 +7,15 @@ CREATE TABLE IF NOT EXISTS Cache
     UNIQUE (url)
 );
 
+CREATE TABLE IF NOT EXISTS Corrections
+(
+    id    INTEGER     NOT NULL AUTO_INCREMENT,
+    type  VARCHAR(30) NOT NULL,
+    data  JSON        NOT NULL,
+    notes VARCHAR(300),
+    PRIMARY KEY (id)
+);
+
 CREATE TABLE IF NOT EXISTS Organizations
 (
     id              INTEGER      NOT NULL AUTO_INCREMENT,

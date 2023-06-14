@@ -1,6 +1,8 @@
 package constructs.school;
 
 import constructs.BaseConstruct;
+import constructs.correction.CorrectionManager;
+import constructs.correction.SchoolAttributeCorrection;
 import constructs.district.District;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -128,11 +130,24 @@ public class School extends BaseConstruct {
     /**
      * Save a new value for some {@link Attribute Attribute} to this {@link School School's} list of
      * {@link #attributes}.
+     * <p>
+     * Note that this first checks the for any school attribute {@link SchoolAttributeCorrection
+     * SchoolAttributeCorrections} that match this value; if any are found, the
+     * {@link SchoolAttributeCorrection#getNewValue() replacement} is used instead. Note that the replacement is not
+     * cleaned.
      *
      * @param attribute The attribute to save.
-     * @param value     The value of the attribute. (This is {@link Attribute#clean(Object, School) cleaned} first).
+     * @param value     The value of the attribute. (This is {@link Attribute#clean(Object, School) cleaned} first,
+     *                  unless it matches a Correction).
      */
     public void put(@NotNull Attribute attribute, @Nullable Object value) {
+        List<SchoolAttributeCorrection> corrections = CorrectionManager.getSchoolAttribute();
+        for (SchoolAttributeCorrection correction : corrections)
+            if (correction.matches(attribute, value)) {
+                attributes.put(attribute, correction.getNewValue());
+                return;
+            }
+
         attributes.put(attribute, attribute.clean(value, this));
     }
 

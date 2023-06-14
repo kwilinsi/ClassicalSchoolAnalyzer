@@ -1,5 +1,8 @@
 package main;
 
+import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
+import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
+import constructs.correction.CorrectionManager;
 import constructs.organization.Organization;
 import constructs.organization.OrganizationManager;
 import constructs.school.*;
@@ -29,8 +32,13 @@ public class Actions {
     /**
      * This is called by {@link Action} methods for actions that are not yet implemented.
      */
-    private static void notImplemented() {
-        logger.error("Sorry, this feature is not yet implemented.");
+    public static void notImplemented() {
+        MessageDialog.showMessageDialog(
+                Main.GUI.getWindowGUI(),
+                "Not Implemented",
+                "Sorry, this feature is not yet implemented.",
+                MessageDialogButton.OK
+        );
     }
 
     /**
@@ -129,6 +137,16 @@ public class Actions {
     static void manageDatabase() {
         logger.info("Calling DatabaseManager.prompt().");
         DatabaseManager.prompt();
+    }
+
+    /**
+     * Present the user with some options for managing the list of corrections.
+     * <p>
+     * Calling {@link Action}: {@link Action#MANAGE_CORRECTIONS MANAGE_CORRECTIONS}
+     */
+    static void manageCorrections() {
+        logger.info("Calling CorrectionManager.guiManager().");
+        CorrectionManager.guiManager();
     }
 
     /**

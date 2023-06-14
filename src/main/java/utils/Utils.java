@@ -344,27 +344,47 @@ public class Utils {
     }
 
     /**
-     * Given a {@link List} of {@link Attribute Attributes}, combine their {@link Attribute#name names} into a single
-     * user-readable string separated by commas with the word "and" between the last two. This includes the Oxford
-     * comma.
+     * Join some strings into a comma-separated list. Separate the last two with the word "and". This includes the
+     * Oxford comma.
      * <p>
-     * The order of the input list is preserved, along with duplicates. However, <code>null</code> elements are skipped.
+     * All <code>null</code> or {@link String#isEmpty() empty} strings are omitted.
+     *
+     * @param strings The list of strings.
+     * @return The joined list, or an empty string if the input is empty or <code>null</code>.
+     */
+    @NotNull
+    public static String joinList(@Nullable Collection<String> strings) {
+        if (strings == null)
+            return "";
+
+        List<String> filtered = new ArrayList<>();
+        for (String s : strings)
+            if (s != null && !s.isEmpty())
+                filtered.add(s);
+
+        if (filtered.size() == 0)
+            return "";
+        else if (filtered.size() == 1)
+            return filtered.get(0);
+        else if (filtered.size() == 2)
+            return filtered.get(0) + " and " + filtered.get(1);
+        else {
+            return String.format("%s, and %s",
+                    String.join(", ", filtered.subList(0, filtered.size() - 1)),
+                    filtered.get(filtered.size() - 1)
+            );
+        }
+    }
+
+    /**
+     * Given a {@link List} of {@link Attribute Attributes}, combine their {@link Attribute#name names} into a single
+     * user-readable string using {@link #joinList(Collection)}.
      *
      * @param attributes The list of attributes to combine.
      * @return The user-readable string (an empty string if the list is empty).
      */
     @NotNull
     public static String listAttributes(@NotNull List<Attribute> attributes) {
-        List<String> names = attributes.stream().filter(Objects::nonNull).map(Attribute::name).toList();
-
-        if (names.size() == 0)
-            return "";
-        else if (names.size() == 1)
-            return names.get(0);
-        else if (names.size() == 2)
-            return names.get(0) + " and " + names.get(1);
-        else
-            return String.join(", ", names.subList(0, names.size() - 1)) +
-                    ", and " + names.get(names.size() - 1);
+        return joinList(attributes.stream().filter(Objects::nonNull).map(Attribute::name).toList());
     }
 }

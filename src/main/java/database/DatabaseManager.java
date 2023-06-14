@@ -23,23 +23,31 @@ public class DatabaseManager {
      * Present the user with the database management options, and call the method associated with their selection.
      */
     public static void prompt() {
-        Runnable runnable = Main.GUI.showPrompt(SelectionPrompt.of(
-                "Manage Database",
-                "What would you like to do?",
-                RunnableOption.of("Add Organizations", OrganizationManager::addOrganizationsToSQL),
-                RunnableOption.of("Clear Schools and Districts", DatabaseManager::clearSchoolsAndDistricts,
-                        "This will delete every school and district in the database. " +
-                        "Are you sure you wish to continue?"),
-                RunnableOption.of("Reset All", () -> resetDatabase(true),
-                        "Are you sure you want to recreate the tables? " +
-                        "This will delete everything in the database."),
-                RunnableOption.of("Reset All Except Cache", () -> resetDatabase(false),
-                        "This will clear the contents of every table (except Cache). " +
-                        "Are you sure you wish to continue?"),
-                Option.of("Back", null)
-        ));
+        while (true) {
+            Runnable runnable = Main.GUI.showPrompt(SelectionPrompt.of(
+                    "Manage Database",
+                    "What would you like to do?",
+                    RunnableOption.of("Add Organizations", OrganizationManager::addOrganizationsToSQL),
+                    RunnableOption.of("Clear Schools and Districts", DatabaseManager::clearSchoolsAndDistricts,
+                            "This will delete every school and district in the database. " +
+                                    "Are you sure you wish to continue?"),
+                    RunnableOption.of("Reset All", () -> resetDatabase(true, true),
+                            "Are you sure you want to recreate the tables? " +
+                                    "This will delete everything in the database."),
+                    RunnableOption.of("Reset All Except Cache & Corrections",
+                            () -> resetDatabase(false, false),
+                            "This will clear the contents of every table " +
+                                    "(except Cache and Corrections). Are you sure you wish to continue?"),
+                    Option.of("Back", null)
+            ));
 
-        if (runnable != null) runnable.run();
+            // TODO add menu to select which tables to clear
+
+            if (runnable == null)
+                return;
+            else
+                runnable.run();
+        }
     }
 
     /**
@@ -59,24 +67,26 @@ public class DatabaseManager {
     }
 
     /**
-     * {@link #deleteTables(boolean) Delete} every table in the database and {@link #createTables() Recreate} them from
-     * the <code>setup.sql</code> script.
+     * {@link #deleteTables(boolean, boolean) Delete} every table in the database and {@link #createTables() Recreate}
+     * them from the <code>setup.sql</code> script.
      *
-     * @param includeCache Whether to also delete the Cache table. If this is <code>false</code>, the Cache table will
-     *                     be preserved as-is.
+     * @param includeCache       Whether to also delete the Cache table. If this is <code>false</code>, the
+     *                           Corrections table will be preserved as-is.
+     * @param includeCorrections Whether to also delete the Corrections table.
      */
-    private static void resetDatabase(boolean includeCache) {
-        deleteTables(includeCache);
+    private static void resetDatabase(boolean includeCache, boolean includeCorrections) {
+        deleteTables(includeCache, includeCorrections);
         createTables();
         OrganizationManager.addOrganizationsToSQL();
     }
 
     /**
-     * Delete the tables in the 'classical' database.
+     * Delete the tables in the database.
      *
-     * @param includeCache Whether to delete the Cache table as well.
+     * @param includeCache       Whether to delete the Cache table as well.
+     * @param includeCorrections Whether to delete the Corrections table as well.
      */
-    public static void deleteTables(boolean includeCache) {
+    public static void deleteTables(boolean includeCache, boolean includeCorrections) {
         logger.info("Deleting all SQL tables");
 
         try (Connection connection = Database.getConnection()) {
@@ -89,12 +99,14 @@ public class DatabaseManager {
             for (String table : tables)
                 statement.addBatch("DROP TABLE IF EXISTS " + table);
             if (includeCache) statement.addBatch("DROP TABLE IF EXISTS Cache");
+            if (includeCorrections) statement.addBatch("DROP TABLE IF EXISTS Corrections");
 
             statement.executeBatch();
 
             for (String table : tables)
                 logger.info("Deleted table " + table);
             if (includeCache) logger.info("Deleted table Cache");
+            if (includeCorrections) logger.info("Deleted table Corrections");
 
         } catch (SQLException e) {
             logger.error("Failed to delete one or more tables.", e);

@@ -1,5 +1,7 @@
 package processing.schoolLists.matching;
 
+import constructs.correction.CorrectionManager;
+import constructs.correction.DistrictMatchCorrection;
 import constructs.district.District;
 import constructs.organization.Organization;
 import constructs.organization.OrganizationManager;
@@ -190,7 +192,9 @@ public class MatchIdentifier {
      * <p>
      * <h2>Process</h2>
      * <ol>
-     *     <li>First, perform a check for incoming schools from the {@link OrganizationManager#GHI GHI} organization:
+     *     <li>Check for any {@link DistrictMatchCorrection}
+     *     {@link DistrictMatchCorrection#match(CreatedSchool, District) matches} in this situation.
+     *     <li>Perform a check for incoming schools from the {@link OrganizationManager#GHI GHI} organization:
      *     Check each school in the district. If the following are all true for any existing school,
      *     {@link MatchData.Level#DISTRICT_MATCH DISTRICT_MATCH} is determined for that district:
      *     <ul>
@@ -223,6 +227,13 @@ public class MatchIdentifier {
     private static MatchData processDistrictMatch(@NotNull CreatedSchool incomingSchool,
                                                   @NotNull District district,
                                                   @NotNull List<SchoolComparison> districtSchools) {
+        // STEP 1
+        // Check for any applicable Corrections
+        for (DistrictMatchCorrection correction : CorrectionManager.getDistrictMatch())
+            if (correction.match(incomingSchool, district))
+                return DistrictMatch.of(district, correction.getName(district), correction.getUrl(district));
+
+        // STEP 2
         // For GHI schools, check whether this is a district match
         if (incomingSchool.getOrganization().getId() == OrganizationManager.GHI.getId()) {
             for (SchoolComparison comparison : districtSchools) {
@@ -268,6 +279,7 @@ public class MatchIdentifier {
             }
         }
 
+        // STEP 3
         // As a last resort, prompt the user to make a decision
         return promptUserMatchResolution(incomingSchool, district, districtSchools);
     }
@@ -393,7 +405,8 @@ public class MatchIdentifier {
      * @param str1 The first string.
      * @param str2 The second string.
      * @return The positive matching substring if one is found, or <code>null</code> if the strings do not match or
-     * match exactly. Note that in the event of a match, the returned substring will be all lowercase, and any series of multiple
+     * match exactly. Note that in the event of a match, the returned substring will be all lowercase, and any series
+     * of multiple
      * spaces will have been replaced with a single space. For example, if the strings match with
      * <code>"Some&nbsp;&nbsp;&nbsp;Text"</code>, the result will be <code>"some text"</code>.
      */

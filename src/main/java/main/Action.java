@@ -27,6 +27,8 @@ public enum Action {
      */
     MANAGE_DATABASE(Actions::manageDatabase),
 
+    MANAGE_CORRECTIONS(Actions::manageCorrections),
+
     /**
      * Run {@link Actions#clearDataDirectory()}.
      */

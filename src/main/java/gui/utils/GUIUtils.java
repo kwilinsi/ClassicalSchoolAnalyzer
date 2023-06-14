@@ -10,6 +10,7 @@ import com.googlecode.lanterna.gui2.*;
 import constructs.school.Attribute;
 import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import processing.schoolLists.matching.AttributeComparison;
 import utils.Utils;
 
