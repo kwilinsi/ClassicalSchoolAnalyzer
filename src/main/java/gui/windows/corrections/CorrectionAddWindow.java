@@ -8,6 +8,7 @@ import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import constructs.correction.Correction;
 import constructs.correction.CorrectionManager;
 import constructs.correction.CorrectionManager.Type;
+import gui.utils.GUIUtils;
 import gui.windows.MyBaseWindow;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
@@ -141,7 +142,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
         MessageDialog.showMessageDialog(
                 Main.GUI.getWindowGUI(),
                 "Error: " + error,
-                message,
+                GUIUtils.wrapLabelText(message),
                 MessageDialogButton.OK
         );
     }
@@ -161,7 +162,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
         return MessageDialogButton.Continue == MessageDialog.showMessageDialog(
                 Main.GUI.getWindowGUI(),
                 "Warning: " + warning,
-                message + " Are you sure you want to continue?",
+                GUIUtils.wrapLabelText(message + " Are you sure you want to continue?"),
                 MessageDialogButton.Cancel,
                 MessageDialogButton.Continue
         );

@@ -4,24 +4,26 @@ import constructs.organization.Organization;
 import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
-import constructs.school.SchoolManager;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import processing.schoolLists.extractors.Extractor;
 import utils.JsoupHandler;
 import utils.JsoupHandler.DownloadConfig;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 /**
  * Each {@link ICLEPageParser} instance manages a single page of the ICLE's school list. It delegates a separate set of
  * {@link ICLESchoolParser ICLESchoolParser} instances to download a page for each school from the ICLE website.
  */
-public class ICLEPageParser implements Callable<List<CreatedSchool>> {
+public class ICLEPageParser extends Helper<List<CreatedSchool>> {
     private static final Logger logger = LoggerFactory.getLogger(ICLEPageParser.class);
 
     /**
@@ -31,20 +33,19 @@ public class ICLEPageParser implements Callable<List<CreatedSchool>> {
     private final int pageNum;
 
     /**
-     * This controls whether {@link utils.JsoupHandler.DownloadConfig#CACHE_ONLY caching} should be employed when
-     * downloading ICLE pages.
-     */
-    private final boolean useCache;
-
-    /**
-     * Initialize an {@link ICLEPageParser} instance by providing the page number to download.
+     * Initialize a helper.
      *
-     * @param pageNum  The {@link #pageNum}.
+     * @param parent   See {@link #parent}.
+     * @param pageNum  See {@link #pageNum}.
      * @param useCache See {@link #useCache}.
+     * @param progress See {@link #progress}.
      */
-    public ICLEPageParser(int pageNum, boolean useCache) {
+    public ICLEPageParser(@NotNull Extractor parent,
+                          boolean useCache,
+                          @Nullable SchoolListProgressWindow progress,
+                          int pageNum) {
+        super(parent, useCache, progress);
         this.pageNum = pageNum;
-        this.useCache = useCache;
     }
 
     /**
@@ -65,7 +66,7 @@ public class ICLEPageParser implements Callable<List<CreatedSchool>> {
      */
     @Override
     public List<CreatedSchool> call() throws Exception {
-        logger.debug("Downloading ICLE school list page {}.", pageNum);
+        logger.debug("Downloading {} school list page {}", parent.abbreviation(), pageNum);
 
         // Download the appropriate page number
         @SuppressWarnings("SpellCheckingInspection")
@@ -79,18 +80,20 @@ public class ICLEPageParser implements Callable<List<CreatedSchool>> {
         // Extract each school from the page
         Elements schoolElements = doc.select("div.row div.col[data-post-id] div.card");
 
-        logger.debug("Identified {} schools on page {}.", schoolElements.size(), pageNum);
+        logger.debug("Identified {} schools on page {}", schoolElements.size(), pageNum);
+        if (progress != null)
+            progress.increaseSubProgressMax(schoolElements.size() - 1);
 
         List<CreatedSchool> schools = new ArrayList<>();
 
         for (Element schoolElement : schoolElements) {
             // Set initial parameters for a new school from this element
-            CreatedSchool school = SchoolManager.newICLE();
+            CreatedSchool school = new CreatedSchool(OrganizationManager.ICLE);
 
             school.put(Attribute.name, ExtUtils.extHtmlStr(schoolElement, "h2 a"));
-            String ICLEUrl = ExtUtils.extHtmlLink(schoolElement, "h2 a");
+            String urlIcle = ExtUtils.extHtmlLink(schoolElement, "h2 a");
 
-            if (ICLEUrl == null) {
+            if (urlIcle == null) {
                 logger.error("Skipping school {} because it has no ICLE page Link.", school.name());
                 continue;
             }
@@ -103,13 +106,14 @@ public class ICLEPageParser implements Callable<List<CreatedSchool>> {
             );
             school.put(Attribute.icle_affiliation_level,
                     ExtUtils.extHtmlStr(schoolElement, "div div.geodir-field-post_category a"));
-            school.put(Attribute.icle_page_url, ICLEUrl);
+            school.put(Attribute.icle_page_url, urlIcle);
 
             // Create a new school parser for this school
-            ICLESchoolParser schoolParser = new ICLESchoolParser(school, ICLEUrl, useCache);
+            ICLESchoolParser schoolParser = new ICLESchoolParser(parent, useCache, progress, school, urlIcle);
 
             // Call the parser and add the result to the school list
             schools.add(schoolParser.call());
+            parent.incrementProgressBar(progress, school);
         }
 
         return schools;

@@ -7,6 +7,7 @@ import com.googlecode.lanterna.bundle.LanternaThemes;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
+import constructs.district.CachedDistrict;
 import constructs.district.District;
 import constructs.organization.Organization;
 import constructs.school.Attribute;
@@ -47,7 +48,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
      * The district that may match the incoming school.
      */
     @NotNull
-    private final District district;
+    private final CachedDistrict district;
 
     /**
      * The list of comparisons between the incoming school and the schools in the possibly matching {@link #district}.
@@ -142,7 +143,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
     @Nullable
     private DistrictMatch districtMatchData;
 
-    private SchoolMatchDisplay(@NotNull District district,
+    private SchoolMatchDisplay(@NotNull CachedDistrict district,
                                @NotNull List<SchoolComparison> schoolComparisons) throws IllegalArgumentException {
         super(
                 null,
@@ -175,7 +176,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
      * @throws IllegalArgumentException If the list of school comparisons is empty.
      */
     public static SchoolMatchDisplay of(@NotNull CreatedSchool incomingSchool,
-                                        @NotNull District district,
+                                        @NotNull CachedDistrict district,
                                         @NotNull List<SchoolComparison> schoolComparisons)
             throws IllegalArgumentException {
         SchoolMatchDisplay display = new SchoolMatchDisplay(district, schoolComparisons);
@@ -492,6 +493,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
 
         switch (value) {
             case DISTRICT_MATCH -> {
+                // Give the user the opportunity to change the district's name or website
                 SchoolComparison schoolComparison = schoolComparisons.get(currentDisplayedSchool);
                 DistrictUpdateDialog dialog = DistrictUpdateDialog.of(
                         district, schoolComparison.getIncomingSchool(), schoolComparison.getExistingSchool()
@@ -504,9 +506,11 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                         return;
                     }
                     case Cancel -> districtMatchData = DistrictMatch.of(district);
-                    case OK -> districtMatchData = DistrictMatch.of(
-                            district, dialog.getSelectedName(), dialog.getSelectedUrl()
-                    );
+                    case OK -> {
+                        district.setName(dialog.getSelectedName());
+                        district.setWebsiteURL(dialog.getSelectedUrl());
+                        districtMatchData = DistrictMatch.of(district);
+                    }
                     default -> throw new IllegalArgumentException(
                             "Unreachable: unexpected selection " + selection + " from district update dialog."
                     );
@@ -532,9 +536,13 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                 MessageDialog.showMessageDialog(
                         Main.GUI.getWindowGUI(),
                         "Error: Unresolved Attributes",
-                        "The following attributes have Preference \"NONE\":\n" + Utils.listAttributes(unresolved) +
-                                "\n\nYou must first resolve those attributes before selecting a match with this " +
-                                "school.",
+                        GUIUtils.wrapLabelText(
+                                """
+                                        The following attributes have Preference "NONE": %s
+
+                                        You must resolve those attributes before selecting a match with this school.""",
+                                Utils.listAttributes(unresolved)
+                        ),
                         MessageDialogButton.OK
                 );
             }

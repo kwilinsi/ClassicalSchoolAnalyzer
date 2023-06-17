@@ -22,7 +22,7 @@ public class MyBaseWindow extends BasicWindow {
      *
      * @param key The keyboard input to handle.
      *
-     * @return <code>true</code> if the input was handled; <code>false</code> otherwise.
+     * @return <code>True</code> if and only if the input was handled.
      */
     @Override
     public boolean handleInput(KeyStroke key) {

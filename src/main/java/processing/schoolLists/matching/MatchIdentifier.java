@@ -2,10 +2,12 @@ package processing.schoolLists.matching;
 
 import constructs.correction.CorrectionManager;
 import constructs.correction.DistrictMatchCorrection;
+import constructs.district.CachedDistrict;
 import constructs.district.District;
 import constructs.organization.Organization;
 import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
+import constructs.school.CachedSchool;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
 import gui.windows.prompt.schoolMatch.SchoolMatchDisplay;
@@ -22,8 +24,8 @@ import utils.Config;
 import utils.URLUtils;
 import utils.Utils;
 
-import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * The methods contained in this class are used to determine whether a given {@link School}, just obtained from some
@@ -34,15 +36,17 @@ public class MatchIdentifier {
     private static final Logger logger = LoggerFactory.getLogger(MatchIdentifier.class);
 
     /**
-     * Compare some incoming {@link CreatedSchool} with every school already in the database, looking for matches.
+     * Compare some incoming {@link CreatedSchool} with every {@link CachedSchool} already in the database, looking
+     * for matches.
      * <h2>Process</h2>
      * Broadly speaking, this function (using its helper functions in this class) performs the following steps:
      * <ol>
-     *     <li>Search the database (using the <code>schoolsCache</code>) for any schools that might match this one.
+     *     <li>Search the database (using the <code>schoolCache</code>) for any schools that might match this one.
      *     <li>While searching, if any high-probability matches are found, where every attribute comparison between
      *     the schools is automatically {@link AttributeComparison#isResolvable() resolvable}, immediately exit,
-     *     identifying that school as a match.
-     *     <li>Otherwise, identify a list of districts from all of the partially matching schools.
+     *     identifying that school as a match. If no matches are found at all, exit.
+     *     <li>Otherwise, identify a list of districts from <code>districtCache</code> to which those partially
+     *     matching school belong.
      *     <li>Process each district further, likely asking the user to resolve issues manually. If the incoming
      *     school is found to match any of those districts, return the comparison instance for the school from that
      *     district.
@@ -50,15 +54,20 @@ public class MatchIdentifier {
      * </ol>
      *
      * @param incomingSchool The {@link CreatedSchool} to match.
-     * @param schoolsCache   A list of all the schools already in the database.
+     * @param schoolCache    A list of all the schools already in the database.
      * @return A {@link MatchData} instance indicating the result of the match and any necessary data.
      */
     @NotNull
     public static MatchData compare(@NotNull CreatedSchool incomingSchool,
-                                    @NotNull List<School> schoolsCache) {
+                                    @NotNull List<CachedSchool> schoolCache,
+                                    @NotNull List<CachedDistrict> districtCache) {
+        // ------------------------------
+        // Find Matches
+        // ------------------------------
+
         // Create a SchoolComparison instance for every cached school. Compare the matchIndicatorAttributes for each.
         List<SchoolComparison> allComparisons = new ArrayList<>();
-        for (School existingSchool : schoolsCache)
+        for (CachedSchool existingSchool : schoolCache)
             allComparisons.add(SchoolComparison.of(incomingSchool, existingSchool));
 
         // Compare the matchIndicatorAttributes attributes for every school
@@ -83,15 +92,33 @@ public class MatchIdentifier {
                 .toList();
         bulkCompare(otherAttributes, incomingSchool, matches);
 
-        // Sort the matches to prefer those requiring less user input. If any require NONE, use them
-        matches.sort(Comparator.comparingInt(SchoolComparison::getResolvableAttributes).reversed());
-        if (matches.get(0).areAllResolvable())
-            return matches.get(0)
-                    .logMatchInfo("MATCHED")
-                    .setLevel(MatchData.Level.SCHOOL_MATCH);
+        // If any matches don't require user input at all, use them
+        for (SchoolComparison match : matches)
+            if (match.areAllResolvable())
+                return match.logMatchInfo("MATCHED").setLevel(MatchData.Level.SCHOOL_MATCH);
+
+        // ------------------------------
+        // Associate Districts
+        // ------------------------------
 
         // Get the districts associated with the identified matches
-        LinkedHashMap<District, List<SchoolComparison>> districtMatches = extractDistricts(matches, allComparisons);
+        Map<CachedDistrict, List<SchoolComparison>> districtMatches =
+                associateDistricts(matches, allComparisons, districtCache);
+
+        // Add the districts to the school comparisons
+        for (CachedDistrict district : districtMatches.keySet())
+            for (SchoolComparison comparison : districtMatches.get(district))
+                comparison.setDistrict(district);
+
+        // Sort the schools associated with each district to prefer those requiring less user input
+        for (List<SchoolComparison> comparisons : districtMatches.values())
+            comparisons.sort(Comparator.comparingInt(SchoolComparison::getResolvableAttributes).reversed());
+
+        // Sort the districts to prefer those whose best-matching school requires less user input
+        districtMatches = districtMatches.entrySet().stream()
+                .sorted(Map.Entry.<CachedDistrict, List<SchoolComparison>>comparingByValue(
+                        Comparator.comparingInt(l -> l.get(0).getResolvableAttributes())).reversed())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
 
         logger.info("- Incoming school {} found {} school matches from {} districts",
                 incomingSchool, matches.size(), districtMatches.size()
@@ -104,8 +131,12 @@ public class MatchIdentifier {
                 .toList()
         );
 
+        // ------------------------------
+        // Process each district
+        // ------------------------------
+
         // Process each of the districts in turn
-        for (District district : districtMatches.keySet()) {
+        for (CachedDistrict district : districtMatches.keySet()) {
             MatchData result = processDistrictMatch(incomingSchool, district, districtMatches.get(district));
             if (result != null) return result;
         }
@@ -131,7 +162,7 @@ public class MatchIdentifier {
                                     CreatedSchool incomingSchool,
                                     List<SchoolComparison> comparisons) {
         // Extract the existing schools from the school comparisons
-        List<School> schools = comparisons.stream().map(SchoolComparison::getExistingSchool).toList();
+        List<CachedSchool> schools = comparisons.stream().map(SchoolComparison::getExistingSchool).toList();
 
         // Process each attribute in turn
         for (Attribute attribute : attributes) {
@@ -144,51 +175,59 @@ public class MatchIdentifier {
     }
 
     /**
-     * Extract a list of {@link District Districts} from the {@link SchoolComparison#getExistingSchool() existing}
-     * schools in a list of {@link SchoolComparison SchoolComparisons}. Pair each of these districts
-     * with a list of school match objects for each of its member schools.
+     * Associate a list of {@link CachedDistrict CachedDistricts} with a list of probable {@link SchoolComparison
+     * SchoolComparisons}. Pair each of these districts with a list of school match objects for each of its member
+     * schools.
      * <p>
      * Importantly, the list of schools associated with each district comes directly from the
      * <code>allComparisons</code> list, meaning that <code>allComparisons.contains()</code> will be
      * <code>true</code> for every {@link SchoolComparison} returned by this function.
      *
-     * @param matches        A list of comparison instances for schools that matched the incoming school. This should
-     *                       be in descending order {@link SchoolComparison#getResolvableAttributes() resolvable
-     *                       attributes}.
+     * @param matches        A list of comparison instances for schools that matched the incoming school.
      * @param allComparisons A list of all comparisons, one for every school in the database cache.
-     * @return A list of {@link District Districts} and the {@link SchoolComparison SchoolComparisons} for their
-     * member schools.
+     * @param districtCache  The cache of all districts in the database.
+     * @return A map of {@link CachedDistrict CachedDistricts} and the {@link SchoolComparison SchoolComparisons}
+     * for their member schools. It's guaranteed that every district will be paired with at least one school comparison.
      */
     @NotNull
-    private static LinkedHashMap<District, List<SchoolComparison>> extractDistricts(
-            @NotNull List<SchoolComparison> matches, @NotNull List<SchoolComparison> allComparisons) {
-        List<District> districts = new ArrayList<>();
+    private static Map<CachedDistrict, List<SchoolComparison>> associateDistricts(
+            @NotNull List<SchoolComparison> matches,
+            @NotNull List<SchoolComparison> allComparisons,
+            @NotNull List<CachedDistrict> districtCache) {
+        Map<Integer, Set<SchoolComparison>> idMap = new HashMap<>();
 
-        for (SchoolComparison match : matches)
-            try {
-                District d = match.getExistingSchool().getDistrict();
-                if (!districts.contains(d)) districts.add(d);
-            } catch (SQLException e) {
-                logger.error("Error retrieving district for school " + match.getExistingSchool().name() + ".", e);
-            }
-
-        LinkedHashMap<District, List<SchoolComparison>> districtSchools = new LinkedHashMap<>();
-
-        for (District district : districts) {
-            List<SchoolComparison> comparisons = new ArrayList<>();
-            for (SchoolComparison c : allComparisons)
-                if (district.getId() == c.getExistingSchool().getDistrictId())
-                    comparisons.add(c);
-            districtSchools.put(district, comparisons);
+        // Add all districts by the id
+        for (SchoolComparison match : matches) {
+            int id = match.getExistingSchool().getDistrictId();
+            if (idMap.containsKey(id))
+                idMap.get(id).add(match);
+            else
+                idMap.put(id, new HashSet<>(List.of(match)));
         }
 
-        return districtSchools;
+        // Add any other comparisons from these districts. Duplicates are omitted, as it uses an underlying Set
+        for (SchoolComparison comparison : allComparisons)
+            if (idMap.containsKey(comparison.getExistingSchool().getDistrictId()))
+                idMap.get(comparison.getExistingSchool().getDistrictId()).add(comparison);
+
+        // Convert the map to a map of CachedDistricts and Lists
+        Map<CachedDistrict, List<SchoolComparison>> districtMap = new HashMap<>();
+
+        for (int id : idMap.keySet()) {
+            for (CachedDistrict district : districtCache)
+                if (id == district.getId()) {
+                    districtMap.put(district, new ArrayList<>(idMap.get(id)));
+                    break;
+                }
+        }
+
+        return districtMap;
     }
 
     /**
      * Attempt to resolve a likely match between some incoming school and an existing district. First, a series of
      * automated techniques are employed. If these are unable to resolve the match, the user is
-     * {@link #promptUserMatchResolution(CreatedSchool, District, List) prompted} to resolve it manually.
+     * {@link #promptUserMatchResolution(CreatedSchool, CachedDistrict, List) prompted} to resolve it manually.
      * <p>
      * <h2>Process</h2>
      * <ol>
@@ -225,19 +264,22 @@ public class MatchIdentifier {
      */
     @Nullable
     private static MatchData processDistrictMatch(@NotNull CreatedSchool incomingSchool,
-                                                  @NotNull District district,
+                                                  @NotNull CachedDistrict district,
                                                   @NotNull List<SchoolComparison> districtSchools) {
         // STEP 1
         // Check for any applicable Corrections
         for (DistrictMatchCorrection correction : CorrectionManager.getDistrictMatch())
-            if (correction.match(incomingSchool, district))
-                return DistrictMatch.of(district, correction.getName(district), correction.getUrl(district));
+            if (correction.match(incomingSchool, district)) {
+                district.setName(correction.getName(district));
+                district.setWebsiteURL(correction.getUrl(district));
+                return DistrictMatch.of(district);
+            }
 
         // STEP 2
         // For GHI schools, check whether this is a district match
         if (incomingSchool.getOrganization().getId() == OrganizationManager.GHI.getId()) {
             for (SchoolComparison comparison : districtSchools) {
-                School existingSchool = comparison.getExistingSchool();
+                CachedSchool existingSchool = comparison.getExistingSchool();
                 // First, make sure some other attributes are as expected
                 if (comparison.matchesAt(Attribute.grades_offered, Level.INDICATOR) ||
                         comparison.matchesAt(Attribute.name, Level.EXACT))
@@ -275,7 +317,9 @@ public class MatchIdentifier {
                 logger.info("- District match for {} and GHI school {}; using name district {}",
                         existingSchool, incomingSchool, name);
 
-                return DistrictMatch.of(district, Utils.titleCase(name + " - Great Hearts"), url);
+                district.setName(Utils.titleCase(name + " - Great Hearts"));
+                district.setWebsiteURL(url);
+                return DistrictMatch.of(district);
             }
         }
 
@@ -304,7 +348,7 @@ public class MatchIdentifier {
      * </ul>
      */
     private static MatchData promptUserMatchResolution(@NotNull CreatedSchool incomingSchool,
-                                                       @NotNull District district,
+                                                       @NotNull CachedDistrict district,
                                                        @NotNull List<SchoolComparison> districtSchools) {
         SchoolMatchDisplay prompt = SchoolMatchDisplay.of(incomingSchool, district, districtSchools);
 
@@ -314,66 +358,6 @@ public class MatchIdentifier {
             case DISTRICT_MATCH -> prompt.getDistrictMatchData();
             case SCHOOL_MATCH -> prompt.getSelectedComparison();
         };
-    }
-
-    /**
-     * Given an incoming school and the match data returned by {@link #compare(CreatedSchool, List) compare()}, set
-     * the {@link School#setDistrictId(int) district id} for the incoming school.
-     * <p>
-     * The functionality of this method is determined by the given match data's {@link MatchData.Level Level}:
-     * <ul>
-     *     <li>{@link MatchData.Level#SCHOOL_MATCH SCHOOL_MATCH} — The match data is interpreted as a
-     *     {@link SchoolComparison} and the district id is copied from the
-     *     {@link SchoolComparison#getExistingSchool() existing} school.
-     *     <li>{@link MatchData.Level#DISTRICT_MATCH DISTRICT_MATCH} — The match data is interpreted as a
-     *     {@link DistrictMatch} and the district id is copied from its {@link DistrictMatch#getDistrict() district}.
-     *     <li>{@link MatchData.Level#NO_MATCH NO_MATCH} — A new district is created with the same
-     *     {@link Attribute#name name} and {@link Attribute#website_url url} as the school, and its id is used.
-     *     <li>{@link MatchData.Level#OMIT OMIT} — An exception is thrown.
-     * </ul>
-     * If the {@link MatchData} type is unexpected given the match level, an exception is thrown.
-     *
-     * @param incomingSchool The incoming school whose district id is set.
-     * @param matchData      The match data that contains the necessary information for getting the district id.
-     * @throws IllegalArgumentException If the match data is {@link MatchData.Level#OMIT OMIT} or otherwise
-     *                                  unexpected given the match level.
-     */
-    public static void setDistrictId(@NotNull CreatedSchool incomingSchool,
-                                     @NotNull MatchData matchData) throws IllegalArgumentException {
-        switch (matchData.getLevel()) {
-            case SCHOOL_MATCH -> {
-                if (matchData instanceof SchoolComparison sc) {
-                    incomingSchool.setDistrictId(sc.getExistingSchool().getDistrictId());
-                    return;
-                }
-            }
-
-            case DISTRICT_MATCH -> {
-                if (matchData instanceof DistrictMatch dm) {
-                    incomingSchool.setDistrictId(dm.getDistrict().getId());
-                    return;
-                }
-            }
-
-            case NO_MATCH -> {
-                District district = new District(incomingSchool.name(), incomingSchool.getStr(Attribute.website_url));
-                try {
-                    district.saveToDatabase();
-                    incomingSchool.setDistrictId(district.getId());
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-                return;
-            }
-
-            case OMIT -> throw new IllegalArgumentException(
-                    "Unexpected match level " + matchData.getLevel() + " while setting district id"
-            );
-        }
-
-        throw new IllegalArgumentException(String.format(
-                "Unexpected match data %s for level %s", matchData.getClass(), matchData.getLevel()
-        ));
     }
 
     /**

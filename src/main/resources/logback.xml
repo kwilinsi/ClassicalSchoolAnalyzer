@@ -20,7 +20,7 @@
             <onMatch>DENY</onMatch>
         </filter>
         <encoder>
-            <pattern>%d{mm:ss} %boldCyan(%-14.-14thread) %boldGreen(%-12.-12logger{0}) %highlight(%-5level) %msg%n</pattern>
+            <pattern>%d{mm:ss} %boldCyan(%-10.-10thread) %boldGreen(%-12.-12logger{0}) %highlight(%-5level) %msg%n</pattern>
         </encoder>
     </appender>
 

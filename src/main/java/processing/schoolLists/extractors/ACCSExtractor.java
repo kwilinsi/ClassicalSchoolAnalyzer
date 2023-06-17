@@ -2,10 +2,12 @@ package processing.schoolLists.extractors;
 
 import constructs.organization.OrganizationManager;
 import constructs.school.CreatedSchool;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
@@ -25,23 +27,20 @@ import java.util.stream.Collectors;
 public class ACCSExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(ACCSExtractor.class);
 
-    /**
-     * Extract schools from the {@link OrganizationManager#ACCS Association of Classical Christian Schools}
-     * website.
-     *
-     * @param document The HTML document from which to extract the list.
-     *
-     * @return A list of created schools.
-     */
+    @Override
+    public String abbreviation() {
+        return OrganizationManager.ACCS.getNameAbbr();
+    }
+
     @Override
     @NotNull
-    public List<CreatedSchool> extract(@NotNull Document document) {
+    public List<CreatedSchool> extract(@NotNull Document document, @Nullable SchoolListProgressWindow progress) {
         List<CreatedSchool> list = new ArrayList<>();
         logHeader();
 
         int choice = Main.GUI.showPrompt(SelectionPrompt.of(
-                "ACCS - Cache",
-                "Select a mode for loading ACCS school pages:",
+                abbreviation() + " - Cache",
+                "Select a mode for loading " + abbreviation() + " school pages:",
                 Option.of("Use Cache", 1),
                 Option.of("Force New Download", 2),
                 Option.of("Test a sample (incl. cache)", 3)
@@ -59,9 +58,11 @@ public class ACCSExtractor implements Extractor {
                 linkElements.remove(0);
         }
 
+        logPossibleCount(linkElements.size(), progress);
+
         // Create a parser Callable for each school link
         List<ACCSSchoolParser> parsers = linkElements.stream()
-                .map(e -> new ACCSSchoolParser(e.attr("href"), useCache))
+                .map(e -> new ACCSSchoolParser(this, useCache, progress, e.attr("href")))
                 .collect(Collectors.toList());
 
         // Iterate through each school, going to its "more info" page and scraping the information there.
@@ -71,25 +72,31 @@ public class ACCSExtractor implements Extractor {
         try {
             futures = threadPool.invokeAll(parsers);
         } catch (InterruptedException e) {
-            logger.error("Interrupted while waiting for thread pool to process ACCS schools.", e);
+            logger.error("Interrupted while waiting for thread pool to process " + abbreviation() + " schools.", e);
         }
+
+        if (progress != null)
+            progress.setSubTask("Extracting futures...");
 
         // Add the resulting Schools to the list
         if (futures != null)
             for (int i = 0; i < futures.size(); i++) {
                 Future<CreatedSchool> future = futures.get(i);
+
                 try {
-                    list.add(future.get());
+                    CreatedSchool school = future.get();
+                    list.add(school);
+                    incrementProgressBar(progress, school);
                 } catch (InterruptedException | ExecutionException e) {
                     // Any thread that encountered an error will log this to the console and be omitted from the
                     // final returned list.
-                    logger.warn("An ACCS parsing thread encountered an error during execution: " +
-                                parsers.get(i).get_accs_page_url(), e);
+                    logger.warn("An " + abbreviation() + " parsing thread encountered an error during execution: " +
+                            parsers.get(i).get_accs_page_url(), e);
                 }
             }
 
-        // Return the final assembled list of ACCS schools.
-        logger.info("Extracted " + list.size() + " ACCS schools.");
+        // Return the final assembled list of schools.
+        logParsedCount(list.size(), progress);
         return list;
     }
 }

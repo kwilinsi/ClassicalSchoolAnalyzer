@@ -3,12 +3,13 @@ package processing.schoolLists.extractors.helpers;
 import constructs.school.CreatedSchool;
 import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
+import processing.schoolLists.extractors.Extractor;
 import utils.JsoupHandler;
 import utils.JsoupHandler.DownloadConfig;
-
-import java.util.concurrent.Callable;
 
 /**
  * The {@link OrganizationManager#ICLE ICLE}, in similar fashion to the {@link OrganizationManager#ACCS ACCS}, has a
@@ -18,7 +19,7 @@ import java.util.concurrent.Callable;
  * {@link #pageUrl url} to the page for that school. It then downloads the page and parses it for the school's
  * information.
  */
-public class ICLESchoolParser implements Callable<CreatedSchool> {
+public class ICLESchoolParser extends Helper<CreatedSchool> {
     /**
      * This is the ICLE {@link CreatedSchool} assigned to this {@link ICLESchoolParser}.
      * <p>
@@ -36,22 +37,22 @@ public class ICLESchoolParser implements Callable<CreatedSchool> {
     private final String pageUrl;
 
     /**
-     * This controls whether {@link DownloadConfig#CACHE_ONLY caching} should be employed when downloading the ICLE
-     * page.
-     */
-    private final boolean useCache;
-
-    /**
-     * Initialize a new parser instance by assigning it to a {@link CreatedSchool}.
+     * Initialize a helper.
      *
+     * @param parent   See {@link #parent}.
+     * @param useCache See {@link #useCache}.
+     * @param progress See {@link #progress}.
      * @param school   The {@link #school}.
      * @param pageUrl  The {@link #pageUrl}.
-     * @param useCache See {@link #useCache}.
      */
-    public ICLESchoolParser(@NotNull CreatedSchool school, @NotNull String pageUrl, boolean useCache) {
+    public ICLESchoolParser(@NotNull Extractor parent,
+                            boolean useCache,
+                            @Nullable SchoolListProgressWindow progress,
+                            @NotNull CreatedSchool school,
+                            @NotNull String pageUrl) {
+        super(parent, useCache, progress);
         this.school = school;
         this.pageUrl = pageUrl;
-        this.useCache = useCache;
     }
 
     /**

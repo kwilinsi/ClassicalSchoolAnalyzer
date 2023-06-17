@@ -1,8 +1,9 @@
 package processing.schoolLists.matching.data;
 
+import constructs.district.CachedDistrict;
 import constructs.school.Attribute;
+import constructs.school.CachedSchool;
 import constructs.school.CreatedSchool;
-import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -23,8 +24,10 @@ import java.util.stream.Collectors;
  * with each other, as well as which attribute should be preferred in cases where they conflict.
  * <p>
  * One of these instances is automatically created for every existing school every time a new school is being
- * added to the database. This is done by {@link MatchIdentifier#compare(CreatedSchool, List)}. That method
- * will return just <i>one</i> instance of this class, or it will return <code>null</code> if there is no match.
+ * added to the database. This is done by {@link MatchIdentifier#compare(CreatedSchool, List, List)
+ * MatchIdentifier.compare()}. If that method determines that the incoming and existing schools are a
+ * {@link MatchData.Level#SCHOOL_MATCH SCHOOL_MATCH}, it returns an instance of this class. Otherwise, it returns
+ * some other {@link MatchData}.
  */
 public class SchoolComparison extends MatchData {
     private static final Logger logger = LoggerFactory.getLogger(SchoolComparison.class);
@@ -40,7 +43,16 @@ public class SchoolComparison extends MatchData {
      * The existing school from the database that is being matched against the {@link #incomingSchool}.
      */
     @NotNull
-    private final School existingSchool;
+    private final CachedSchool existingSchool;
+
+    /**
+     * The district to which the {@link #existingSchool} belongs. This must be {@link #setDistrict(CachedDistrict) set}
+     * as soon as the {@link CachedDistrict} instance is determined for the existing school. Once set, it is not
+     * <code>null</code>. This is {@link #getDistrict() used} for adding a DistrictOrganization relation for a
+     * {@link MatchData.Level#SCHOOL_MATCH SCHOOL_MATCH}.
+     */
+    @Nullable
+    private CachedDistrict district;
 
     /**
      * This map pairs every {@link Attribute Attributes} with the corresponding {@link AttributeComparison} data for
@@ -57,7 +69,7 @@ public class SchoolComparison extends MatchData {
      */
     private int resolvableAttributes = 0;
 
-    private SchoolComparison(@NotNull CreatedSchool incomingSchool, @NotNull School existingSchool) {
+    private SchoolComparison(@NotNull CreatedSchool incomingSchool, @NotNull CachedSchool existingSchool) {
         super(Level.NO_MATCH);
         this.incomingSchool = incomingSchool;
         this.existingSchool = existingSchool;
@@ -70,7 +82,7 @@ public class SchoolComparison extends MatchData {
      * @param incomingSchool The {@link #incomingSchool}.
      * @param existingSchool The {@link #existingSchool}.
      */
-    public static SchoolComparison of(@NotNull CreatedSchool incomingSchool, @NotNull School existingSchool) {
+    public static SchoolComparison of(@NotNull CreatedSchool incomingSchool, @NotNull CachedSchool existingSchool) {
         return new SchoolComparison(incomingSchool, existingSchool);
     }
 
@@ -91,8 +103,17 @@ public class SchoolComparison extends MatchData {
     }
 
     @NotNull
-    public School getExistingSchool() {
+    public CachedSchool getExistingSchool() {
         return existingSchool;
+    }
+
+    @Nullable
+    public CachedDistrict getDistrict() {
+        return district;
+    }
+
+    public void setDistrict(@NotNull CachedDistrict district) {
+        this.district = district;
     }
 
     public int getResolvableAttributes() {
@@ -340,9 +361,9 @@ public class SchoolComparison extends MatchData {
      * For each of the {@link #getAttributesToUpdate() attributes to update}, change the values in the
      * {@link #existingSchool existing} school to the new values.
      * <p>
-     * The actual {@link School} object should be the same Java object in memory that's in the list of cached schools.
-     * Thus, updating the existing school here will allow the cached list to accurately reflect the database without
-     * the need for SQL queries or separately replacing the object in the cache.
+     * The actual {@link CachedSchool} object should be the same Java object in memory that's in the list of cached
+     * schools. Thus, updating the existing school here will allow the cached list to accurately reflect the database
+     * without the need for SQL queries or separately replacing the object in the cache.
      *
      * @throws IllegalArgumentException This should be unreachable, but it's thrown if an attribute comparison
      *                                  doesn't exist for any of the attributes to update (which doesn't make sense,

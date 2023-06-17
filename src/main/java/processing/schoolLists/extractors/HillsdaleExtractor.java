@@ -3,8 +3,9 @@ package processing.schoolLists.extractors;
 import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
-import constructs.school.SchoolManager;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -19,28 +20,26 @@ import java.util.List;
 public class HillsdaleExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(HillsdaleExtractor.class);
 
-    /**
-     * Extract schools from the {@link OrganizationManager#HILLSDALE Hillsdale K-12 Education} website.
-     *
-     * @param document The HTML document from which to extract the list.
-     *
-     * @return An array of created schools.
-     */
+    @Override
+    public String abbreviation() {
+        return OrganizationManager.HILLSDALE.getNameAbbr();
+    }
+
     @Override
     @NotNull
-    public List<CreatedSchool> extract(@NotNull Document document) {
+    public List<CreatedSchool> extract(@NotNull Document document, @Nullable SchoolListProgressWindow progress) {
         List<CreatedSchool> list = new ArrayList<>();
         logHeader();
 
         // Get all the script tags, each of which contains a school
         Elements scriptTags = document.select("h2.page-title ~ script + script[type]");
 
-        logger.info("Identified " + scriptTags.size() + " possible Hillsdale schools.");
+        logPossibleCount(scriptTags.size(), progress);
 
         // Iterate through each script tag, extracting the attributes for each school
         for (Element scriptTag : scriptTags) {
             // Make a new school instance
-            CreatedSchool school = SchoolManager.newHillsdale();
+            CreatedSchool school = new CreatedSchool(OrganizationManager.HILLSDALE);
             String text = scriptTag.outerHtml();
 
             String level = HillsdaleParse.match(text, HillsdaleParse.Regex.HILLSDALE_AFFILIATION_LEVEL);
@@ -62,9 +61,12 @@ public class HillsdaleExtractor implements Extractor {
             school.put(Attribute.projected_opening,
                     HillsdaleParse.matchInt(text, HillsdaleParse.Regex.PROJECTED_OPENING));
 
+            // Add the completed school, and log it
+            incrementProgressBar(progress, school);
             list.add(school);
         }
 
+        logParsedCount(list.size(), progress);
         return list;
     }
 }

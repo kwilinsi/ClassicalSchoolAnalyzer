@@ -42,7 +42,6 @@ public class Option<T> {
      *
      * @param name  The {@link #getName() name}.
      * @param value The {@link #value value}.
-     *
      * @return The new option.
      * @see #of(String, T, String)
      */
@@ -56,7 +55,6 @@ public class Option<T> {
      * @param name                The {@link #getName() name}.
      * @param value               The {@link #value value}.
      * @param confirmationMessage The {@link #confirmationMessage}.
-     *
      * @return The new option.
      * @see #of(String, T)
      */
@@ -82,6 +80,16 @@ public class Option<T> {
     @NotNull
     public String getName() {
         return name;
+    }
+
+    /**
+     * Get the name.
+     *
+     * @return The {@link #getName() name}.
+     */
+    @Override
+    public String toString() {
+        return getName();
     }
 
     /**

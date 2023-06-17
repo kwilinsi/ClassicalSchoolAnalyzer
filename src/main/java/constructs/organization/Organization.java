@@ -1,8 +1,10 @@
 package constructs.organization;
 
-import constructs.BaseConstruct;
+import constructs.Construct;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
+import org.jetbrains.annotations.Nullable;
 import processing.schoolLists.extractors.Extractor;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
@@ -15,6 +17,8 @@ import utils.JsoupHandler;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -26,12 +30,11 @@ import java.util.stream.Stream;
  * Currently, there are 6 distinct organizations. Adding new organizations requires writing a custom function for
  * parsing those organizations' school lists.
  */
-public class Organization extends BaseConstruct {
+public class Organization implements Construct {
     private static final Logger logger = LoggerFactory.getLogger(Organization.class);
 
     /**
-     * This is the organization's unique id as it appears in the SQL database. This is used as a primary and foreign key
-     * in SQL.
+     * The unique id of this organization in the SQL database.
      */
     private final int id;
 
@@ -69,7 +72,7 @@ public class Organization extends BaseConstruct {
     /**
      * These attributes, if they match between two schools, indicate a high probability that the schools are either the
      * same school or part of the same district. When
-     * {@link MatchIdentifier#compare(CreatedSchool, List) checking} for an existing school in the database that
+     * {@link MatchIdentifier#compare(CreatedSchool, List, List) checking} for an existing school in the database that
      * matches this one, these attributes are used.
      * <p>
      * Typically, two schools should not share the same value for any of these attributes unless they are part of the
@@ -130,13 +133,19 @@ public class Organization extends BaseConstruct {
         this.schoolListExtractor = schoolListExtractor;
     }
 
-    /**
-     * Get the id of this organization.
-     *
-     * @return The {@link #id}.
-     */
+    @Override
     public int getId() {
         return id;
+    }
+
+    /**
+     * Setting the id is not supported on {@link Organization Organizations}. This throws an exception.
+     *
+     * @param id The id.
+     */
+    @Override
+    public void setId(int id) {
+        throw new UnsupportedOperationException("setId() is not supported on organizations.");
     }
 
     /**
@@ -202,15 +211,19 @@ public class Organization extends BaseConstruct {
      * {@link Document}. If the page has already been downloaded and there is an available cache, that cache will be
      * returned instead.
      *
+     * @param progress An optional progress window. If this is given, it is updated accordingly.
      * @param useCache If this is true, the {@link JsoupHandler.DownloadConfig} configuration instance will have
      *                 useCache enabled.
-     *
      * @return The contents of the school list page as a {@link Document}.
      * @throws IOException If there is an error loading the page.
      */
     @NotNull
-    public Document loadSchoolListPage(boolean useCache) throws IOException {
-        logger.debug("Attempting to load school list page for " + this.name_abbr + ".");
+    public Document loadSchoolListPage(boolean useCache,
+                                       @Nullable SchoolListProgressWindow progress) throws IOException {
+        logger.debug("Attempting to load school list page for {}.", name_abbr);
+        if (progress != null)
+            progress.setGeneralTask("Downloading " + name_abbr + " schools...")
+                    .setSubTask("Downloading school list...");
 
         // Select a config based on whether caching is enabled
         JsoupHandler.DownloadConfig config = JsoupHandler.DownloadConfig.of(useCache, true);
@@ -228,27 +241,52 @@ public class Organization extends BaseConstruct {
      *
      * @param useCache If this is true, a cached version of the school list page will be used, if available. If there is
      *                 no cache, or if this is False, the page will be downloaded through JSoup.
-     *
+     * @param progress An optional progress window. If this is given, it is updated accordingly.
      * @return An array of created schools from this organization's school list page.
-     * @throws IOException If there is an error {@link #loadSchoolListPage(boolean) retrieving} the page
-     *                     {@link Document}.
+     * @throws IOException If there is an error {@link #loadSchoolListPage(boolean, SchoolListProgressWindow)
+     *                     retrieving} the page {@link Document}.
      */
     @NotNull
-    public List<CreatedSchool> retrieveSchools(boolean useCache) throws IOException {
-        logger.info("Retrieving school list for " + this.name_abbr + (useCache ? " using cache." : "."));
-        return schoolListExtractor.extract(loadSchoolListPage(useCache));
+    public List<CreatedSchool> retrieveSchools(boolean useCache,
+                                               @Nullable SchoolListProgressWindow progress) throws IOException {
+        logger.info("Retrieving school list for {}{}.", this.name_abbr, useCache ? " using cache" : "");
+        return schoolListExtractor.extract(loadSchoolListPage(useCache, progress), progress);
     }
 
     /**
      * Get the path to a file within the data directory, placed in the subdirectory for this {@link Organization}.
      *
      * @param file The name of the file.
-     *
      * @return A complete path to that file.
      * @throws NullPointerException If the data directory cannot be retrieved from the program configuration.
      */
     @Override
-    public Path getFilePath(String file) throws NullPointerException {
-        return super.getFilePath(name_abbr).resolve(file);
+    @NotNull
+    public Path getFilePath(@NotNull String file) throws NullPointerException {
+        return Construct.super.getFilePath(name_abbr).resolve(file);
+    }
+
+    @Override
+    public void addToInsertStatement(@NotNull PreparedStatement statement) throws SQLException {
+        statement.setInt(1, getId());
+        statement.setString(2, getName());
+        statement.setString(3, getNameAbbr());
+        statement.setString(4, getHomepageUrl());
+        statement.setString(5, getSchoolListUrl());
+        statement.addBatch();
+    }
+
+    /**
+     * Get a user-readable string for this Organization. This includes the {@link #name} followed by the
+     * {@link #name_abbr} in  parentheses. For example:
+     * <p>
+     * <code>"Foo Bar Organization (FBO)"</code>
+     *
+     * @return A string representation of this Organization.
+     */
+    @Override
+    @NotNull
+    public String toString() {
+        return name + " (" + name_abbr + ")";
     }
 }

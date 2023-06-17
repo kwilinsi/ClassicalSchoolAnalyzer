@@ -3,13 +3,13 @@ package processing.schoolLists.extractors;
 import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import processing.schoolLists.extractors.helpers.ExtUtils;
@@ -20,42 +20,33 @@ import java.util.List;
 public class OCSAExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(OCSAExtractor.class);
 
-    /**
-     * Extract schools from the {@link OrganizationManager#OCSA Orthodox Christian School Association}
-     * website.
-     *
-     * @param document The HTML document from which to extract the list.
-     *
-     * @return An array of created schools.
-     */
     @Override
-    public @NotNull List<CreatedSchool> extract(@NotNull Document document) {
-        List<CreatedSchool> list = new ArrayList<>();
-        logHeader();
+    public String abbreviation() {
+        return OrganizationManager.OCSA.getNameAbbr();
+    }
 
-        // Get the p tags that correspond to each school
-        Elements elements = document.select("div.et_pb_tab > div.et_pb_tab_content > p");
-
-        // Create a school from each div
-        for (Element element : elements) {
-            // If the element has basically no contents, skip it
-            if (element.text().length() < 10) continue;
-
-            list.add(extractSingleSchool(element));
-        }
-
-        return list;
+    @Override
+    @NotNull
+    public List<CreatedSchool> extract(@NotNull Document document, @Nullable SchoolListProgressWindow progress) {
+        // Run the basic extraction process: applying a single function to a set of HTML elements
+        return Extractor.processElements(this,
+                document.select("div.et_pb_tab > div.et_pb_tab_content > p"),
+                this::extractSingleSchool,
+                progress
+        );
     }
 
     /**
      * Extract a single {@link CreatedSchool} from an HTML {@link Element} containing the school info.
      *
      * @param el The HTML element.
-     *
-     * @return The created school.
+     * @return The created school, or <code>null</code> if the element is basically empty (less than 10 characters).
      */
-    @NotNull
+    @Nullable
     private CreatedSchool extractSingleSchool(@NotNull Element el) {
+        // If the element has basically no contents, skip it
+        if (el.text().length() < 10) return null;
+
         CreatedSchool school = new CreatedSchool(OrganizationManager.OCSA);
 
         // Get the school name
@@ -97,7 +88,6 @@ public class OCSAExtractor implements Extractor {
      * This removes that question mark. It also passes the input through {@link ExtUtils#aliasNull(String)}.
      *
      * @param address The input address to format.
-     *
      * @return The formatted address.
      */
     @Nullable

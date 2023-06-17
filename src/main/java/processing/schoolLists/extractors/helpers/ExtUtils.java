@@ -3,6 +3,7 @@ package processing.schoolLists.extractors.helpers;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import constructs.school.School;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
@@ -12,6 +13,11 @@ import utils.Utils;
 
 import java.time.LocalDate;
 
+/**
+ * This is a collection of <code>static</code> utility functions for
+ * {@link processing.schoolLists.extractors.Extractor#extract(Document, SchoolListProgressWindow) extracting} schools
+ * from Organization school lists.
+ */
 public class ExtUtils {
     /**
      * This is a list of strings that are mapped to <code>null</code> by {@link #aliasNull(String)}.
@@ -30,7 +36,6 @@ public class ExtUtils {
      * (case-insensitive), <code>null</code> is returned. Otherwise, the trimmed input string is returned.
      *
      * @param input The input.
-     *
      * @return The trimmed input, or possibly <code>null</code>.
      */
     @Nullable
@@ -49,7 +54,6 @@ public class ExtUtils {
      * {@link #NULL_LINKS} (case-insensitive). If it matches any of them, <code>null</code> is returned.
      *
      * @param input The input.
-     *
      * @return The original string, or possibly <code>null</code>.
      */
     @Nullable
@@ -69,9 +73,8 @@ public class ExtUtils {
      * table.
      *
      * @param name The input name.
-     *
      * @return The input unmodified, or the missing name substitution if the name would otherwise resolve to
-     *         <code>null</code>.
+     * <code>null</code>.
      */
     @NotNull
     public static String validateName(@Nullable String name) {
@@ -86,7 +89,6 @@ public class ExtUtils {
      *
      * @param arr   The JSON array to extract from.
      * @param index The index of the element to extract.
-     *
      * @return The extracted element, or <code>null</code> if the element is <code>null</code> or empty.
      */
     @Nullable
@@ -100,7 +102,6 @@ public class ExtUtils {
      *
      * @param obj The JSON object to extract from.
      * @param key The key of the element to extract.
-     *
      * @return The extracted element, or <code>null</code> if the element is <code>null</code> or empty.
      */
     @Nullable
@@ -118,7 +119,6 @@ public class ExtUtils {
      *
      * @param element  The element to search.
      * @param selector The selector to use.
-     *
      * @return The element, or <code>null</code> if the element is not found.
      */
     @Nullable
@@ -135,7 +135,6 @@ public class ExtUtils {
      *
      * @param element  The element to search.
      * @param selector The selector to use.
-     *
      * @return The contents of the element, or <code>null</code> if the element is not found.
      */
     @Nullable
@@ -151,7 +150,6 @@ public class ExtUtils {
      *
      * @param element  The element to search.
      * @param selector The selector to use.
-     *
      * @return The text of the element, or <code>null</code> if the element is not found.
      */
     @Nullable
@@ -167,7 +165,6 @@ public class ExtUtils {
      *
      * @param element  The element to search.
      * @param selector The selector to use.
-     *
      * @return The text parsed to a boolean.
      */
     public static boolean extHtmlBool(@Nullable Element element, @Nullable String selector) {
@@ -182,7 +179,6 @@ public class ExtUtils {
      *
      * @param element  The element to search.
      * @param selector The selector to use.
-     *
      * @return The text parsed to an {@link Integer}.
      */
     @Nullable
@@ -202,7 +198,6 @@ public class ExtUtils {
      *
      * @param element  The element to search.
      * @param selector The selector to use.
-     *
      * @return The text parsed to a {@link LocalDate}.
      */
     @Nullable
@@ -221,7 +216,6 @@ public class ExtUtils {
      *
      * @param element  The element to search.
      * @param selector The selector to use.
-     *
      * @return The link, or <code>null</code> if the link is not found.
      */
     @Nullable

@@ -1,8 +1,7 @@
 package constructs.school;
 
-import constructs.BaseConstruct;
-import constructs.correction.CorrectionManager;
-import constructs.correction.SchoolAttributeCorrection;
+import constructs.Construct;
+import constructs.district.CachedDistrict;
 import constructs.district.District;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,15 +10,18 @@ import database.Database;
 import utils.Utils;
 
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
 
-public class School extends BaseConstruct {
+public class School implements Construct {
+    /**
+     * The unique id of this school in the SQL database. This is <code>-1</code> if the id is not yet known.
+     */
+    protected int id;
+
     /**
      * This is the id of the {@link District} to which this school belongs. Most schools are in a district by
      * themselves. However, some schools are paired with others in a district (such as in the case of separate
@@ -36,69 +38,31 @@ public class School extends BaseConstruct {
     protected final Map<Attribute, Object> attributes;
 
     /**
-     * The unique <code>id</code> for this school that was provided by MySQL through the AUTO_INCREMENT id column. This
-     * is typically only set for {@link School Schools} created from a {@link ResultSet}.
-     * <p>
-     * By default, this is set to <code>-1</code> to indicate no assigned id.
+     * Create a new school. This populates the {@link #attributes} map with each {@link Attribute Attribute's}
+     * {@link Attribute#defaultValue default value}.
      */
-    protected int id = -1;
-
     public School() {
-        // Add all the Attributes to the attributes map.
+        this.id = -1;
+
+        // Add all the Attributes to the attributes map
         attributes = new LinkedHashMap<>(Attribute.values().length);
         for (Attribute attribute : Attribute.values())
             attributes.put(attribute, attribute.defaultValue);
     }
 
-    /**
-     * Create a {@link School} from a {@link ResultSet}, the result of a query of the Schools table. It's expected that
-     * "<code>SELECT *</code>" was used, and so the resultSet contains every {@link Attribute}/column.
-     *
-     * @param resultSet The result set of the query.
-     * @throws SQLException if there is any error parsing the resultSet.
-     */
-    public School(@NotNull ResultSet resultSet) throws SQLException {
-        this();
-
-        this.id = resultSet.getInt("id");
-        this.district_id = resultSet.getInt("district_id");
-
-        for (Attribute a : Attribute.values())
-            if (a.type == LocalDate.class) {
-                Date date = resultSet.getDate(a.name());
-                put(a, date == null ? null : date.toLocalDate());
-            } else if (a.type == Double.class) {
-                Object o = resultSet.getObject(a.name());
-                if (o == null) put(a, null);
-                else put(a, ((Float) o).doubleValue());
-            } else
-                put(a, resultSet.getObject(a.name()));
-
-    }
-
-    /**
-     * Get this school's id, as provided by the MySQL database, if it has been set.
-     *
-     * @return The {@link #id}.
-     */
+    @Override
     public int getId() {
         return id;
     }
 
-    /**
-     * Get this school's district id, if it has been set.
-     *
-     * @return The {@link #district_id} (or -1 if it hasn't been set).
-     */
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public int getDistrictId() {
         return district_id;
     }
 
-    /**
-     * Set this school's district id.
-     *
-     * @param district_id The {@link #district_id}.
-     */
     public void setDistrictId(int district_id) {
         this.district_id = district_id;
     }
@@ -107,12 +71,12 @@ public class School extends BaseConstruct {
      * Retrieve the {@link District} to which this {@link School} belongs by querying the Districts table in the
      * database.
      *
-     * @return A new {@link District} object created from a SQL query. This will never be <code>null</code>.
+     * @return A new {@link CachedDistrict} object created from a SQL query.
      * @throws SQLException         If there is any error querying the database.
      * @throws NullPointerException If the {@link #district_id} is not set.
      */
     @NotNull
-    public District getDistrict() throws SQLException {
+    public CachedDistrict getDistrict() throws NullPointerException, SQLException {
         if (district_id == -1)
             throw new NullPointerException("Cannot retrieve parent District because the district_id is not set.");
 
@@ -121,7 +85,7 @@ public class School extends BaseConstruct {
             statement.setInt(1, district_id);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next())
-                return new District(resultSet);
+                return new CachedDistrict(resultSet);
         }
 
         throw new SQLException("No District found with id " + district_id + ".");
@@ -131,23 +95,12 @@ public class School extends BaseConstruct {
      * Save a new value for some {@link Attribute Attribute} to this {@link School School's} list of
      * {@link #attributes}.
      * <p>
-     * Note that this first checks the for any school attribute {@link SchoolAttributeCorrection
-     * SchoolAttributeCorrections} that match this value; if any are found, the
-     * {@link SchoolAttributeCorrection#getNewValue() replacement} is used instead. Note that the replacement is not
-     * cleaned.
+     * Note that the value is {@link Attribute#clean(Object, School) cleaned} first.
      *
      * @param attribute The attribute to save.
-     * @param value     The value of the attribute. (This is {@link Attribute#clean(Object, School) cleaned} first,
-     *                  unless it matches a Correction).
+     * @param value     The value of the attribute.
      */
     public void put(@NotNull Attribute attribute, @Nullable Object value) {
-        List<SchoolAttributeCorrection> corrections = CorrectionManager.getSchoolAttribute();
-        for (SchoolAttributeCorrection correction : corrections)
-            if (correction.matches(attribute, value)) {
-                attributes.put(attribute, correction.getNewValue());
-                return;
-            }
-
         attributes.put(attribute, attribute.clean(value, this));
     }
 
@@ -224,6 +177,17 @@ public class School extends BaseConstruct {
         );
     }
 
+    @Override
+    public void addToInsertStatement(@NotNull PreparedStatement statement) throws SQLException {
+        statement.setInt(1, this.district_id);
+
+        Attribute[] attributes = Attribute.values();
+        for (int i = 0; i < attributes.length; i++)
+            attributes[i].addToStatement(statement, get(attributes[i]), i + 2);
+
+        statement.addBatch();
+    }
+
     /**
      * Get a quick string representation of this school. This will take one of the following forms:
      * <ul>
@@ -235,10 +199,11 @@ public class School extends BaseConstruct {
      * @return A string representation of this school.
      */
     @Override
+    @NotNull
     public String toString() {
-        if (id != -1)
-            return String.format("%s (%d)", name(), id);
-        else
+        if (id == -1)
             return name();
+        else
+            return String.format("%s (%d)", name(), id);
     }
 }

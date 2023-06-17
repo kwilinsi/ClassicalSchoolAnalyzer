@@ -333,7 +333,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
      */
     public static List<AttributeComparison> compare(@NotNull Attribute attribute,
                                                     @NotNull CreatedSchool incomingSchool,
-                                                    @NotNull List<School> existingSchools) {
+                                                    @NotNull List<? extends School> existingSchools) {
         List<AttributeComparison> comparisons;
 
         // Handle address based attributes separately
@@ -641,7 +641,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
      */
     private static List<AttributeComparison> compareAddress(@NotNull Attribute attribute,
                                                             @NotNull CreatedSchool incomingSchool,
-                                                            @NotNull List<School> existingSchools) {
+                                                            @NotNull List<? extends School> existingSchools) {
         List<AttributeComparison> comparisons = new ArrayList<>();
 
         String incomingAddress = incomingSchool.getStr(attribute);

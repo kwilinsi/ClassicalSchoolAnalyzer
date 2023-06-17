@@ -3,7 +3,9 @@ package processing.schoolLists.extractors;
 import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
@@ -12,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import processing.schoolLists.extractors.helpers.ExtUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,38 +26,30 @@ public class CCLEExtractor implements Extractor {
      */
     private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile("(\\(?\\d{3}\\)?\\D\\d{3}\\D\\d{4})");
 
-    /**
-     * Extract schools from the {@link OrganizationManager#CCLE Consortium for Classical Lutheran Education}
-     * website.
-     *
-     * @param document The HTML document from which to extract the list.
-     *
-     * @return An array of created schools.
-     */
+    @Override
+    public String abbreviation() {
+        return OrganizationManager.CCLE.getNameAbbr();
+    }
+
     @Override
     @NotNull
-    public List<CreatedSchool> extract(@NotNull Document document) {
-        List<CreatedSchool> list = new ArrayList<>();
-        logHeader();
-
-        // Get the div tags that correspond to each school
-        Elements elements = document.select(
-                "div.elementor-widget-container section.elementor-section > " +
-                "div.elementor-container div.elementor-widget-text-editor > div.elementor-widget-container"
+    public List<CreatedSchool> extract(@NotNull Document document, @Nullable SchoolListProgressWindow progress) {
+        // Run the basic extraction process: applying a single function to a set of HTML elements
+        return Extractor.processElements(this,
+                document.select(
+                        "div.elementor-widget-container section.elementor-section > " +
+                                "div.elementor-container div.elementor-widget-text-editor > " +
+                                "div.elementor-widget-container"
+                ),
+                this::extractSingleSchool,
+                progress
         );
-
-        // Create a school from each div
-        for (Element element : elements)
-            list.add(extractSingleSchool(element));
-
-        return list;
     }
 
     /**
      * Extract a single {@link CreatedSchool} from an HTML {@link Element} containing the school info.
      *
      * @param el The HTML element.
-     *
      * @return The created school.
      */
     @NotNull

@@ -1,5 +1,7 @@
 package constructs.school;
 
+import constructs.correction.CorrectionManager;
+import constructs.correction.SchoolAttributeCorrection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -154,27 +156,41 @@ public enum Attribute {
     }
 
     /**
-     * Clean the given value according to the constraints imposed by this attribute within SQL. This is used to fix the
-     * length of strings to their {@link #maxLength}. If a value is changed by this method, a warning is logged to the
-     * console.
+     * Clean the given value. This will change the initial value for one of two reasons (checked in this order):
+     * <ol>
+     *     <li>Some {@link SchoolAttributeCorrection} mandates replacing this particular value with a
+     *     {@link SchoolAttributeCorrection#getNewValue() new value}. Note that it is conceivably possible for more
+     *     than one correction to {@link SchoolAttributeCorrection#matches(Attribute, Object) match}, in which case
+     *     the result is non-deterministic and unsupported. Hopefully this doesn't happen. Don't write bad corrections.
+     *     <li>The value does not meet constraints imposed on this attribute by the SQL database. For example, a
+     *     string may be trimmed to fit within its {@link #maxLength}. In this case, a warning is logged to the console.
+     * </ol>
      * <p>
      * Note that this is different from
      * {@link processing.schoolLists.matching.AttributeComparison#normalize(Attribute, School) normalizing} the
-     * value, in that this only corrects values for SQL restrictions.
+     * value.
      *
-     * @param input  The value to clean.
+     * @param input  The value to clean. If this is <code>null</code>, then <code>null</code> is returned immediately
+     *               without performing any checks.
      * @param school The school to which the value belongs. This is used exclusively for logging purposes.
-     * @return The cleaned value.
+     * @return The cleaned value, typically the same as the input.
      */
     @Nullable
     public Object clean(@Nullable Object input, @NotNull School school) {
         if (input == null) return null;
 
-        // If this attribute is a string and the input is a string and the input is too long, truncate it
+        // Check corrections
+        List<SchoolAttributeCorrection> corrections = CorrectionManager.getSchoolAttribute();
+        for (SchoolAttributeCorrection correction : corrections)
+            if (correction.matches(this, input))
+                input = correction.getNewValue();
+
+        // Check SQL limitations
         if (type == String.class || type == URL.class)
+            // Trim strings over the max length
             if (input instanceof String s && s.length() > maxLength) {
-                logger.warn("Trimmed {} for school {} to max {} characters.", name(), school.name(), maxLength);
-                return s.substring(0, maxLength);
+                logger.warn("Trimmed {} for school {} to max {} characters.", name(), school, maxLength);
+                input = s.substring(0, maxLength);
             }
 
         return input;

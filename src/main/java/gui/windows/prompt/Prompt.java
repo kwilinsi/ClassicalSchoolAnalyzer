@@ -1,9 +1,6 @@
 package gui.windows.prompt;
 
-import com.googlecode.lanterna.gui2.Component;
-import com.googlecode.lanterna.gui2.Direction;
-import com.googlecode.lanterna.gui2.LinearLayout;
-import com.googlecode.lanterna.gui2.Panel;
+import com.googlecode.lanterna.gui2.*;
 import gui.windows.MyBaseWindow;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
@@ -62,7 +59,7 @@ public abstract class Prompt<T> extends MyBaseWindow {
         this.optionsPanel = optionComponent;
 
         // Create the main panel that contains the window elements
-        panel = new Panel(new LinearLayout(Direction.VERTICAL));
+        panel = new Panel(new GridLayout(1).setTopMarginSize(1));
         setComponent(panel);
 
         // Add the prompt/message component

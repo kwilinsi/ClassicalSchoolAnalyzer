@@ -23,15 +23,15 @@ public class SelectionPrompt<T> extends Prompt<T> {
     private final ActionListBox actions;
 
     /**
-     * Create a new prompt window.
+     * Create a new selection prompt window.
      *
      * @param windowTitle     The title of the window.
      * @param promptComponent The {@link Component} that contains the prompt message for the user.
      * @param options         The list of {@link Option Options} to present to the user.
      */
-    public SelectionPrompt(@Nullable String windowTitle,
-                           @NotNull Component promptComponent,
-                           @NotNull List<Option<T>> options) {
+    protected SelectionPrompt(@Nullable String windowTitle,
+                              @NotNull Component promptComponent,
+                              @NotNull List<Option<T>> options) {
         super(windowTitle, promptComponent, new Panel());
 
         this.actions = new ActionListBox();

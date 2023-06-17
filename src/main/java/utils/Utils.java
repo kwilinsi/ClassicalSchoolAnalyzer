@@ -387,4 +387,27 @@ public class Utils {
     public static String listAttributes(@NotNull List<Attribute> attributes) {
         return joinList(attributes.stream().filter(Objects::nonNull).map(Attribute::name).toList());
     }
+
+    /**
+     * Run some task separately in its own thread. If it throws any {@link Exception Exceptions}, log them along
+     * with the given <code>errorMessage</code> and exit without escalating further.
+     *
+     * @param task         The task to run.
+     * @param errorMessage An optional message to log in the event of an error. If this is <code>null</code> and an
+     *                     exception is raised, a generic substitute is used.
+     * @param threadName   An optional name for the thread. If this is <code>null</code>, a random thread number is
+     *                     used.
+     */
+    public static void runParallel(@NotNull RunnableWithExceptions task,
+                                   @Nullable String errorMessage,
+                                   @Nullable String threadName) {
+        Thread thread = new Thread(() -> {
+            try {
+                task.run();
+            } catch (Exception e) {
+                logger.error(errorMessage == null ? "Encountered error in parallel thread." : errorMessage, e);
+            }
+        }, threadName == null ? String.format("thread-%5d", (int) (Math.random() * 100000)) : threadName);
+        thread.start();
+    }
 }

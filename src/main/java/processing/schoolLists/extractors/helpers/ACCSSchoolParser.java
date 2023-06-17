@@ -4,60 +4,60 @@ import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
-import constructs.school.SchoolManager;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
 import processing.schoolLists.extractors.ACCSExtractor;
+import processing.schoolLists.extractors.Extractor;
 import utils.Config;
 import utils.JsoupHandler;
 import utils.JsoupHandler.DownloadConfig;
 import utils.Pair;
 
 import java.io.IOException;
-import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * This class is utilized by {@link ACCSExtractor#extract(Document)} to extract the school list from the ACCS website.
+ * This class is utilized by {@link ACCSExtractor#extract(Document, SchoolListProgressWindow)} to extract the school
+ * list from the ACCS website.
  */
-public class ACCSSchoolParser implements Callable<CreatedSchool> {
+public class ACCSSchoolParser extends Helper<CreatedSchool> {
     private static final Pattern SCHOOL_NAME_PATTERN = Pattern.compile("^(.*?)(?:\\s\\((.*)\\))?$");
 
     /**
-     * This is the Link of the school's personalized page on the ACCS website.
+     * This is the Link of the school's personalized page on the organization website.
      */
     private final String accs_page_url;
 
     /**
-     * This controls whether the ACCS page for this school should be loaded from cache (if available) or downloaded from
-     * the ACCS server.
-     */
-    private final boolean useCache;
-
-    /**
-     * Create a new ACCSSchoolParser by providing the Link of the ACCS page with information about this school.
+     * Initialize a helper.
      *
      * @param accs_page_url See {@link #accs_page_url}.
      * @param useCache      See {@link #useCache}.
+     * @param progress      See {@link #progress}.
      */
-    public ACCSSchoolParser(String accs_page_url, boolean useCache) {
+    public ACCSSchoolParser(@NotNull Extractor parent,
+                            boolean useCache,
+                            @Nullable SchoolListProgressWindow progress,
+                            @NotNull String accs_page_url) {
+        super(parent, useCache, progress);
         this.accs_page_url = accs_page_url;
-        this.useCache = useCache;
     }
 
     /**
-     * Get the ACCS page Link.
+     * Get the page URL.
      *
      * @return The {@link #accs_page_url}.
      */
+    @NotNull
     public String get_accs_page_url() {
         return accs_page_url;
     }
 
     /**
-     * Execute this parser thread, returning a complete {@link School} object.
+     * Execute this parser thread, returning a complete {@link CreatedSchool} object.
      *
      * @return The {@link School} object.
      * @throws IOException If there is some error parsing this school's ACCS page.
@@ -65,7 +65,7 @@ public class ACCSSchoolParser implements Callable<CreatedSchool> {
     @Override
     @NotNull
     public CreatedSchool call() throws IOException {
-        CreatedSchool school = SchoolManager.newACCS();
+        CreatedSchool school = new CreatedSchool(OrganizationManager.ACCS);
         school.put(Attribute.accs_page_url, accs_page_url);
 
         // Download the ACCS page for this school
@@ -167,17 +167,16 @@ public class ACCSSchoolParser implements Callable<CreatedSchool> {
      *
      * @param name The name of the school, with the state in parentheses. If this is <code>null</code>, then a pair
      *             containing {@link Config#MISSING_NAME_SUBSTITUTION} and <code>null</code> is returned.
-     *
      * @return A pair containing first the actual name and then the state abbreviation.
      * @throws IllegalArgumentException If there is an error parsing the name.
      */
     @NotNull
     private Pair<String, String> parseACCSName(@Nullable String name) throws IllegalArgumentException {
-        if (name == null) return new Pair<>(Config.MISSING_NAME_SUBSTITUTION.get(), null);
+        if (name == null) return Pair.of(Config.MISSING_NAME_SUBSTITUTION.get(), null);
 
         Matcher matcher = SCHOOL_NAME_PATTERN.matcher(name);
         if (matcher.find())
-            return new Pair<>(ExtUtils.validateName(matcher.group(1)), matcher.group(2));
+            return Pair.of(ExtUtils.validateName(matcher.group(1)), matcher.group(2));
 
         throw new IllegalArgumentException("Failed to parse ACCS name: " + name);
     }

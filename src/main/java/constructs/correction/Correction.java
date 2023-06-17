@@ -42,7 +42,7 @@ public abstract class Correction {
      * This is <code>transient</code> as it is stored separately from the serialized Corretion data in the database.
      */
     @Nullable
-    protected final transient String notes;
+    protected transient String notes;
 
     /**
      * Initialize a new Correction with the given notes.
@@ -57,6 +57,15 @@ public abstract class Correction {
                     "Correction notes length " + notes.length() + " exceeds 300-character limit"
             );
 
+        this.notes = notes;
+    }
+
+    /**
+     * Set the notes.
+     *
+     * @param notes The {@link #notes}.
+     */
+    public void setNotes(@Nullable String notes) {
         this.notes = notes;
     }
 }

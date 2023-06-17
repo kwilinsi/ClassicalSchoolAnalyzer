@@ -1,106 +1,175 @@
 package constructs.school;
 
-import constructs.organization.OrganizationManager;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import constructs.ConstructManager;
+import constructs.district.CachedDistrict;
+import constructs.district.DistrictManager;
+import constructs.districtOrganization.CachedDistrictOrganization;
+import constructs.organization.Organization;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow.Phase;
 import database.Database;
+import processing.schoolLists.matching.AttributeComparison;
+import processing.schoolLists.matching.MatchIdentifier;
+import processing.schoolLists.matching.data.DistrictMatch;
+import processing.schoolLists.matching.data.MatchData;
+import processing.schoolLists.matching.data.SchoolComparison;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
+import java.sql.*;
+import java.util.*;
 
 /**
- * This utility class contains methods that are designed to create {@link CreatedSchool Schools} from each organization.
+ * This utility class contains methods designed to produce the main list of schools.
  */
-@SuppressWarnings("unused")
 public class SchoolManager {
-    private static final Logger logger = LoggerFactory.getLogger(SchoolManager.class);
-
     /**
-     * Get a list of every {@link School} currently in the database.
+     * Download the list of schools from the {@link Organization#getSchoolListUrl() school list} pages of one or more
+     * Organizations. Use this list to update the Schools table in the database, whether by adding new schools or
+     * updating the attributes for existing ones.
      *
-     * @return A list of cached schools.
-     * @throws SQLException If there is an error establishing the SQL connection or executing the query.
+     * @param organizations The organizations to reference in getting the list of schools.
+     * @param useCache      Whether to use cached versions of the school list pages when available.
      */
-    @NotNull
-    public static List<School> getSchoolsFromDatabase() throws SQLException {
-        logger.debug("Retrieving all schools from database...");
-        List<School> schools = new ArrayList<>();
+    public static void updateSchoolList(Collection<Organization> organizations, boolean useCache) {
+        // Initialize the progress bar window
+        SchoolListProgressWindow progress = SchoolListProgressWindow.of().show();
 
-        // Execute query
-        Connection connection = Database.getConnection();
-        ResultSet resultSet = connection.prepareStatement("SELECT * FROM Schools").executeQuery();
+        // ------------------------------
+        // Retrieve Cached Constructs
+        // ------------------------------
 
-        // Convert the resultSet to a list of schools
-        while (resultSet.next())
-            schools.add(new School(resultSet));
+        List<CachedSchool> schoolsCache;
+        List<CachedDistrict> districtCache;
+        Set<CachedDistrictOrganization> districtOrganizationCache;
 
-        return schools;
-    }
+        try (Connection connection = Database.getConnection()) {
+            progress.setPhase(Phase.RETRIEVING_SCHOOL_CACHE).setGeneralTask("Retrieving existing schools...");
+            schoolsCache = ConstructManager.loadCacheNullable(connection, CachedSchool.class, progress);
+            if (schoolsCache == null) return;
 
-    /**
-     * Create a new {@link CreatedSchool} instance associated with {@link OrganizationManager#ACCS ACCS}.
-     *
-     * @return A new school.
-     */
-    public static CreatedSchool newACCS() {
-        return new CreatedSchool(OrganizationManager.ACCS);
-    }
+            progress.setPhase(Phase.RETRIEVING_DISTRICT_CACHE)
+                    .setGeneralTask("Retrieving existing districts...");
+            districtCache = ConstructManager.loadCacheNullable(connection, CachedDistrict.class, progress);
+            if (districtCache == null) return;
 
-    /**
-     * Create a new {@link CreatedSchool} instance associated with {@link OrganizationManager#GHI GHI}.
-     *
-     * @return A new school.
-     */
-    public static CreatedSchool newGHI() {
-        return new CreatedSchool(OrganizationManager.GHI);
-    }
+            progress.setPhase(Phase.RETRIEVING_DISTRICT_ORGANIZATION_CACHE)
+                    .setGeneralTask("Retrieving existing district-organization relations...");
+            List<CachedDistrictOrganization> cdo = ConstructManager.loadCacheNullable(
+                    connection, CachedDistrictOrganization.class, progress);
+            if (cdo == null) return;
+            districtOrganizationCache = new HashSet<>(cdo);
+        } catch (SQLException e) {
+            progress.errorOut("Failed to establish database connection", e);
+            return;
+        }
 
-    /**
-     * Create a new {@link CreatedSchool} instance associated with {@link OrganizationManager#ICLE ICLE}.
-     *
-     * @return A new school.
-     */
-    public static CreatedSchool newICLE() {
-        return new CreatedSchool(OrganizationManager.ICLE);
-    }
+        // ------------------------------
+        // Download Schools from Organizations
+        // ------------------------------
 
-    /**
-     * Create a new {@link CreatedSchool} instance associated with {@link OrganizationManager#HILLSDALE Hillsdale}.
-     *
-     * @return A new school.
-     */
-    public static CreatedSchool newHillsdale() {
-        return new CreatedSchool(OrganizationManager.HILLSDALE);
-    }
+        progress.setPhase(Phase.DOWNLOADING_SCHOOLS);
+        List<CreatedSchool> schools = new ArrayList<>();
 
-    /**
-     * Create a new {@link CreatedSchool} instance associated with {@link OrganizationManager#ASA ASA}.
-     *
-     * @return A new school.
-     */
-    public static CreatedSchool newASA() {
-        return new CreatedSchool(OrganizationManager.ASA);
-    }
+        for (Organization organization : organizations) {
+            try {
+                progress.resetSubProgressBar(0);
+                schools.addAll(organization.retrieveSchools(useCache, progress));
+            } catch (IOException e) {
+                if (progress.errorPrompt("Failed to load and process school list for " + organization +
+                        " — omitting it", e))
+                    return;
+            }
+        }
 
-    /**
-     * Create a new {@link CreatedSchool} instance associated with {@link OrganizationManager#CCLE CCLE}.
-     *
-     * @return A new school.
-     */
-    public static CreatedSchool newCCLE() {
-        return new CreatedSchool(OrganizationManager.CCLE);
-    }
+        // ------------------------------
+        // Normalize School Attributes
+        // ------------------------------
 
-    /**
-     * Create a new {@link CreatedSchool} instance associated with {@link OrganizationManager#OCSA OCSA}.
-     *
-     * @return A new school.
-     */
-    public static CreatedSchool newOCSA() {
-        return new CreatedSchool(OrganizationManager.OCSA);
+        progress.setPhase(Phase.PRE_PROCESSING_SCHOOLS)
+                .setGeneralTask("Normalizing school attributes...")
+                .resetSubProgressBar(Attribute.values().length, "Attributes");
+
+        for (Attribute attribute : Attribute.values()) {
+            progress.setSubTask("Normalizing " + attribute.name() + "...");
+
+            List<?> normalized = AttributeComparison.normalize(attribute, schools);
+            for (int i = 0; i < normalized.size(); i++)
+                schools.get(i).put(attribute, normalized.get(i));
+
+            progress.incrementSubProgress();
+        }
+
+        // ------------------------------
+        // Validate Schools — Identify Matches
+        // ------------------------------
+
+        progress.setPhase(Phase.IDENTIFYING_MATCHES)
+                .setGeneralTask("Checking for duplicates...")
+                .resetSubProgressBar(schools.size(), "Schools");
+
+        for (int i = 0; i < schools.size(); i++) {
+            CreatedSchool school = schools.get(i);
+            //noinspection UnnecessaryUnicodeEscape
+            progress.setSubTask("Checking #" + i + " \u2014 " + school + "...");
+
+            // Compare this school to the cache of database schools, and handle the result accordingly
+            MatchData matchData = MatchIdentifier.compare(school, schoolsCache, districtCache);
+            switch (matchData.getLevel()) {
+                case OMIT -> schools.set(i, null);
+
+                case NO_MATCH -> {
+                    // Make a new district, and add this school to it
+                    CachedDistrict district = DistrictManager.makeDistrict(school);
+                    districtOrganizationCache.add(new CachedDistrictOrganization(school.getOrganization(), district));
+                    districtCache.add(district);
+
+                    CachedSchool cachedSchool = new CachedSchool(school);
+                    cachedSchool.setDistrict(district);
+                    schoolsCache.add(cachedSchool);
+                }
+
+                case DISTRICT_MATCH -> {
+                    // Add this new school to the district
+                    CachedDistrict district = ((DistrictMatch) matchData).getDistrict();
+                    districtOrganizationCache.add(new CachedDistrictOrganization(school.getOrganization(), district));
+
+                    CachedSchool cachedSchool = new CachedSchool(school);
+                    cachedSchool.setDistrict(district);
+                    schoolsCache.add(cachedSchool);
+                }
+
+                case SCHOOL_MATCH -> {
+                    // Add a district organization relation, and set the new school's district
+                    SchoolComparison comparison = Objects.requireNonNull((SchoolComparison) matchData);
+                    districtOrganizationCache.add(new CachedDistrictOrganization(
+                            school.getOrganization(), Objects.requireNonNull(comparison.getDistrict())
+                    ));
+                    comparison.updateExistingSchoolAttributes();
+                }
+            }
+
+            progress.incrementSubProgress();
+        }
+
+        // ------------------------------
+        // Execute SQL Updates
+        // ------------------------------
+
+        progress.setPhase(Phase.SAVING_TO_DATABASE)
+                .setGeneralTask("Saving to database...")
+                .setSubTask("Establishing connection...")
+                .resetSubProgressBar(0);
+
+        try (Connection connection = Database.getConnection()) {
+            // Save districts and schools
+            ConstructManager.saveToDatabase(connection, districtCache, progress);
+            ConstructManager.saveToDatabase(connection, schoolsCache, progress);
+            ConstructManager.saveToDatabase(connection, districtOrganizationCache, progress);
+        } catch (SQLException e) {
+            progress.errorOut("Failed to save the results to the database.", e);
+            return;
+        }
+
+        progress.setPhase(Phase.FINISHED).clearTasks();
     }
 }

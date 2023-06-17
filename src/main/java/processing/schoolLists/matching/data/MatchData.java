@@ -51,24 +51,7 @@ public class MatchData {
          * DistrictOrganizations table for the matched district, in case the incoming school comes from a different
          * Organization.
          */
-        DISTRICT_MATCH;
-
-        /**
-         * Check whether this {@link Level Level} means that the incoming school matched either an existing School or
-         * an existing District. In that case, the <code>DistrictOrganization</code> table must be updated by adding
-         * another relation, in case the incoming school came from a new Organization.
-         * <p>
-         * This is true for:
-         * <ul>
-         *     <li>{@link #DISTRICT_MATCH DISTRICT_MATCH}
-         *     <li>{@link #SCHOOL_MATCH SCHOOL_MATCH}
-         * </ul>
-         *
-         * @return Whether to add a new <code>DistrictOrganization</code> relation.
-         */
-        public boolean doAddDistrictOrganization() {
-            return this == DISTRICT_MATCH || this == SCHOOL_MATCH;
-        }
+        DISTRICT_MATCH
     }
 
     /**

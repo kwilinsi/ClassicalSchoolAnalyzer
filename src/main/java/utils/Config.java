@@ -155,7 +155,15 @@ public enum Config {
      * <b>Default:</b> <code>"greatheartsamerica.org"</code>
      */
     @SuppressWarnings("SpellCheckingInspection")
-    STANDARD_GHI_WEBSITE_DOMAIN("greatheartsamerica.org", false);
+    STANDARD_GHI_WEBSITE_DOMAIN("greatheartsamerica.org", false),
+
+    /**
+     * The maximum number of characters per line in a GUI popup message that respects
+     * {@link gui.utils.GUIUtils#wrapLabelText(String)}.
+     * <p>
+     * <b>Default:</b> <code>75</code>
+     */
+    GUI_POPUP_TEXT_WRAP_LENGTH(75, false);
 
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
 

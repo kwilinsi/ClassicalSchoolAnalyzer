@@ -7,11 +7,12 @@ import constructs.organization.Organization;
 import constructs.organization.OrganizationManager;
 import constructs.school.*;
 import database.DatabaseManager;
+import gui.utils.GUIUtils;
+import gui.windows.prompt.selection.MultiSelectionPrompt;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import processing.schoolLists.matching.AttributeComparison;
 import utils.Config;
 
 import java.io.File;
@@ -19,7 +20,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -36,7 +36,7 @@ public class Actions {
         MessageDialog.showMessageDialog(
                 Main.GUI.getWindowGUI(),
                 "Not Implemented",
-                "Sorry, this feature is not yet implemented.",
+                GUIUtils.wrapLabelText("Sorry, this feature is not yet implemented."),
                 MessageDialogButton.OK
         );
     }
@@ -49,64 +49,26 @@ public class Actions {
     static void updateSchoolList() {
         logger.info("Updating school list.");
 
-        int orgChoice = Main.GUI.showPrompt(SelectionPrompt.of(
+        List<Organization> organizations = Main.GUI.showPrompt(MultiSelectionPrompt.of(
                 "Organizations",
-                "Select the organization(s) to download:",
-                OrganizationManager.getAsSelections()
+                "Select the organization(s) whose schools you wish to download:",
+                OrganizationManager.ORGANIZATIONS.stream().map(o -> Option.of(o.getName(), o)).toList(),
+                true
         ));
 
-        if (orgChoice == -1) {
+        if (organizations == null || organizations.size() == 0) {
             logger.info("Aborting download.");
             return;
         }
 
         boolean useCache = Main.GUI.showPrompt(SelectionPrompt.of(
                 "Cache",
-                "Select a download mode for the organization " + (orgChoice == 0 ? "page:" : "pages:"),
+                "Select a download mode for the organization " + (organizations.size() == 1 ? "page:" : "pages:"),
                 Option.of("Use Cache", true),
                 Option.of("Force New Download", false)
         ));
 
-        // Get the organizations to use, either one of them or all
-        Organization[] orgs = orgChoice == 0 ?
-                OrganizationManager.ORGANIZATIONS :
-                new Organization[]{OrganizationManager.getById(orgChoice)};
-
-        // Download all existing schools from the database to create a cache. This will be used for identifying
-        // duplicate schools when saving them to the database.
-        List<School> schoolsCache;
-        try {
-            schoolsCache = SchoolManager.getSchoolsFromDatabase();
-        } catch (SQLException e) {
-            logger.error("Failed to retrieve schools from database. Aborting download.", e);
-            return;
-        }
-
-        // Download schools from each organization
-        for (Organization organization : orgs) {
-            try {
-                List<CreatedSchool> schools = organization.retrieveSchools(useCache);
-
-                // Normalize the schools' values for each attributes
-                for (Attribute attribute : Attribute.values()) {
-                    List<?> normalized = AttributeComparison.normalize(attribute, schools);
-                    for (int i = 0; i < normalized.size(); i++)
-                        schools.get(i).put(attribute, normalized.get(i));
-                }
-
-                // Validate each school and save it to the database. Then add it to the cache for checking the next
-                // school.
-                // TODO add a progress bar while saving to database
-                for (CreatedSchool school : schools)
-                    try {
-                        school.saveToDatabase(schoolsCache);
-                    } catch (SQLException e) {
-                        logger.error("Failed to save school " + school.name() + " to database.", e);
-                    }
-            } catch (IOException e) {
-                logger.error("Failed to load school list.", e);
-            }
-        }
+        SchoolManager.updateSchoolList(organizations, useCache);
     }
 
     /**

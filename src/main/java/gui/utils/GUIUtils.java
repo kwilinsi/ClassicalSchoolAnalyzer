@@ -9,9 +9,10 @@ import com.googlecode.lanterna.graphics.Theme;
 import com.googlecode.lanterna.gui2.*;
 import constructs.school.Attribute;
 import constructs.school.School;
+import org.apache.commons.text.WordUtils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import processing.schoolLists.matching.AttributeComparison;
+import utils.Config;
 import utils.Utils;
 
 import java.time.Instant;
@@ -232,19 +233,19 @@ public class GUIUtils {
 
     /**
      * Create a {@link LinearLayout} panel containing a single label. The panel is filled with the given color and
-     * set to {@link LinearLayout.GrowPolicy Grow} horizontally to fill available space.
-     * The header text is generated as a centered, {@link SGR#BOLD bold}, {@link TextColor.ANSI#WHITE_BRIGHT
-     * white_bright} label.
+     * set to expand horizontally to fill available space. It is specifically designed for use in a
+     * {@link GridLayout} based panel of width 1. The header text is generated as a centered, {@link SGR#BOLD bold},
+     * {@link TextColor.ANSI#WHITE_BRIGHT white_bright} label.
      *
      * @param text   The header text
      * @param color  The background color.
-     * @param height The height of the panel, set by adding {@link EmptySpace} components. The header text is
-     *               vertically centered within this height.
+     * @param height The height of the panel. The header text is vertically centered within this height.
      * @return The new panel containing the header.
      */
     public static Panel createFilledHeader(@NotNull String text,
                                            @NotNull TextColor.ANSI color,
                                            int height) {
+        // TODO this only seems to work if it's put in a GridLayout with vertical spacing 1. Fix that.
         Panel panel = new Panel()
                 .setLayoutManager(new GridLayout(1)
                         .setLeftMarginSize(0)
@@ -276,4 +277,33 @@ public class GUIUtils {
         panel.setTheme(getThemeWithBackgroundColor(color));
         return panel;
     }
+
+    /**
+     * Given some text for a {@link Label}, wrap it using {@link WordUtils#wrap(String, int, String, boolean)}.
+     * <p>
+     * The wrap length is based on {@link Config#GUI_POPUP_TEXT_WRAP_LENGTH GUI_POPUP_TEXT_WRAP_LENGTH}. This will
+     * force wrap long words. The newline character is <code>"\n"</code>.
+     *
+     * @param text The text to wrap.
+     * @return The formatted text.
+     */
+    @NotNull
+    public static String wrapLabelText(@NotNull String text) {
+        return WordUtils.wrap(text, Config.GUI_POPUP_TEXT_WRAP_LENGTH.getInt(), "\n", true);
+    }
+
+    /**
+     * Format text for a {@link Label} like {@link String#format(String, Object...) String.format()}, and wrap it to
+     * a readable length with {@link #wrapLabelText(String) wrapLabelText()}.
+     *
+     * @param text The text to format and wrap.
+     * @return The formatted text.
+     */
+    @NotNull
+    public static String wrapLabelText(@NotNull String text, Object... args) {
+        return WordUtils.wrap(
+                String.format(text, args), Config.GUI_POPUP_TEXT_WRAP_LENGTH.getInt(), "\n", true
+        );
+    }
+
 }

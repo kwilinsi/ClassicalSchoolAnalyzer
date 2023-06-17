@@ -82,7 +82,7 @@ public class JsoupHandler {
                 // If there's a match, attempt to parse the file
                 if (resultSet.next()) {
                     path = resultSet.getString(1);
-                    return new Pair<>(parse(new File(path), url), false);
+                    return Pair.of(parse(new File(path), url), false);
                 }
             } catch (SQLException e) {
                 logger.warn("Failed to search Cache database for: " + url + ". Downloading with Jsoup instead.", e);
@@ -121,7 +121,7 @@ public class JsoupHandler {
 
         // Download the page
         try {
-            return new Pair<>(connection.get(), true);
+            return Pair.of(connection.get(), true);
         } catch (HttpStatusException e) {
             // If there's an HTTP error and strict HTTP handling is enabled, throw it
             if (Config.STRICT_HTTP.getBool()) throw e;
@@ -129,7 +129,7 @@ public class JsoupHandler {
             // Otherwise, log the error and retry the connection
             logger.debug("Encountered an HTTP error at Link " + url + ". Retrying connection", e);
             connection.ignoreHttpErrors(true);
-            return new Pair<>(connection.get(), true);
+            return Pair.of(connection.get(), true);
         }
     }
 

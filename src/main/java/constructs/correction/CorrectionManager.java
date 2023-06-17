@@ -13,6 +13,7 @@ import gui.windows.prompt.selection.SelectionPrompt;
 import main.Actions;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,8 @@ public class CorrectionManager {
         DISTRICT_MATCH(DistrictMatchCorrection.class);
 
         /**
-         * This is the class that is instantiated when a Correction is created from this type via {@link #make(String)}.
+         * This is the class that is instantiated when a Correction is created from this type via
+         * {@link #make(String, String)}.
          */
         private final Class<? extends Correction> correctionClass;
 
@@ -71,8 +73,10 @@ public class CorrectionManager {
          * @throws JsonSyntaxException If there is an error parsing the JSON data.
          */
         @NotNull
-        public Correction make(@NotNull String data) throws JsonSyntaxException {
-            return new Gson().fromJson(data, correctionClass);
+        public Correction make(@NotNull String data, @Nullable String notes) throws JsonSyntaxException {
+            Correction correction = new Gson().fromJson(data, correctionClass);
+            correction.setNotes(notes);
+            return correction;
         }
     }
 
@@ -108,24 +112,27 @@ public class CorrectionManager {
             Statement statement = connection.createStatement();
             ResultSet result = statement.executeQuery("SELECT * FROM Corrections;");
             while (result.next()) {
-                String typeStr = result.getString(1);
-                String dataStr = result.getString(2);
+                String typeStr = result.getString(2);
+                String dataStr = result.getString(3);
+                String notesStr = result.getString(4);
                 Type type;
 
                 try {
                     type = Type.valueOf(typeStr);
                 } catch (IllegalArgumentException e) {
-                    logger.warn("Failed to save Correction with unknown type " + typeStr, e);
+                    logger.warn("Failed to create Correction with unknown type '" + typeStr + "'", e);
                     continue;
                 }
 
                 try {
-                    CORRECTIONS.get(type).add(type.make(dataStr));
+                    CORRECTIONS.get(type).add(type.make(dataStr, notesStr));
                 } catch (Exception e) {
-                    logger.warn("Failed to create Correction of type " + typeStr + " from data " + dataStr, e);
+                    logger.warn("Failed to create Correction of type '" + typeStr + "' from data " + dataStr, e);
                 }
             }
         }
+
+        logger.info("Loaded Corrections.");
     }
 
     /**

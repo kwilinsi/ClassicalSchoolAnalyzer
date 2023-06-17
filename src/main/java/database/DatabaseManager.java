@@ -1,5 +1,6 @@
 package database;
 
+import constructs.ConstructManager;
 import constructs.district.District;
 import constructs.organization.OrganizationManager;
 import constructs.school.School;
@@ -27,7 +28,6 @@ public class DatabaseManager {
             Runnable runnable = Main.GUI.showPrompt(SelectionPrompt.of(
                     "Manage Database",
                     "What would you like to do?",
-                    RunnableOption.of("Add Organizations", OrganizationManager::addOrganizationsToSQL),
                     RunnableOption.of("Clear Schools and Districts", DatabaseManager::clearSchoolsAndDistricts,
                             "This will delete every school and district in the database. " +
                                     "Are you sure you wish to continue?"),
@@ -77,7 +77,7 @@ public class DatabaseManager {
     private static void resetDatabase(boolean includeCache, boolean includeCorrections) {
         deleteTables(includeCache, includeCorrections);
         createTables();
-        OrganizationManager.addOrganizationsToSQL();
+        ConstructManager.saveToDatabase(OrganizationManager.ORGANIZATIONS, null);
     }
 
     /**

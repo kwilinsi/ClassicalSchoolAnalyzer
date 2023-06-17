@@ -323,11 +323,10 @@ public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
      * This has no effect for index 0.
      *
      * @param index The index of the data panel to move up.
-     * @return The new index of the panel.
      * @throws IndexOutOfBoundsException If the index is out of bounds.
      */
-    protected int movePanelUp(int index) throws IndexOutOfBoundsException {
-        if (index == 0) return 0;
+    protected void movePanelUp(int index) throws IndexOutOfBoundsException {
+        if (index == 0) return;
         if (index < 0 || index >= rules.size())
             throw new IndexOutOfBoundsException("Invalid index " + index + " for " + rules.size() + " rule(s)");
 
@@ -343,8 +342,6 @@ public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
         rules.get(index).setIndex(index);
 
         rule.takeFocus(true);
-
-        return index - 1;
     }
 
     /**

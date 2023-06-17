@@ -28,6 +28,9 @@ dependencies {
 
     // Lanterna - terminal UI
     implementation 'com.googlecode.lanterna:lanterna:3.1.1'
+
+    // Apache Commons Text
+    implementation 'org.apache.commons:commons-text:1.10.0'
 }
 
 application {

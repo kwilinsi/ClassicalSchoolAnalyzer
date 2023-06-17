@@ -1,17 +1,10 @@
 package constructs.organization;
 
 import constructs.school.Attribute;
-import gui.windows.prompt.selection.Option;
-import gui.windows.prompt.selection.SelectionPrompt;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Unmodifiable;
 import processing.schoolLists.extractors.*;
-import database.Database;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -172,73 +165,14 @@ public class OrganizationManager {
     /**
      * This is the complete list of all organizations supported by this program. It contains an {@link Organization}
      * object for each of the organizations. No other objects should be created for any organization at any time during
-     * the program execution. These objects may be modified as more data is obtained for each organization, such as
-     * downloading the school_list_page_file.
-     */
-    public static final Organization[] ORGANIZATIONS = {ACCS, GHI, HILLSDALE, ICLE, ASA, CCLE, OCSA};
-
-    private static final Logger logger = LoggerFactory.getLogger(OrganizationManager.class);
-
-    /**
-     * Add the {@link #ORGANIZATIONS} to the SQL database.
-     */
-    public static void addOrganizationsToSQL() {
-        logger.info("Saving Organizations to SQL database");
-
-        try (Connection connection = Database.getConnection()) {
-            for (Organization organization : ORGANIZATIONS) {
-                @SuppressWarnings("SqlInsertValues")
-                PreparedStatement preparedStatement = connection.prepareStatement(
-                        "INSERT INTO Organizations (id, name, name_abbr, homepage_url, school_list_url) " +
-                                "VALUES (?, ?, ?, ?, ?)"
-                );
-                preparedStatement.setInt(1, organization.getId());
-                preparedStatement.setString(2, organization.getName());
-                preparedStatement.setString(3, organization.getNameAbbr());
-                preparedStatement.setString(4, organization.getHomepageUrl());
-                preparedStatement.setString(5, organization.getSchoolListUrl());
-                preparedStatement.executeUpdate();
-            }
-        } catch (SQLException e) {
-            logger.error("Error adding Organizations to SQL database.", e);
-        }
-    }
-
-    /**
-     * Get the list of {@link #ORGANIZATIONS} as {@link Option Options} for the user to choose between in a
-     * {@link SelectionPrompt}. Each selection is assigned a value corresponding to the
-     * {@link Organization Organization's} {@link Organization#getId() id}.
+     * the program execution.
      * <p>
-     * The first selection option is "All", which returns the value 0, and the last option is "None", which returns the
-     * value -1.
-     *
-     * @return A list of selections.
+     * These objects may be modified as more data is obtained for each organization, such as downloading the
+     * school_list_page_file. However, the list itself is immutable.
      */
-    public static List<Option<Integer>> getAsSelections() {
-        List<Option<Integer>> options = new ArrayList<>();
-        options.add(Option.of("All organizations", 0));
-        options.add(Option.of("None", -1));
-        for (Organization organization : ORGANIZATIONS)
-            options.add(Option.of(
-                    organization.getNameAbbr() + " - " + organization.getName(),
-                    organization.getId()
-            ));
-        return options;
-    }
-
-    /**
-     * Get an {@link Organization} from its {@link Organization#getId() id}.
-     *
-     * @param id The id of the desired organization.
-     * @return The organization with the given id, or <code>null</code> if no organization with that id exists.
-     */
-    @Nullable
-    public static Organization getById(int id) {
-        for (Organization organization : ORGANIZATIONS)
-            if (organization.getId() == id)
-                return organization;
-        return null;
-    }
+    @Unmodifiable
+    @NotNull
+    public static final List<Organization> ORGANIZATIONS = List.of(ACCS, GHI, HILLSDALE, ICLE, ASA, CCLE, OCSA);
 
     /**
      * Generate an array of {@link Attribute Attributes} for the
@@ -306,5 +240,4 @@ public class OrganizationManager {
 
         return attrList.toArray(new Attribute[0]);
     }
-
 }

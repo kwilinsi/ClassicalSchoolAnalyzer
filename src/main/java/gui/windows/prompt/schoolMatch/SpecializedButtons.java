@@ -209,7 +209,7 @@ public class SpecializedButtons {
             MessageDialog.showMessageDialog(
                     Main.GUI.getWindowGUI(),
                     "Error",
-                    message,
+                    GUIUtils.wrapLabelText(message),
                     MessageDialogButton.OK
             );
         }

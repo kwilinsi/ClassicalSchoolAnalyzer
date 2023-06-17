@@ -1,46 +1,47 @@
 package constructs.district;
 
-import constructs.BaseConstruct;
-import constructs.organization.Organization;
+import constructs.Construct;
 import constructs.school.School;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import database.Database;
 
 import java.sql.*;
 import java.util.*;
 
-public class District extends BaseConstruct {
-    private static final Logger logger = LoggerFactory.getLogger(District.class);
-
+/**
+ * The district construct is a means of grouping {@link School Schools}. Some classical schools, especially those
+ * affiliated with {@link constructs.organization.OrganizationManager#GHI GHI}, have districts, where multiple
+ * nearby schools share the same name and organization structure, with each school teaching different grade levels.
+ * <p>
+ * All schools have a district, even if they aren't grouped with any other schools. Thus, most districts only have a
+ * single member school, while a handful have many of schools.
+ */
+public class District implements Construct {
     /**
-     * The id of this district as assigned by the MySQL database. This is -1 for new districts, and is only populated
-     * for districts retrieved from the database.
+     * The unique id of this district in the SQL database. This is <code>-1</code> if the id is not yet known.
      */
-    private int id;
+    protected int id;
 
     /**
      * The name of this district. This is typically the name of the first {@link School} in the district. After a second
      * school is added to the district, the user is given the option to rename the district.
      * <p>
-     * This can only be changed by {@link #updateDatabase(String, String) updateDatabase()}.
+     * This can only be changed by the {@link CachedDistrict} subclass.
      */
     @Nullable
-    private String name;
+    protected String name;
 
     /**
      * The Link of this district's main website. This is typically the same as the associated {@link School school's}
      * url.
      * <p>
-     * This can only be changed by {@link #updateDatabase(String, String) updateDatabase()}.
+     * This can only be changed by the {@link CachedDistrict} subclass.
      */
     @Nullable
-    private String website_url;
+    protected String website_url;
 
     /**
-     * Create a new District by providing the name, Link, and id.
+     * Create a new District by providing its name, website, and id.
      *
      * @param id          The {@link #id}.
      * @param name        The {@link #name}.
@@ -52,65 +53,20 @@ public class District extends BaseConstruct {
         this.website_url = website_url;
     }
 
-    /**
-     * Create a new District with only its {@link #id}. This is used for making single calls to
-     * {@link #addOrganizationRelation(Organization)}.
-     *
-     * @param id The {@link #id}.
-     */
-    public District(int id) {
-        this(id, null, null);
-    }
-
-    /**
-     * Create a new District by providing the name and Link. The {@link #id} is set to the default value, -1.
-     *
-     * @param name        The {@link #name}.
-     * @param website_url The {@link #website_url}.
-     */
-    public District(@Nullable String name, @Nullable String website_url) {
-        this(-1, name, website_url);
-    }
-
-    /**
-     * Create a {@link District} from a {@link ResultSet}, the result of a query of the Districts table. It's expected
-     * that "<code>SELECT *</code>" was used, and so the resultSet contains every column.
-     *
-     * @param resultSet The result set of the query.
-     * @throws SQLException if there is any error parsing the <code>resultSet</code>.
-     */
-    public District(@NotNull ResultSet resultSet) throws SQLException {
-        this(
-                resultSet.getInt("id"),
-                resultSet.getString("name"),
-                resultSet.getString("website_url")
-        );
-    }
-
-    /**
-     * Get the id of this district.
-     *
-     * @return The {@link #id}.
-     */
+    @Override
     public int getId() {
         return id;
     }
 
-    /**
-     * Get the name of this district.
-     *
-     * @return The {@link #name}.
-     */
+    public void setId(int id) {
+        this.id = id;
+    }
+
     @Nullable
     public String getName() {
         return name;
     }
 
-    /**
-     * Get the website Link of this district.
-     *
-     * @return The {@link #website_url}.
-     */
     public String getWebsiteURL() {
         return website_url;
     }
@@ -133,115 +89,29 @@ public class District extends BaseConstruct {
         return false;
     }
 
-    /**
-     * Retrieve a list of all the {@link School Schools} in this district from the SQL database.
-     *
-     * @return A list of schools.
-     * @throws SQLException If there is any error querying the database.
-     */
-    public List<School> getSchools() throws SQLException {
-        List<School> schools = new ArrayList<>();
-
-        try (Connection connection = Database.getConnection()) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "SELECT * FROM Schools WHERE district_id = ?"
-            );
-            statement.setInt(1, id);
-            ResultSet resultSet = statement.executeQuery();
-
-            while (resultSet.next())
-                schools.add(new School(resultSet));
-        }
-
-        return schools;
+    @Override
+    public void addToInsertStatement(@NotNull PreparedStatement statement) throws SQLException {
+        statement.setString(1, getName());
+        statement.setString(2, getWebsiteURL());
+        statement.addBatch();
     }
 
     /**
-     * Save this {@link District} to the database. This will assign a new {@link #id} if this is a new district.
-     * <p>
-     * Note that this does not check to see if the district already exists in the database, and therefore may
-     * theoretically result in duplicates.
+     * Get a quick string representation of this district. This will take one of the following forms:
+     * <ul>
+     *     <li>If the {@link #id} is set, the string <code>"[name] ([id])"</code> is
+     *     returned.
+     *     <li>If the id is not set, the result of calling {@link #getName()} is returned.
+     * </ul>
      *
-     * @throws SQLException If there is any error saving the district to the database.
+     * @return A string representation of this district.
      */
-    public void saveToDatabase() throws SQLException {
-        try (Connection connection = Database.getConnection()) {
-            // Add the district to the database.
-            PreparedStatement prepStmt = connection.prepareStatement(
-                    "INSERT INTO Districts (name, website_url) VALUES (?, ?)"
-            );
-            prepStmt.setString(1, name);
-            prepStmt.setString(2, website_url);
-            prepStmt.executeUpdate();
-
-            // Get the id of the district that was just added.
-            Statement stmt = connection.createStatement();
-            ResultSet result = stmt.executeQuery("SELECT LAST_INSERT_ID();");
-            if (result.next())
-                this.id = result.getInt(1);
-            else
-                logger.error("Failed to get auto-generated id of newly created district.");
-        }
-    }
-
-    /**
-     * Update the {@link #name} and {@link #website_url} in the database for this district. If the given values to
-     * update are already the values of this district, nothing happens. If only one of them is different, only that
-     * value is updated.
-     *
-     * @param name        The new district name.
-     * @param website_url The new district website URL.
-     * @throws SQLException If there is an error establishing the database connection or executing the command.
-     */
-    public void updateDatabase(@Nullable String name, @Nullable String website_url) throws SQLException {
-        LinkedHashMap<String, String> map = new LinkedHashMap<>();
-
-        if (!Objects.equals(this.name, name))
-            map.put("name", name);
-
-        if (!Objects.equals(this.website_url, website_url))
-            map.put("website_url", website_url);
-
-        if (map.size() == 0)
-            return;
-
-        // Open database connection
-        try (Connection connection = Database.getConnection()) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "UPDATE Districts SET %s WHERE id = ?;".formatted(
-                            String.join(", ", map.keySet().stream().map(k -> k + " = ?").toList()))
-            );
-
-            ArrayList<String> values = new ArrayList<>(map.values());
-            for (int i = 0; i < values.size(); i++)
-                statement.setString(i + 1, values.get(i));
-
-            statement.setInt(values.size() + 1, id);
-            statement.executeUpdate();
-
-            this.name = name;
-            this.website_url = website_url;
-
-            logger.debug("Updated district {}: name {} and website {}", id, name, website_url);
-        }
-    }
-
-    /**
-     * Add a link between this district and the specified {@link Organization} to the <code>DistrictOrganizations
-     * </code> table in the database.
-     *
-     * @param organization The organization to link to this district.
-     * @throws SQLException If there is any error interacting with the database.
-     */
-    public void addOrganizationRelation(@NotNull Organization organization) throws SQLException {
-        try (Connection connection = Database.getConnection()) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "INSERT INTO DistrictOrganizations (organization_id, district_id) VALUES (?, ?) " +
-                            "ON DUPLICATE KEY UPDATE organization_id = organization_id;"
-            );
-            statement.setInt(1, organization.getId());
-            statement.setInt(2, id);
-            statement.executeUpdate();
-        }
+    @Override
+    @NotNull
+    public String toString() {
+        if (getId() == -1)
+            return getName() == null ? "MISSING_DISTRICT_NAME" : getName();
+        else
+            return String.format("%s (%d)", getName(), getId());
     }
 }

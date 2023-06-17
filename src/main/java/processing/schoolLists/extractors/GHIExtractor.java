@@ -8,8 +8,9 @@ import com.google.gson.stream.JsonReader;
 import constructs.organization.OrganizationManager;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
-import constructs.school.SchoolManager;
+import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,16 +24,14 @@ import java.util.Objects;
 public class GHIExtractor implements Extractor {
     private static final Logger logger = LoggerFactory.getLogger(GHIExtractor.class);
 
-    /**
-     * Extract schools from the {@link OrganizationManager#GHI Great Hearts Institute} website.
-     *
-     * @param document The HTML document from which to extract the list.
-     *
-     * @return An array of created schools.
-     */
+    @Override
+    public String abbreviation() {
+        return OrganizationManager.GHI.getNameAbbr();
+    }
+
     @Override
     @NotNull
-    public List<CreatedSchool> extract(@NotNull Document document) {
+    public List<CreatedSchool> extract(@NotNull Document document, @Nullable SchoolListProgressWindow progress) {
         List<CreatedSchool> list = new ArrayList<>();
         logHeader();
 
@@ -52,8 +51,11 @@ public class GHIExtractor implements Extractor {
             jsonSchoolMap = rootObj.getAsJsonArray("mapRS");
         } catch (IndexOutOfBoundsException | JsonParseException | IllegalStateException e) {
             logger.error("Failed to extract GHI schools.", e);
+            logParsedCount(0, progress);
             return list;
         }
+
+        logPossibleCount(jsonSchools.size(), progress);
 
         // Iterate through each school, extracting the information from the JSON structures.
         for (int i = 0; i < jsonSchools.size(); i++) {
@@ -78,33 +80,24 @@ public class GHIExtractor implements Extractor {
 
                 // Make sure these values correspond. If they don't, log a warning and skip this school
                 if (!Objects.equals(name, name2)) {
-                    logger.warn("GHI school name mismatch: '{}' != '{}'. Skipping school.", name, name2);
+                    logger.warn("{} school name mismatch: '{}' != '{}'. Skipping school.",
+                            abbreviation(), name, name2);
+                    incrementProgressBar(progress, null);
                     continue;
                 } else if (!Objects.equals(address, address2)) {
-                    logger.warn("GHI school address mismatch: '{}' != '{}'. Skipping school.", address, address2);
+                    logger.warn("{} school address mismatch: '{}' != '{}'. Skipping school.",
+                            abbreviation(), address, address2);
+                    incrementProgressBar(progress, null);
                     continue;
                 } else if (!Objects.equals(servingGrades, servingGrades2)) {
-                    logger.warn("GHI school serving grades mismatch: '{}' != '{}'. Skipping school.",
-                            servingGrades, servingGrades2);
+                    logger.warn("{} school serving grades mismatch: '{}' != '{}'. Skipping school.",
+                            abbreviation(), servingGrades, servingGrades2);
+                    incrementProgressBar(progress, null);
                     continue;
-                }
-
-                // If the previous school has the same website and address, it is almost certainly the same school
-                // with a different name. Change the name of the previous school to this one, and then continue to
-                // avoid adding duplicates.
-                // There are many Great Hearts schools with the name "Archway Classical Academy - <City>" followed
-                // immediately in the list by "<City> Preparatory Academy". I intend to keep the latter name.
-                if (list.size() > 0) {
-                    CreatedSchool prevSchool = list.get(list.size() - 1);
-                    if (Objects.equals(prevSchool.get(Attribute.website_url), website) &&
-                        Objects.equals(prevSchool.get(Attribute.address), address)) {
-                        prevSchool.put(Attribute.name, name);
-                        continue;
-                    }
                 }
 
                 // Create a school instance from this information
-                CreatedSchool school = SchoolManager.newGHI();
+                CreatedSchool school = new CreatedSchool(OrganizationManager.GHI);
                 school.put(Attribute.name, ExtUtils.validateName(name));
                 school.put(Attribute.address, address);
                 school.put(Attribute.grades_offered, servingGrades);
@@ -114,14 +107,15 @@ public class GHIExtractor implements Extractor {
                 school.put(Attribute.longitude, longitude);
                 school.put(Attribute.lat_long_accuracy, latLongAccuracy);
 
-                logger.debug("Added GHI school: " + school.name());
+                // Add the completed school, and log it
+                incrementProgressBar(progress, school);
                 list.add(school);
             } catch (IndexOutOfBoundsException | IllegalStateException | ClassCastException | NullPointerException e) {
                 logger.debug("Failed to parse GHI school at index " + i + ".", e);
             }
         }
 
-        logger.info("Extracted " + list.size() + " GHI schools.");
+        logParsedCount(list.size(), progress);
         return list;
     }
 }
