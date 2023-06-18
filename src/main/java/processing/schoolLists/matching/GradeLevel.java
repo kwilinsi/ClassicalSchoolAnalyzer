@@ -231,7 +231,8 @@ public enum GradeLevel {
                 .toLowerCase(Locale.ROOT)
                 .replace("—", "-")
                 .replace("–", "-")
-                .replace("_", "-");
+                .replace("_", "-")
+                .replace(" \uFFFD ", "-");
 
         // If the string contains "(expanding to foo-bar)" at the end, remove the parenthetical
         Matcher matcher = GRADE_RANGE_PARENTHETICAL.matcher(str);
@@ -280,6 +281,9 @@ public enum GradeLevel {
 
                 char c = str.charAt(0);
                 Function<String, Boolean> condition;
+
+                // TODO DEBUGGING STUFF DELETE THIS
+                System.out.printf("Unknown char %c is int %d (\\u%04X)", c, (int) c, (int) c);
 
                 // If the next character is a number, remove all upcoming numbers.
                 // If it's a letter, remove all upcoming letters.

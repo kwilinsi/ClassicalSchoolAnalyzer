@@ -25,6 +25,8 @@ import utils.URLUtils;
 import utils.Utils;
 
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -182,6 +184,12 @@ public class MatchIdentifier {
      * Importantly, the list of schools associated with each district comes directly from the
      * <code>allComparisons</code> list, meaning that <code>allComparisons.contains()</code> will be
      * <code>true</code> for every {@link SchoolComparison} returned by this function.
+     * <p>
+     * Because the association is done with {@link constructs.CachedConstruct cached} districts and schools,
+     * comparisons cannot necessarily be made on the district {@link CachedDistrict#getId() id}. The district might
+     * not have been added to the database yet, meaning its id would be <code>-1</code>. Thus, when the district id
+     * is known (not <code>-1</code>), the known value is used. But when it's not known, the {@link CachedDistrict}
+     * object itself is compared.
      *
      * @param matches        A list of comparison instances for schools that matched the incoming school.
      * @param allComparisons A list of all comparisons, one for every school in the database cache.
@@ -194,34 +202,63 @@ public class MatchIdentifier {
             @NotNull List<SchoolComparison> matches,
             @NotNull List<SchoolComparison> allComparisons,
             @NotNull List<CachedDistrict> districtCache) {
-        Map<Integer, Set<SchoolComparison>> idMap = new HashMap<>();
+        Map<CachedDistrict, List<SchoolComparison>> map = new HashMap<>();
 
-        // Add all districts by the id
-        for (SchoolComparison match : matches) {
-            int id = match.getExistingSchool().getDistrictId();
-            if (idMap.containsKey(id))
-                idMap.get(id).add(match);
-            else
-                idMap.put(id, new HashSet<>(List.of(match)));
-        }
+        // Define a function for comparing districts either by object reference or ids that aren't -1
+        BiFunction<@Nullable CachedDistrict, @Nullable CachedDistrict, Boolean> compareDistricts =
+                (d1, d2) -> d1 == d2 || (d1 != null && d2 != null && d1.getId() != -1 && d1.getId() == d2.getId());
 
-        // Add any other comparisons from these districts. Duplicates are omitted, as it uses an underlying Set
-        for (SchoolComparison comparison : allComparisons)
-            if (idMap.containsKey(comparison.getExistingSchool().getDistrictId()))
-                idMap.get(comparison.getExistingSchool().getDistrictId()).add(comparison);
-
-        // Convert the map to a map of CachedDistricts and Lists
-        Map<CachedDistrict, List<SchoolComparison>> districtMap = new HashMap<>();
-
-        for (int id : idMap.keySet()) {
-            for (CachedDistrict district : districtCache)
-                if (id == district.getId()) {
-                    districtMap.put(district, new ArrayList<>(idMap.get(id)));
-                    break;
+        // Define a function for getting the district from a school comparison
+        BiFunction<@NotNull SchoolComparison, Collection<CachedDistrict>, @Nullable CachedDistrict> findDistrict =
+                (comparison, districts) -> {
+            CachedSchool school = comparison.getExistingSchool();
+            int id = school.getDistrictId();
+            if (id == -1) {
+                CachedDistrict district = school.getDistrict();
+                if (district == null) {
+                    logger.warn("Unable to find district matching existing school {}", comparison.getExistingSchool());
+                } else {
+                    for (CachedDistrict cachedDistrict : districts)
+                        // Intentional use of == to compare the object references
+                        if (cachedDistrict == district)
+                            return cachedDistrict;
                 }
+            } else {
+                for (CachedDistrict cachedDistrict : districts)
+                    if (cachedDistrict.getId() == id)
+                        return cachedDistrict;
+            }
+
+            return null;
+        };
+
+        // Define a function for adding a comparison to a district if that district is already listed or adding the
+        // district if it isn't added yet
+        BiConsumer<CachedDistrict, SchoolComparison> addOrUpdate = (district, comparison) -> {
+            for (CachedDistrict cachedDistrict : map.keySet())
+                if (compareDistricts.apply(district, cachedDistrict)) {
+                    map.get(cachedDistrict).add(comparison);
+                    return;
+                }
+            map.put(district, new ArrayList<>(Collections.singletonList(comparison)));
+        };
+
+        for (SchoolComparison match : matches) {
+            CachedDistrict district = findDistrict.apply(match, districtCache);
+            if (district == null)
+                logger.warn("Unable to find cached district for existing school {}", match.getExistingSchool());
+            else
+                addOrUpdate.accept(district, match);
         }
 
-        return districtMap;
+        for (SchoolComparison comparison : allComparisons)
+            if (!matches.contains(comparison)) {
+                CachedDistrict district = findDistrict.apply(comparison, map.keySet());
+                if (district != null)
+                    map.get(district).add(comparison);
+            }
+
+        return map;
     }
 
     /**

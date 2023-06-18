@@ -96,6 +96,11 @@ public class CachedSchool extends School implements CachedConstruct {
                 put(a, resultSet.getObject(a.name()));
     }
 
+    @Nullable
+    public CachedDistrict getDistrict() {
+        return district;
+    }
+
     /**
      * Save a new value for some attribute to this school. If that value is the same as the old value stored in the
      * initial {@link #attributes} map, any new values are cleared. However, if this is a new value for the

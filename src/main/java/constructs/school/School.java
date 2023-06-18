@@ -76,7 +76,7 @@ public class School implements Construct {
      * @throws NullPointerException If the {@link #district_id} is not set.
      */
     @NotNull
-    public CachedDistrict getDistrict() throws NullPointerException, SQLException {
+    public CachedDistrict retrieveDistrict() throws NullPointerException, SQLException {
         if (district_id == -1)
             throw new NullPointerException("Cannot retrieve parent District because the district_id is not set.");
 
