@@ -209,11 +209,13 @@ public class ConstructManager {
      * @param message    The message to log if the saving process fails for any reason. If this is <code>null</code>
      *                   and an error occurs, a generic substitute is used.
      * @param <T>        The type of construct.
+     * @return <code>True</code> if and only if the save is successful.
      */
-    public static <T extends Construct> void saveToDatabase(@NotNull Collection<T> constructs,
-                                                            @Nullable String message) {
+    public static <T extends Construct> boolean saveToDatabase(@NotNull Collection<T> constructs,
+                                                               @Nullable String message) {
         try {
             saveToDatabase(constructs);
+            return true;
         } catch (SQLException e) {
             if (message == null)
                 message = String.format("Error adding %s to SQL database.",
@@ -222,6 +224,7 @@ public class ConstructManager {
                 );
 
             logger.error(message, e);
+            return false;
         }
     }
 

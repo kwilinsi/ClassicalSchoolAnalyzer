@@ -115,14 +115,14 @@ public class DatabaseManager {
                             if (results[0] >= 0)
                                 logger.info("Successfully cleared {} rows from {} table", results[0], table);
                             else if (results[0] == Statement.SUCCESS_NO_INFO)
-                                logger.info("Successfully cleared table {}. Unknown row count", table);
+                                logger.info("Successfully cleared the {} table. Unknown row count", table);
                             else
-                                logger.warn("Failed to clear table {}", table);
+                                logger.warn("Failed to clear the {} table", table);
 
                             if (results[1] >= 0 || results[1] == Statement.SUCCESS_NO_INFO)
-                                logger.debug(" - Reset auto increment to 1 for {} table", table);
+                                logger.debug(" - Reset auto increment to 1 for the {} table", table);
                             else
-                                logger.warn(" - Failed to reset auto increment to 1 for {} table", table);
+                                logger.warn(" - Failed to reset auto increment to 1 for the {} table", table);
 
                             if (table == Table.Organizations) clearedOrganizations.set(true);
 
@@ -135,10 +135,12 @@ public class DatabaseManager {
             return;
         }
 
-        if (clearedOrganizations.get())
-            ConstructManager.saveToDatabase(OrganizationManager.ORGANIZATIONS,
+        if (clearedOrganizations.get()) {
+            if (ConstructManager.saveToDatabase(OrganizationManager.ORGANIZATIONS,
                     "Failed to re-populate " + Table.Organizations.getTableName() + " table after clearing"
-            );
+            ))
+                logger.info("Added Organizations to database");
+        }
     }
 
     /**
@@ -148,7 +150,9 @@ public class DatabaseManager {
     private static void resetDatabase() {
         deleteTables();
         createTables();
-        ConstructManager.saveToDatabase(OrganizationManager.ORGANIZATIONS, null);
+        if (ConstructManager.saveToDatabase(OrganizationManager.ORGANIZATIONS,
+                "Failed to add Organizations to database"))
+            logger.info("Added Organizations to database");
     }
 
     /**
