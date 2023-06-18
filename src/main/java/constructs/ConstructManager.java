@@ -9,6 +9,7 @@ import constructs.school.Attribute;
 import constructs.school.CachedSchool;
 import constructs.school.School;
 import database.Database;
+import database.Table;
 import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -225,7 +226,7 @@ public class ConstructManager {
     }
 
     /**
-     * Get the name of the SQL table associated with a particular construct.
+     * Get the name of the SQL {@link Table} associated with a particular construct.
      *
      * @param cls The construct class.
      * @param <T> The construct class type.
@@ -234,11 +235,11 @@ public class ConstructManager {
     @Nullable
     private static <T extends CachedConstruct> String getConstructSQLTable(@NotNull Class<T> cls) {
         if (cls == CachedDistrict.class)
-            return "Districts";
+            return Table.Districts.getTableName();
         else if (cls == CachedSchool.class)
-            return "Schools";
+            return Table.Schools.getTableName();
         else if (cls == CachedDistrictOrganization.class)
-            return "DistrictOrganizations";
+            return Table.DistrictOrganizations.getTableName();
         else
             return null;
     }

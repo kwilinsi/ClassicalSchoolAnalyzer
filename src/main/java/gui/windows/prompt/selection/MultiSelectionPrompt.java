@@ -10,14 +10,19 @@ import gui.windows.prompt.Prompt;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import utils.Pair;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
  * Similar to a {@link SelectionPrompt}, a multi-selection prompt allows the user to choose from a list of options.
  * However, the options are listed as checkboxes, allowing the user to select more than one.
+ * <p>
+ * Note that this prompt has a {@link MessageDialogButton#Cancel Cancel} button which, if selected, will yield
+ * <code>null</code>.
  */
 public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
     /**
@@ -27,23 +32,61 @@ public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
     private final CheckBoxList<Option<T>> checkBoxes;
 
     /**
+     * This is an optional validation function that is called when the user {@link #onOk() submits} the prompt. If it
+     * fails, the associated message is displayed and the prompt is not submitted.
+     * <p>
+     * It takes as input an immutable list of currently selected items. It returns a {@link Pair} of a {@link Boolean}
+     * (<code>true</code> if the validation passed; <code>false</code> if it failed) and an optional {@link String},
+     * which, if present, contains the error message to display.
+     *
+     * @see #confirmation
+     */
+    @Nullable
+    private final Function<List<T>, Pair<Boolean, String>> validator;
+
+    /**
+     * This is an optional function for generating a confirmation message when the user {@link #onOk() submits} the
+     * prompt. If it fails, prompt is not submitted.
+     * <p>
+     * It takes as input an immutable list of currently selected items. It returns the confirmation message to
+     * display the user. The message is automatically suffixed with <code>"Are you sure you want to
+     * continue?"</code>, and the user is given {@link MessageDialogButton#Yes Yes} and
+     * {@link MessageDialogButton#No No} buttons.
+     * <p>
+     * If this is <code>null</code>, it is not used. If it's present but the produced message is <code>null</code>,
+     * this is also not shown.
+     * <p>
+     * Note that this runs after the {@link #validator}.
+     */
+    @Nullable
+    private final Function<List<T>, String> confirmation;
+
+    /**
      * Create a new multi-selection prompt window.
      *
      * @param windowTitle     The title of the window.
      * @param promptComponent The {@link Component} that contains the prompt message for the user.
      * @param options         The list of {@link Option Options} to present to the user.
      * @param checkedStates   The current state of the checkbox for each option.
+     * @param validator       The {@link #validator}.
+     * @param confirmation    The {@link #confirmation}.
      * @throws IllegalArgumentException If the <code>checkStates</code> list is not <code>null</code> and a different
      *                                  length than the <code>options</code> list.
      */
     protected MultiSelectionPrompt(@Nullable String windowTitle,
                                    @Nullable Component promptComponent,
                                    @NotNull List<Option<T>> options,
-                                   @Nullable List<Boolean> checkedStates) throws IllegalArgumentException {
+                                   @Nullable List<Boolean> checkedStates,
+                                   @Nullable Function<List<T>, Pair<Boolean, String>> validator,
+                                   @Nullable Function<List<T>, String> confirmation)
+            throws IllegalArgumentException {
         super(windowTitle, promptComponent, new Panel());
 
         if (checkedStates != null && checkedStates.size() != options.size())
             throw new IllegalArgumentException("Checked states list must be the same size as the options list");
+
+        this.validator = validator;
+        this.confirmation = confirmation;
 
         checkBoxes = new CheckBoxList<>();
         for (int i = 0; i < options.size(); i++)
@@ -83,14 +126,20 @@ public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
      * @param promptComponent The {@link Component} that contains the prompt message for the user.
      * @param options         The list of {@link Option Options} to present to the user.
      * @param checkedStates   The current state of the checkbox for each option.
+     * @param validator       The {@link #validator}.
+     * @param confirmation    The {@link #confirmation}.
      * @param <T>             The type of value.
      * @return The new window.
      */
     public static <T> MultiSelectionPrompt<T> of(@Nullable String windowTitle,
                                                  @Nullable Component promptComponent,
                                                  @NotNull List<Option<T>> options,
-                                                 @Nullable List<Boolean> checkedStates) {
-        return new MultiSelectionPrompt<>(windowTitle, promptComponent, options, checkedStates);
+                                                 @Nullable List<Boolean> checkedStates,
+                                                 @Nullable Function<List<T>, Pair<Boolean, String>> validator,
+                                                 @Nullable Function<List<T>, String> confirmation) {
+        return new MultiSelectionPrompt<>(
+                windowTitle, promptComponent, options, checkedStates, validator, confirmation
+        );
     }
 
     /**
@@ -100,19 +149,44 @@ public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
      * @param text          The prompt message.
      * @param options       The list of options to show the user.
      * @param checkedStates The current state of the checkbox for each option.
+     * @param validator     The {@link #validator}.
+     * @param confirmation  The {@link #confirmation}.
      * @param <T>           The type of value.
      * @return The new window.
      */
     public static <T> MultiSelectionPrompt<T> of(@Nullable String windowTitle,
                                                  @NotNull String text,
                                                  @NotNull List<Option<T>> options,
-                                                 @Nullable List<Boolean> checkedStates) {
+                                                 @Nullable List<Boolean> checkedStates,
+                                                 @Nullable Function<List<T>, Pair<Boolean, String>> validator,
+                                                 @Nullable Function<List<T>, String> confirmation) {
         return new MultiSelectionPrompt<>(
                 windowTitle,
                 new Panel().addComponent(new Label(text)).addComponent(new EmptySpace()),
                 options,
-                checkedStates
+                checkedStates,
+                validator,
+                confirmation
         );
+    }
+
+    /**
+     * Create a new multi-selection prompt window.
+     *
+     * @param windowTitle  The title of the widow.
+     * @param text         The prompt message.
+     * @param options      The list of options to show the user. All options are not selected by default.
+     * @param validator    The {@link #validator}.
+     * @param confirmation The {@link #confirmation}.
+     * @param <T>          The type of value.
+     * @return The new window.
+     */
+    public static <T> MultiSelectionPrompt<T> of(@Nullable String windowTitle,
+                                                 @NotNull String text,
+                                                 @NotNull List<Option<T>> options,
+                                                 @Nullable Function<List<T>, Pair<Boolean, String>> validator,
+                                                 @Nullable Function<List<T>, String> confirmation) {
+        return of(windowTitle, text, options, null, validator, confirmation);
     }
 
     /**
@@ -127,7 +201,7 @@ public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
     public static <T> MultiSelectionPrompt<T> of(@Nullable String windowTitle,
                                                  @NotNull String text,
                                                  @NotNull List<Option<T>> options) {
-        return of(windowTitle, text, options, null);
+        return of(windowTitle, text, options, null, null, null);
     }
 
     /**
@@ -145,7 +219,8 @@ public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
                                                  @NotNull List<Option<T>> options,
                                                  boolean checkedState) {
         return of(windowTitle, text, options,
-                Stream.generate(() -> checkedState).limit(options.size()).collect(Collectors.toList()));
+                Stream.generate(() -> checkedState).limit(options.size()).collect(Collectors.toList()),
+                null, null);
     }
 
     /**
@@ -157,21 +232,54 @@ public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
 
     /**
      * Called when the user chooses the {@link MessageDialogButton#OK OK} button.
+     * <p>
+     * This runs the {@link #validator} function, if one is present. Then, it runs the {@link #confirmation}
+     * function, if one is present. Finally, if none of the options are selected, it shows a warning confirmation.
+     * Finally, it records the selected options and closes the window.
      */
     private void onOk() {
         List<Option<T>> items = checkBoxes.getCheckedItems();
+
+        // If there's a validation function, run it
+        if (validator != null) {
+            Pair<Boolean, String> result = validator.apply(items.stream().map(Option::getValue).toList());
+            if (!result.a) {
+                MessageDialog.showMessageDialog(
+                        Main.GUI.getWindowGUI(),
+                        "Error",
+                        GUIUtils.wrapLabelText(result.b == null ? "The validator failed for the current selections. " +
+                                "Try a different selection." : result.b),
+                        MessageDialogButton.OK
+                );
+                return;
+            }
+        }
+
+        // If there's a confirmation message, show it
+        if (confirmation != null) {
+            String message = confirmation.apply(items.stream().map(Option::getValue).toList());
+            if (message != null)
+                if (MessageDialogButton.No == MessageDialog.showMessageDialog(
+                        Main.GUI.getWindowGUI(),
+                        "Confirm Selection",
+                        GUIUtils.wrapLabelText(message + " Are you sure you want to continue?"),
+                        MessageDialogButton.No,
+                        MessageDialogButton.Yes
+                ))
+                    return;
+        }
+
+        // Show a warning if nothing is selected
         if (items.size() == 0) {
-            MessageDialogButton button = MessageDialog.showMessageDialog(
+            if (MessageDialogButton.No == MessageDialog.showMessageDialog(
                     Main.GUI.getWindowGUI(),
                     "Confirm Selection",
                     GUIUtils.wrapLabelText(
                             "None of the options are currently selected. Are you sure want to continue?"
                     ),
-                    MessageDialogButton.Yes,
-                    MessageDialogButton.No
-            );
-
-            if (button == MessageDialogButton.No)
+                    MessageDialogButton.No,
+                    MessageDialogButton.Yes
+            ))
                 return;
         }
 
