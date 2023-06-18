@@ -47,7 +47,7 @@ public class Actions {
      * Calling {@link Action}: {@link Action#UPDATE_SCHOOL_LIST UPDATE_SCHOOL_LIST}
      */
     static void updateSchoolList() {
-        logger.info("Updating school list.");
+        logger.info("Updating school list");
 
         List<Organization> organizations = Main.GUI.showPrompt(MultiSelectionPrompt.of(
                 "Organizations",
@@ -77,7 +77,7 @@ public class Actions {
      * Calling {@link Action}: {@link Action#DOWNLOAD_SCHOOL_WEBSITES DOWNLOAD_SCHOOL_WEBSITES}
      */
     static void downloadSchoolWebsites() {
-        logger.info("Downloading school websites.");
+        logger.info("Downloading school websites");
         notImplemented();
     }
 
@@ -87,7 +87,7 @@ public class Actions {
      * Calling {@link Action}: {@link Action#PERFORM_ANALYSIS PERFORM_ANALYSIS}
      */
     static void performAnalysis() {
-        logger.info("Performing analysis on classical schools.");
+        logger.info("Performing analysis on classical schools");
         notImplemented();
     }
 
@@ -97,7 +97,7 @@ public class Actions {
      * Calling {@link Action}: {@link Action#MANAGE_DATABASE MANAGE_DATABASE}
      */
     static void manageDatabase() {
-        logger.info("Calling DatabaseManager.prompt().");
+        logger.info("Calling DatabaseManager.prompt()");
         DatabaseManager.prompt();
     }
 
@@ -107,7 +107,7 @@ public class Actions {
      * Calling {@link Action}: {@link Action#MANAGE_CORRECTIONS MANAGE_CORRECTIONS}
      */
     static void manageCorrections() {
-        logger.info("Calling CorrectionManager.guiManager().");
+        logger.info("Calling CorrectionManager.guiManager()");
         CorrectionManager.guiManager();
     }
 
@@ -121,7 +121,7 @@ public class Actions {
      * Calling {@link Action}: {@link Action#CLEAR_DATA_DIRECTORY CLEAR_DATA_DIRECTORY}
      */
     static void clearDataDirectory() {
-        logger.info("Clearing data directory.");
+        logger.info("Clearing data directory");
 
         String p;
         try {
@@ -169,6 +169,6 @@ public class Actions {
      * Calling {@link Action}: {@link Action#TEST TEST}
      */
     static void test() {
-        logger.info("Running test script.");
+        logger.info("Running test script");
     }
 }

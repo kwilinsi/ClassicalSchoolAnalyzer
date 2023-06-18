@@ -19,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 public class DatabaseManager {
@@ -90,11 +91,16 @@ public class DatabaseManager {
      * Clear the specified {@link Table}. Log an info message for each cleared table.
      * <p>
      * This also resets the auto-increment counter to 1 for the table.
+     * <p>
+     * If this clears the {@link Table#Organizations Organizations} table, the organizations are added back
+     * immediately afterward.
      *
      * @param tables The tables to clear. This must not be <code>null</code>, but it may include <code>null</code>
      *               elements in any order with duplicates. It is filtered and sorted before clearing.
      */
     private static void clearTables(@NotNull Collection<Table> tables) {
+        AtomicBoolean clearedOrganizations = new AtomicBoolean(false);
+
         try (Connection connection = Database.getConnection()) {
             tables.stream()
                     .filter(Objects::nonNull)
@@ -118,13 +124,21 @@ public class DatabaseManager {
                             else
                                 logger.warn(" - Failed to reset auto increment to 1 for {} table", table);
 
+                            if (table == Table.Organizations) clearedOrganizations.set(true);
+
                         } catch (SQLException e) {
                             logger.error("Failed to clear " + table + " table", e);
                         }
                     });
         } catch (SQLException e) {
             logger.error("Failed to establish database connection", e);
+            return;
         }
+
+        if (clearedOrganizations.get())
+            ConstructManager.saveToDatabase(OrganizationManager.ORGANIZATIONS,
+                    "Failed to re-populate " + Table.Organizations.getTableName() + " table after clearing"
+            );
     }
 
     /**
