@@ -1,5 +1,6 @@
 package constructs;
 
+import constructs.correction.Correction;
 import constructs.district.CachedDistrict;
 import constructs.district.District;
 import constructs.districtOrganization.CachedDistrictOrganization;
@@ -201,6 +202,16 @@ public class ConstructManager {
     }
 
     /**
+     * Convenience method for {@link #saveToDatabase(Collection) saveToDatabase()} with a single {@link Construct}.
+     *
+     * @param construct The construct
+     * @throws SQLException If there is an error creating or executing the statement.
+     */
+    public static void saveToDatabase(@NotNull Construct construct) throws SQLException {
+        saveToDatabase(List.of(construct));
+    }
+
+    /**
      * Convenience method for {@link #saveToDatabase(Collection) saveToDatabase()} that catches and logs any
      * {@link SQLException SQLExceptions}.
      *
@@ -266,6 +277,8 @@ public class ConstructManager {
             return plural ? "Organizations" : "Organization";
         else if (DistrictOrganization.class.isAssignableFrom(cls))
             return plural ? "DistrictOrganizations" : "DistrictOrganization";
+        else if (Correction.class.isAssignableFrom(cls))
+            return plural ? "Constructs" : "Construct";
         else
             return "<Unknown Construct>";
     }
@@ -300,6 +313,9 @@ public class ConstructManager {
                     "VALUES (?, ?, ?, ?, ?)", false);
         else if (DistrictOrganization.class.isAssignableFrom(cls))
             return Pair.of("INSERT INTO DistrictOrganizations (organization_id, district_id) VALUES (?, ?)", true);
+        else if (Construct.class.isAssignableFrom(cls))
+            return Pair.of("INSERT INTO Corrections (type, data, deserialization_data, notes) VALUES (?, ?, ?, ?)",
+                    true);
         else
             return Pair.of("", false);
     }

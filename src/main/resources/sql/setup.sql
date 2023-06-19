@@ -9,10 +9,11 @@ CREATE TABLE IF NOT EXISTS Cache
 
 CREATE TABLE IF NOT EXISTS Corrections
 (
-    id    INTEGER     NOT NULL AUTO_INCREMENT,
-    type  VARCHAR(30) NOT NULL,
-    data  JSON        NOT NULL,
-    notes VARCHAR(300),
+    id                   INTEGER     NOT NULL AUTO_INCREMENT,
+    type                 VARCHAR(30) NOT NULL,
+    data                 JSON        NOT NULL,
+    deserialization_data JSON,
+    notes                VARCHAR(300),
     PRIMARY KEY (id)
 );
 

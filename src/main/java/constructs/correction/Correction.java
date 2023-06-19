@@ -1,6 +1,16 @@
 package constructs.correction;
 
+import com.google.gson.Gson;
+import com.google.gson.TypeAdapter;
+import constructs.Construct;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
+
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A Correction represents some manually created rule that affects the behavior of the program with respect to the
@@ -25,14 +35,25 @@ import org.jetbrains.annotations.Nullable;
  * schools that trigger manual action can be dealt with using Corrections, thereby avoiding wasted time.
  * <hr>
  * <p>
- * Corrections are stored in the SQL database. They consist of a {@link CorrectionManager.Type Type} parameter that
+ * Corrections are stored in the SQL database. They consist of a {@link CorrectionType CorrectionType} parameter that
  * specifies what processes within the program they impact, which greatly improves filtering time. Their logic is
  * stored in JSON objects within the databse that contain information partaining to the type of Correction. This
  * structure allows for easily creating new types of Corrections as the program expands, without the need to
  * constantly refactor the Corrections SQL table.
  */
 @SuppressWarnings("SpellCheckingInspection")
-public abstract class Correction {
+public abstract class Correction implements Construct {
+    /**
+     * The unique id of this Correction in the SQL database. This is <code>-1</code> if the id is not yet known.
+     */
+    protected transient int id;
+
+    /**
+     * The {@link CorrectionType CorrectionType} of Correction.
+     */
+    @NotNull
+    protected transient final CorrectionType type;
+
     /**
      * These are user-friendly notes associated with the Correction. These are for use in the SQL database to record
      * any helpful information about what the Correction does and/or why it was created.
@@ -45,19 +66,64 @@ public abstract class Correction {
     protected transient String notes;
 
     /**
-     * Initialize a new Correction with the given notes.
+     * This is a set of 0 or more {@link TypeAdapter TypeAdapters} that may be used to configure the
+     * {@link com.google.gson.Gson Gson} interpreter that will read the Correction data.
+     */
+    @NotNull
+    @Unmodifiable
+    protected transient Map<Class<?>, Class<?>> deserialization_data;
+
+    /**
+     * Initialize a new Correction.
      *
-     * @param notes The {@link #notes}.
+     * @param id                   The {@link #id}.
+     * @param type                 The {@link #type}.
+     * @param notes                The {@link #notes}.
+     * @param deserialization_data The {@link #deserialization_data}.
      * @throws IllegalArgumentException If the notes are more than 300 characters long, the maximum length allowed by
      *                                  the SQL database.
      */
-    protected Correction(@Nullable String notes) throws IllegalArgumentException {
+    protected Correction(int id,
+                         @NotNull CorrectionType type,
+                         @Nullable String notes,
+                         @NotNull Map<Class<?>, Class<?>> deserialization_data) throws IllegalArgumentException {
         if (notes != null && notes.length() > 300)
             throw new IllegalArgumentException(
                     "Correction notes length " + notes.length() + " exceeds 300-character limit"
             );
 
+        this.id = id;
+        this.type = type;
         this.notes = notes;
+        this.deserialization_data = deserialization_data;
+    }
+
+    /**
+     * Initialize a new Correction with the given type, notes, and deserilization data.
+     *
+     * @param type                 The {@link #type}.
+     * @param notes                The {@link #notes}.
+     * @param deserialization_data The {@link #deserialization_data}.
+     * @throws IllegalArgumentException If the notes are more than 300 characters long, the maximum length allowed by
+     *                                  the SQL database.
+     */
+    protected Correction(@NotNull CorrectionType type,
+                         @Nullable String notes,
+                         @NotNull Map<Class<?>, Class<?>> deserialization_data) throws IllegalArgumentException {
+        this(-1, type, notes, deserialization_data);
+    }
+
+    /**
+     * Initialize a new Correction with the given type and notes. The {@link #deserialization_data} is set to an empty
+     * map.
+     *
+     * @param type  The {@link #type}.
+     * @param notes The {@link #notes}.
+     * @throws IllegalArgumentException If the notes are more than 300 characters long, the maximum length allowed by
+     *                                  the SQL database.
+     */
+    protected Correction(@NotNull CorrectionType type, @Nullable String notes) throws IllegalArgumentException {
+        this(-1, type, notes, new HashMap<>());
     }
 
     /**
@@ -67,5 +133,31 @@ public abstract class Correction {
      */
     public void setNotes(@Nullable String notes) {
         this.notes = notes;
+    }
+
+    @Override
+    public int getId() {
+        return id;
+    }
+
+    @Override
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    @Override
+    public void addToInsertStatement(@NotNull PreparedStatement statement) throws SQLException {
+        statement.setString(1, type.name());
+        statement.setString(2, new Gson().toJson(this));
+        statement.setString(3, CorrectionType.encodeDeserializationData(deserialization_data));
+        statement.setString(4, notes);
+
+        statement.addBatch();
+    }
+
+    @Override
+    @NotNull
+    public String toString() {
+        return String.format("%s correction%s", type, id == -1 ? "" : " (" + id + ")");
     }
 }

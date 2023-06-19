@@ -1,6 +1,8 @@
 package constructs.school;
 
 import constructs.ConstructManager;
+import constructs.correction.CorrectionManager;
+import constructs.correction.schoolCorrection.SchoolCorrection;
 import constructs.district.CachedDistrict;
 import constructs.district.DistrictManager;
 import constructs.districtOrganization.CachedDistrictOrganization;
@@ -82,7 +84,7 @@ public class SchoolManager {
         }
 
         // ------------------------------
-        // Normalize School Attributes
+        // Normalize School Attributes and check Corrections
         // ------------------------------
 
         progress.setPhase(Phase.PRE_PROCESSING_SCHOOLS)
@@ -97,6 +99,21 @@ public class SchoolManager {
                 schools.get(i).put(attribute, normalized.get(i));
 
             progress.incrementSubProgress();
+        }
+
+        progress.setGeneralTask("Checking school corrections")
+                .resetSubProgressBar(schools.size(), "Schools");
+
+        List<SchoolCorrection> schoolCorrections = CorrectionManager.getSchoolCorrections();
+        for (int i = schools.size() - 1; i >= 0; i--) {
+            CreatedSchool school = schools.get(i);
+            for (SchoolCorrection correction : schoolCorrections)
+                if (correction.matches(school) && !correction.apply(school)) {
+                    schools.remove(i);
+                    break;
+                }
+
+            progress.incrementSubProgress().setSubTask("Checked corrections against " + school);
         }
 
         // ------------------------------

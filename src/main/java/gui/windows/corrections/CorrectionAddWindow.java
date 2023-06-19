@@ -1,23 +1,25 @@
 package gui.windows.corrections;
 
 import com.googlecode.lanterna.SGR;
+import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
+import constructs.correction.CorrectionType;
 import constructs.correction.Correction;
 import constructs.correction.CorrectionManager;
-import constructs.correction.CorrectionManager.Type;
 import gui.utils.GUIUtils;
 import gui.windows.MyBaseWindow;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 /**
  * This window offers a UI for adding {@link Correction Corrections} via the {@link CorrectionManager}. This class
- * must be extended to provide an implementation for each Correction {@link Type Type}.
+ * must be extended to provide an implementation for each Correction {@link CorrectionType CorrectionType}.
  */
 public abstract class CorrectionAddWindow extends MyBaseWindow {
     /**
@@ -30,7 +32,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
     /**
      * Notes to store in the database about the Correction.
      */
-    protected final TextBox notes = new TextBox();
+    protected final TextBox notes;
 
     /**
      * Initialize a new window that's specifically designed to prompt the user to create a new Correction.
@@ -38,10 +40,13 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      * This calls the {@link #makePanel()} method to create the main {@link Panel} containing the window contents.
      * This will automatically add buttons underneath that panel for closing the window.
      *
-     * @param type The {@link Type Type} of Correction. This is used in the header.
+     * @param type  The {@link CorrectionType CorrectionType} of Correction. This is used in the header.
+     * @param notes The {@link #notes}.
      */
-    protected CorrectionAddWindow(@NotNull Type type) {
+    protected CorrectionAddWindow(@NotNull CorrectionType type, @NotNull TextBox notes) {
         super();
+        this.notes = notes;
+
         setHints(List.of(Hint.MODAL, Hint.CENTERED));
 
         Panel buttons = new Panel()
@@ -63,6 +68,17 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
                         false
                 ))
         );
+    }
+
+    /**
+     * Shortcut for {@link #CorrectionAddWindow(CorrectionType, TextBox)} with a default
+     * {@link TextBox.Style#SINGLE_LINE SINGLE_LINE} {@link TextBox}
+     * set to 30 columns.
+     *
+     * @param type  The {@link CorrectionType CorrectionType} of Correction. This is used in the header.
+     */
+    protected CorrectionAddWindow(@NotNull CorrectionType type) {
+        this(type, new TextBox(new TerminalSize(30, 1)));
     }
 
     /**
@@ -138,7 +154,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      * @param message The description text.
      * @see #showWarning(String, String)
      */
-    protected void showError(@NotNull String error, @NotNull String message) {
+    public void showError(@NotNull String error, @NotNull String message) {
         MessageDialog.showMessageDialog(
                 Main.GUI.getWindowGUI(),
                 "Error: " + error,
@@ -158,7 +174,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      * @return <code>True</code> if and only if the user selects the <code>Continue</code> button.
      * @see #showError(String, String)
      */
-    protected boolean showWarning(@NotNull String warning, @NotNull String message) {
+    public boolean showWarning(@NotNull String warning, @NotNull String message) {
         return MessageDialogButton.Continue == MessageDialog.showMessageDialog(
                 Main.GUI.getWindowGUI(),
                 "Warning: " + warning,
@@ -166,6 +182,16 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
                 MessageDialogButton.Cancel,
                 MessageDialogButton.Continue
         );
+    }
+
+    /**
+     * Get the {@link #notes}. If they're {@link String#isBlank() blank}, <code>null</code> is used instead.
+     *
+     * @return The notes.
+     */
+    @Nullable
+    protected String getNotes() {
+        return notes.getText().isBlank() ? null : notes.getText();
     }
 
     /**
@@ -189,7 +215,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      * @param isRequired Whether the label should have a red asterisk denoting that it is a required field.
      * @return The new label.
      */
-    static Component makeValueLabel(@NotNull String text, boolean isRequired) {
+    public static Component makeValueLabel(@NotNull String text, boolean isRequired) {
         Label label = new Label(text + ":");
 
         if (isRequired) {
@@ -208,7 +234,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      *
      * @return The new label.
      */
-    static Label makeRequiredLabel() {
+    public static Label makeRequiredLabel() {
         return new Label("*required").setForegroundColor(TextColor.ANSI.RED)
                 .setLayoutData(GridLayout.createLayoutData(
                         GridLayout.Alignment.FILL,

@@ -1,19 +1,22 @@
 package constructs.correction;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
+import constructs.ConstructManager;
+import constructs.correction.districtMatch.DistrictMatchCorrection;
+import constructs.correction.schoolAttribute.SchoolAttributeCorrection;
+import constructs.correction.schoolCorrection.SchoolCorrection;
 import database.Database;
 import gui.windows.corrections.CorrectionAddWindow;
-import gui.windows.corrections.DistrictMatchCorrectionWindow;
-import gui.windows.corrections.SchoolAttributeCorrectionWindow;
+import gui.windows.corrections.districtMatch.DistrictMatchCorrectionWindow;
+import gui.windows.corrections.schoolAttribute.SchoolAttributeCorrectionWindow;
+import gui.windows.corrections.schoolCorrection.SchoolCorrectionWindow;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.RunnableOption;
 import gui.windows.prompt.selection.SelectionPrompt;
 import main.Actions;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,60 +33,9 @@ public class CorrectionManager {
     private static final Logger logger = LoggerFactory.getLogger(CorrectionManager.class);
 
     /**
-     * These are all the possible types that a {@link Correction} can have. They are associated with particular
-     * subclasses of the Correction superclass.
-     * <p>
-     * Note that the current SQL structure limits these enums at a maximum {@link #name() name} length of 30.
-     */
-    public enum Type {
-        /**
-         * Corrections associated with school attributes.
-         * <p>
-         * <b>Correction class:</b> {@link SchoolAttributeCorrection}
-         */
-        SCHOOL_ATTRIBUTE(SchoolAttributeCorrection.class),
-
-        /**
-         * Corrections associated with district matches.
-         * <p>
-         * <b>Correction class:</b> {@link DistrictMatchCorrection}
-         */
-        DISTRICT_MATCH(DistrictMatchCorrection.class);
-
-        /**
-         * This is the class that is instantiated when a Correction is created from this type via
-         * {@link #make(String, String)}.
-         */
-        private final Class<? extends Correction> correctionClass;
-
-        /**
-         * Initialize a Correction type.
-         *
-         * @param correctionClass The {@link #correctionClass} associated with this type.
-         */
-        Type(Class<? extends Correction> correctionClass) {
-            this.correctionClass = correctionClass;
-        }
-
-        /**
-         * Create a new {@link Correction} of the appropriate {@link #correctionClass class} using the given JSON data.
-         *
-         * @param data The JSON data with which to make the Correction.
-         * @return The new Correction.
-         * @throws JsonSyntaxException If there is an error parsing the JSON data.
-         */
-        @NotNull
-        public Correction make(@NotNull String data, @Nullable String notes) throws JsonSyntaxException {
-            Correction correction = new Gson().fromJson(data, correctionClass);
-            correction.setNotes(notes);
-            return correction;
-        }
-    }
-
-    /**
      * This is the master list of {@link Correction Corrections}. It's a cache of a SQL database Corrections table.
      * <p>
-     * The corrections are sorted by their {@link Type Type} for easy retrieval. This map is initialized to have a
+     * The corrections are sorted by their {@link CorrectionType CorrectionType} for easy retrieval. This map is initialized to have a
      * guaranteed key for every type, though that will initialize map to an empty {@link ArrayList}. Note that the
      * lists thread-safe.
      * <p>
@@ -91,7 +43,7 @@ public class CorrectionManager {
      */
     @NotNull
     @Unmodifiable
-    private static final Map<Type, List<Correction>> CORRECTIONS = Arrays.stream(Type.values()).collect(
+    private static final Map<CorrectionType, List<Correction>> CORRECTIONS = Arrays.stream(CorrectionType.values()).collect(
             Collectors.toMap(Function.identity(), ignored -> Collections.synchronizedList(new ArrayList<>()))
     );
 
@@ -114,18 +66,19 @@ public class CorrectionManager {
             while (result.next()) {
                 String typeStr = result.getString(2);
                 String dataStr = result.getString(3);
-                String notesStr = result.getString(4);
-                Type type;
+                String deserializationData = result.getString(4);
+                String notesStr = result.getString(5);
+                CorrectionType type;
 
                 try {
-                    type = Type.valueOf(typeStr);
+                    type = CorrectionType.valueOf(typeStr);
                 } catch (IllegalArgumentException e) {
                     logger.warn("Failed to create Correction with unknown type '" + typeStr + "'", e);
                     continue;
                 }
 
                 try {
-                    CORRECTIONS.get(type).add(type.make(dataStr, notesStr));
+                    CORRECTIONS.get(type).add(type.make(dataStr, deserializationData, notesStr));
                 } catch (Exception e) {
                     logger.warn("Failed to create Correction of type '" + typeStr + "' from data " + dataStr, e);
                 }
@@ -136,13 +89,13 @@ public class CorrectionManager {
     }
 
     /**
-     * Get all the {@link Correction Corrections} associated with the given {@link Type Type}.
+     * Get all the {@link Correction Corrections} associated with the given {@link CorrectionType CorrectionType}.
      *
      * @param type The type of correction.
      * @return All cached Corrections with that type. This may be empty.
      */
     @NotNull
-    public static List<Correction> get(@NotNull Type type) {
+    public static List<Correction> get(@NotNull CorrectionType type) {
         return CORRECTIONS.get(type);
     }
 
@@ -167,56 +120,43 @@ public class CorrectionManager {
     }
 
     /**
-     * Add a new {@link Correction} to the {@link #CORRECTIONS master list}, and save it to the database.
+     * Add a new {@link Correction} to the {@link #CORRECTIONS master list}, and
+     * {@link ConstructManager#saveToDatabase(constructs.Construct) save} it to the database.
      *
      * @param type       The type of Correction.
      * @param correction The Correction itself.
      * @throws SQLException If there is an error saving the Correction to the database.
      */
-    public static void add(@NotNull Type type, @NotNull Correction correction) throws SQLException {
+    public static void add(@NotNull CorrectionType type, @NotNull Correction correction) throws SQLException {
         logger.debug("Adding Correction type {} class {}", type, correction.getClass());
-
-        // Add to the cache
         CORRECTIONS.get(type).add(correction);
-
-        // Add to the database
-        try (Connection connection = Database.getConnection()) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "INSERT INTO Corrections (type, data, notes) VALUES (?, ?, ?)"
-            );
-
-            statement.setString(1, type.name());
-            statement.setString(2, new Gson().toJson(correction));
-            statement.setString(3, correction.notes);
-
-            statement.executeUpdate();
-        }
-
-        logger.info("Added new {} to database", correction.getClass().getSimpleName());
+        ConstructManager.saveToDatabase(correction);
     }
 
     /**
-     * Open a GUI prompt for the Correction to add, and {@link #add(Type, Correction) add} the newly created correction.
+     * Open a GUI prompt for the Correction to add, and {@link #add(CorrectionType, Correction) add} the newly created correction.
      * <p>
      * If a {@link SQLException} occurs while saving the Correction to the database, that error is caught and logged.
      * In that case, it will still have been added to the {@link #CORRECTIONS cache}.
      */
     public static void promptAddCorrection() {
-        SelectionPrompt<Type> prompt = SelectionPrompt.of(
+        SelectionPrompt<CorrectionType> prompt = SelectionPrompt.of(
                 "Add Correction",
                 "Select the type of correction to add:",
-                Option.of("School Attribute", Type.SCHOOL_ATTRIBUTE),
-                Option.of("District Match", Type.DISTRICT_MATCH),
+                Option.of("School Correction", CorrectionType.SCHOOL_CORRECTION),
+                Option.of("School Attribute", CorrectionType.SCHOOL_ATTRIBUTE),
+                Option.of("District Match", CorrectionType.DISTRICT_MATCH),
                 Option.of("Back", null)
         );
 
-        Type selection = Main.GUI.showPrompt(prompt);
+        CorrectionType selection = Main.GUI.showPrompt(prompt);
         if (selection == null) {
             guiManager();
             return;
         }
 
         CorrectionAddWindow window = switch (selection) {
+            case SCHOOL_CORRECTION -> new SchoolCorrectionWindow();
             case SCHOOL_ATTRIBUTE -> new SchoolAttributeCorrectionWindow();
             case DISTRICT_MATCH -> new DistrictMatchCorrectionWindow();
         };
@@ -235,15 +175,31 @@ public class CorrectionManager {
     }
 
     /**
-     * {@link #get(Type) Get} all {@link SchoolAttributeCorrection SchoolAttributeCorrections} (those with
-     * {@link Type Type} {@link Type#SCHOOL_ATTRIBUTE SCHOOL_ATTRIBUTE}).
+     * {@link #get(CorrectionType) Get} all {@link SchoolCorrection SchoolCorrections} (those with {@link CorrectionType CorrectionType}
+     * {@link CorrectionType#SCHOOL_CORRECTION SCHOOL_CORRECTION}).
      *
      * @return The cached list of Corrections.
      */
     @NotNull
-    public static List<SchoolAttributeCorrection> getSchoolAttribute() {
+    public static List<SchoolCorrection> getSchoolCorrections() {
+        List<SchoolCorrection> list = new ArrayList<>();
+        for (Correction c : CORRECTIONS.get(CorrectionType.SCHOOL_CORRECTION))
+            if (c instanceof SchoolCorrection s)
+                list.add(s);
+
+        return list;
+    }
+
+    /**
+     * {@link #get(CorrectionType) Get} all {@link SchoolAttributeCorrection SchoolAttributeCorrections} (those with
+     * {@link CorrectionType CorrectionType} {@link CorrectionType#SCHOOL_ATTRIBUTE SCHOOL_ATTRIBUTE}).
+     *
+     * @return The cached list of Corrections.
+     */
+    @NotNull
+    public static List<SchoolAttributeCorrection> getSchoolAttributes() {
         List<SchoolAttributeCorrection> list = new ArrayList<>();
-        for (Correction c : CORRECTIONS.get(Type.SCHOOL_ATTRIBUTE))
+        for (Correction c : CORRECTIONS.get(CorrectionType.SCHOOL_ATTRIBUTE))
             if (c instanceof SchoolAttributeCorrection s)
                 list.add(s);
 
@@ -251,14 +207,14 @@ public class CorrectionManager {
     }
 
     /**
-     * {@link #get(Type) Get} all {@link DistrictMatchCorrection DistrictMatchCorrections} (those with
-     * {@link Type Type} {@link Type#DISTRICT_MATCH DISTRICT_MATCH}).
+     * {@link #get(CorrectionType) Get} all {@link DistrictMatchCorrection DistrictMatchCorrections} (those with
+     * {@link CorrectionType CorrectionType} {@link CorrectionType#DISTRICT_MATCH DISTRICT_MATCH}).
      *
      * @return The cached list of Corrections.
      */
-    public static List<DistrictMatchCorrection> getDistrictMatch() {
+    public static List<DistrictMatchCorrection> getDistrictMatches() {
         List<DistrictMatchCorrection> list = new ArrayList<>();
-        for (Correction c : CORRECTIONS.get(Type.DISTRICT_MATCH))
+        for (Correction c : CORRECTIONS.get(CorrectionType.DISTRICT_MATCH))
             if (c instanceof DistrictMatchCorrection d)
                 list.add(d);
 

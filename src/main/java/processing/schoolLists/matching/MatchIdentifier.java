@@ -1,7 +1,7 @@
 package processing.schoolLists.matching;
 
 import constructs.correction.CorrectionManager;
-import constructs.correction.DistrictMatchCorrection;
+import constructs.correction.districtMatch.DistrictMatchCorrection;
 import constructs.district.CachedDistrict;
 import constructs.district.District;
 import constructs.organization.Organization;
@@ -305,7 +305,7 @@ public class MatchIdentifier {
                                                   @NotNull List<SchoolComparison> districtSchools) {
         // STEP 1
         // Check for any applicable Corrections
-        for (DistrictMatchCorrection correction : CorrectionManager.getDistrictMatch())
+        for (DistrictMatchCorrection correction : CorrectionManager.getDistrictMatches())
             if (correction.match(incomingSchool, district)) {
                 district.setName(correction.getName(district));
                 district.setWebsiteURL(correction.getUrl(district));

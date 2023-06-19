@@ -1,11 +1,12 @@
-package gui.windows.corrections;
+package gui.windows.corrections.schoolAttribute;
 
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
-import constructs.correction.CorrectionManager;
-import constructs.correction.SchoolAttributeCorrection;
+import constructs.correction.CorrectionType;
+import constructs.correction.schoolAttribute.SchoolAttributeCorrection;
 import constructs.school.Attribute;
+import gui.windows.corrections.CorrectionAddWindow;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -35,14 +36,12 @@ public class SchoolAttributeCorrectionWindow extends CorrectionAddWindow {
      * Initialize a new window formatted for creating a {@link SchoolAttributeCorrection}.
      */
     public SchoolAttributeCorrectionWindow() {
-        super(CorrectionManager.Type.SCHOOL_ATTRIBUTE);
+        super(
+                CorrectionType.SCHOOL_ATTRIBUTE,
+                new TextBox(new TerminalSize(3, 2), TextBox.Style.MULTI_LINE)
+        );
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @return The panel.
-     */
     @Override
     @NotNull
     protected Panel makePanel() {
@@ -129,7 +128,7 @@ public class SchoolAttributeCorrectionWindow extends CorrectionAddWindow {
                 attribute.getSelectedItem(),
                 initialValue.getText(),
                 newValue.getText().isBlank() ? null : newValue.getText(),
-                notes.getText().isBlank() ? null : notes.getText()
+                getNotes()
         );
     }
 }

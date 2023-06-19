@@ -9,6 +9,7 @@ import constructs.district.District;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
+import gui.buttons.Link;
 import gui.utils.GUIUtils;
 import gui.windows.MyBaseWindow;
 import org.jetbrains.annotations.NotNull;
@@ -277,13 +278,13 @@ public class DistrictUpdateDialog extends MyBaseWindow {
                         )
                         .addComponent(urlButtons[0])
                         .addComponent(new Label("Current:").addStyle(SGR.BOLD))
-                        .addComponent(SpecializedButtons.Link.of(urlOptions[0]))
+                        .addComponent(Link.of(urlOptions[0]))
                         .addComponent(urlButtons[1])
                         .addComponent(new Label("Incoming school:").addStyle(SGR.BOLD))
-                        .addComponent(SpecializedButtons.Link.of(urlOptions[1]))
+                        .addComponent(Link.of(urlOptions[1]))
                         .addComponent(urlButtons[2])
                         .addComponent(new Label("Existing school:").addStyle(SGR.BOLD))
-                        .addComponent(SpecializedButtons.Link.of(urlOptions[2]))
+                        .addComponent(Link.of(urlOptions[2]))
                         .addComponent(urlButtons[3])
                         .addComponent(new Label("Custom:").addStyle(SGR.BOLD))
                         .addComponent(urlCustomBox)

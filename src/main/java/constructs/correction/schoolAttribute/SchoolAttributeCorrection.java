@@ -1,5 +1,7 @@
-package constructs.correction;
+package constructs.correction.schoolAttribute;
 
+import constructs.correction.CorrectionType;
+import constructs.correction.Correction;
 import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,7 +32,7 @@ public class SchoolAttributeCorrection extends Correction {
     private final Object newValue;
 
     /**
-     * Create a new correction, specifying the necessary parameters.
+     * Create a new Correction, specifying the necessary parameters.
      *
      * @param attribute    The {@link #attribute}.
      * @param initialValue The {@link #initialValue}.
@@ -41,7 +43,7 @@ public class SchoolAttributeCorrection extends Correction {
                                      @NotNull Object initialValue,
                                      @Nullable Object newValue,
                                      @Nullable String notes) {
-        super(notes);
+        super(CorrectionType.SCHOOL_ATTRIBUTE, notes);
         this.attribute = attribute;
         this.initialValue = initialValue;
         this.newValue = newValue;
@@ -49,10 +51,6 @@ public class SchoolAttributeCorrection extends Correction {
 
     public Attribute getAttribute() {
         return attribute;
-    }
-
-    public Object getInitialValue() {
-        return initialValue;
     }
 
     public Object getNewValue() {

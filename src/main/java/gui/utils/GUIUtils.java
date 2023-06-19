@@ -306,4 +306,28 @@ public class GUIUtils {
         );
     }
 
+    /**
+     * Remove the last child component from a {@link Container}, if it has any children.
+     *
+     * @param container The container to modify.
+     * @see #replaceLastComponent(Panel, Component)
+     */
+    public static void removeLastComponent(@NotNull Container container) {
+        List<Component> children = container.getChildrenList();
+        if (children.size() > 0)
+            container.removeComponent(children.get(children.size() - 1));
+    }
+
+    /**
+     * Remove the last {@link Component} from a {@link Panel}, and replace it with a new one. If the panel is empty,
+     * this just adds the new component.
+     *
+     * @param panel     The panel to modify.
+     * @param component The new component to add.
+     * @see #removeLastComponent(Container)
+     */
+    public static void replaceLastComponent(@NotNull Panel panel, @NotNull Component component) {
+        removeLastComponent(panel);
+        panel.addComponent(component);
+    }
 }

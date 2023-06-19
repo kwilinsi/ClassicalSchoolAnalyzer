@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * This records data associated with comparing the values for a particular {@link #attribute} from two schools, an
@@ -81,6 +82,12 @@ public record AttributeComparison(@NotNull Attribute attribute,
         }
 
         /**
+         * All of the {@link Level Levels} that indicate some degree of matching (i.e. all except {@link #NONE}).
+         * These are in their {@link #ordinal() natural} order.
+         */
+        public static final Level[] ALL_EXCEPT_NONE = {EXACT, INDICATOR, RELATED};
+
+        /**
          * Get the abbreviation for this {@link Level Level}.
          *
          * @return The {@link #abbreviation}.
@@ -119,8 +126,8 @@ public record AttributeComparison(@NotNull Attribute attribute,
         /**
          * Return whether the match {@link #level} matches at or above the given threshold.
          * <p>
-         * This is simply a convenience method for checking whether the ordinal of the comparison level is less than or
-         * equal to the threshold's ordinal.
+         * This is simply a convenience method for checking whether the {@link #ordinal() ordinal} of the comparison
+         * level is less than or equal to the threshold's ordinal.
          *
          * @param threshold The least-exact match {@link Level Level} that will still return <code>true</code>.
          * @return <code>True</code> if and only if the values match.
@@ -160,6 +167,31 @@ public record AttributeComparison(@NotNull Attribute attribute,
          */
         OTHER
     }
+
+    /**
+     * This map records an indicator of the time complexity of various attributes to be compared.
+     * <p>
+     * The integers mapped to each attribute are ordinal data: they have no intrinsic meaning by themselves or as
+     * intervals. Instead, they loosely indicate how long it takes to compare two values of the attribute via one of
+     * the comparison methods in this class. Larger values take more time. All values are positive integers, and the
+     * lowest value, given to most attributes is 0.
+     * <p>
+     * The following time complexities are assigned:
+     * <ul>
+     *     <li><code>2</code> for all {@link Attribute#ADDRESS_BASED_ATTRIBUTES address-based} attributes.
+     *     <li><code>1</code> for all {@link Attribute#grades_offered grades_offered}.
+     *     <li><code>0</code> for all others.
+     * </ul>
+     */
+    public static final Map<Attribute, Integer> ATTRIBUTE_TIME_COMPLEXITY = Arrays.stream(Attribute.values())
+            .collect(Collectors.toMap(e -> e, a -> {
+                if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(a))
+                    return 2;
+                else if (a == Attribute.grades_offered)
+                    return 1;
+                else
+                    return 0;
+            }));
 
     /**
      * Return whether any difference in the values is resolvable without requiring user-input. That is, check whether
@@ -231,6 +263,64 @@ public record AttributeComparison(@NotNull Attribute attribute,
     }
 
     /**
+     * Attempt to compare the values of two schools for some attribute.
+     * <p>
+     * Note that for some attributes, this method is less reliable than
+     * {@link #compare(Attribute, CreatedSchool, School) comparing} with actual {@link School} instances. When the
+     * actual schools are available, they should be used instead.
+     * <p>
+     * This method returns only a match {@link AttributeComparison.Level Level}. It makes no attempt to establish a
+     * {@link AttributeComparison.Preference Preference}. Thus, the order of the values does not matter; it will
+     * return the same result either way.
+     *
+     * @param attribute The {@link Attribute} that the given values represent.
+     * @param valA      The first value.
+     * @param valB      The second value.
+     * @return The match level that indicates the degree to which the values match.
+     */
+    @NotNull
+    public static AttributeComparison.Level compareValues(@NotNull Attribute attribute,
+                                                          @Nullable Object valA,
+                                                          @Nullable Object valB) {
+        // Handle null values
+        if (Objects.equals(valA, valB))
+            return Level.EXACT;
+        else if (attribute.isEffectivelyNull(valA) && attribute.isEffectivelyNull(valB))
+            return Level.INDICATOR;
+        else if (attribute.isEffectivelyNull(valA) || attribute.isEffectivelyNull(valB))
+            return Level.NONE;
+
+        // Check dates
+        if (attribute.type == LocalDate.class)
+            return compareDates(attribute, (LocalDate) valA, (LocalDate) valB).level();
+
+        // Check doubles
+        if (attribute.type == Double.class || attribute.type == Double.TYPE)
+            return compareDoubles(attribute, (Double) valA, (Double) valB).level();
+
+        // Check URLs
+        if (attribute.type == URL.class)
+            return compareURLs(attribute, (String) valA, (String) valB).level();
+
+        // Check the grades_offered attribute
+        if (attribute == Attribute.grades_offered)
+            return compareGradesOffered((String) valA, (String) valB).level();
+
+        // Check addresses
+        if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
+            if (attribute != Attribute.address) logger.debug("Comparing {}:", attribute.name());
+            return compareAddress(attribute, (String) valA, (String) valB).level();
+        }
+
+        // Check strings
+        if (attribute.type == String.class)
+            return compareGenericStrings(attribute, (String) valA, (String) valB).level();
+
+        // For other attributes, as the Objects.equals() check already failed, they clearly don't match
+        return Level.NONE;
+    }
+
+    /**
      * Compare the values of two schools for some attribute.
      * <p>
      * Note: while this will properly handle {@link Attribute#ADDRESS_BASED_ATTRIBUTES address-based} attributes, it
@@ -289,9 +379,11 @@ public record AttributeComparison(@NotNull Attribute attribute,
             );
         }
 
+        // Compare dates
         if (attribute.type == LocalDate.class)
             return compareDates(attribute, (LocalDate) valI, (LocalDate) valE);
 
+        // Compare double
         if (attribute.type == Double.class || attribute.type == Double.TYPE)
             return compareDoubles(attribute, (Double) valI, (Double) valE);
 
@@ -309,6 +401,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
             return compareAddress(attribute, (String) valI, (String) valE);
         }
 
+        // Compare strings
         if (attribute.type == String.class)
             return compareGenericStrings(attribute, (String) valI, (String) valE);
 
@@ -615,12 +708,15 @@ public record AttributeComparison(@NotNull Attribute attribute,
         if (valI.equals(valE))
             return AttributeComparison.ofExact(attribute, true);
 
-        valI = valI.trim();
-        valE = valE.trim();
+        String adjValI = valI.trim();
+        String adjValE = valE.trim();
 
-        if (valI.equals(valE))
-            return AttributeComparison.of(attribute, Level.EXACT, Preference.OTHER, valE, true);
-        else if (valI.equalsIgnoreCase(valE))
+        if (adjValI.equals(adjValE)) {
+            Preference p = determinePreference(valI, valE, adjValI, adjValE, Objects::equals);
+            return AttributeComparison.of(
+                    attribute, Level.EXACT, p, p == Preference.OTHER ? adjValE : null, true
+            );
+        } else if (adjValI.equalsIgnoreCase(adjValE))
             return AttributeComparison.of(
                     attribute, Level.INDICATOR, Preference.NONE, null, false
             );

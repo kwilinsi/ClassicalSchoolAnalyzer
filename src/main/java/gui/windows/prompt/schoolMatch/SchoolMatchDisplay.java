@@ -13,6 +13,9 @@ import constructs.organization.Organization;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
+import gui.buttons.Link;
+import gui.buttons.PageArrow;
+import gui.buttons.Show;
 import gui.utils.GUIUtils;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
@@ -114,7 +117,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
     /**
      * <b>GUI Object</b>
      * <p>
-     * These components (always {@link Label Labels} or {@link SpecializedButtons.Link Link} buttons) contain the
+     * These components (always {@link Label Labels} or {@link Link Link} buttons) contain the
      * attribute values for the currently displayed existing school. They must correspond one-to-one to the
      * {@link #displayedAttributes} list.
      *
@@ -302,7 +305,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                 .addComponent(GUIUtils.attributeLabel("name", true))
                 .addComponent(new Label(district.getName()))
                 .addComponent(GUIUtils.attributeLabel("url", true))
-                .addComponent(SpecializedButtons.Link.of(district.getWebsiteURL()))
+                .addComponent(Link.of(district.getWebsiteURL()))
                 .addTo(districtInfo);
 
         // --------------------------------------------------
@@ -347,7 +350,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                             .addComponent(GUIUtils.attributeLabel(attribute)))
                     .addComponent(createAttributeValueCompSchool(incomingSchool, attribute))
                     .addComponent(box)
-                    .addComponent(SpecializedButtons.Show.of("Show", () -> {
+                    .addComponent(Show.of("Show", () -> {
                         int attrIndex = displayedAttributes.indexOf(attribute);
                         if (attrIndex == -1)
                             throw new IllegalStateException("Unreachable: showing non-displayed attribute" + attribute);
@@ -359,7 +362,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         GUIUtils.addEmptyComponents(incomingPanel, 4);
         incomingPanel.addComponent(new Panel()
                 .setLayoutManager(new GridLayout(1).setRightMarginSize(0))
-                .addComponent(SpecializedButtons.Show.of("Show All", this::fullIncomingSchoolPopup))
+                .addComponent(Show.of("Show All", this::fullIncomingSchoolPopup))
         );
 
         // --------------------------------------------------
@@ -388,7 +391,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         }
 
         GUIUtils.addEmptyComponents(attributePanel, 4);
-        attributePanel.addComponent(SpecializedButtons.Show.of("Show All", this::fullExistingSchoolPopup));
+        attributePanel.addComponent(Show.of("Show All", this::fullExistingSchoolPopup));
 
         Panel existingCenterPanel = new Panel()
                 .setLayoutManager(new GridLayout(1))
@@ -401,13 +404,13 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         if (numSchools > 1) {
             existingCarousel
                     .addComponent(
-                            SpecializedButtons.PageArrow.of(
+                            PageArrow.of(
                                     true, existingCenterPanel, () -> switchSchoolView(false)
                             ),
                             BorderLayout.Location.LEFT
                     )
                     .addComponent(
-                            SpecializedButtons.PageArrow.of(
+                            PageArrow.of(
                                     false, existingCenterPanel, () -> switchSchoolView(true)
                             ),
                             BorderLayout.Location.RIGHT
@@ -446,7 +449,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
 
             // Separate type checks here for each of the possible Components used by createAttributeValueComp()
             Component component = guiExistingAttributeValues.get(i);
-            if (component instanceof SpecializedButtons.Link l)
+            if (component instanceof Link l)
                 l.setUrl(info.attributeValues().get(i));
             else if (component instanceof Label l)
                 l.setText(info.attributeValues().get(i));
@@ -579,7 +582,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         // Add the contents
         new Panel()
                 .setLayoutManager(new GridLayout(2).setHorizontalSpacing(2))
-                .addComponent(new Label("Preference Type:").addStyle(SGR.BOLD))
+                .addComponent(new Label("Preference CorrectionType:").addStyle(SGR.BOLD))
                 .addComponent(new Label(preferenceBox.getSelectedItem().name()))
                 .addComponent(new Label(""))
                 .addComponent(new Label(""))
@@ -649,7 +652,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                     .addComponent(new Panel()
                             .setLayoutManager(new LinearLayout(Direction.HORIZONTAL))
                             .addComponent(box)
-                            .addComponent(SpecializedButtons.Show.of("Show", () ->
+                            .addComponent(Show.of("Show", () ->
                                     showPreferenceValue(attribute, preferences.get(attribute))
                             ))
                     )
@@ -736,7 +739,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
     /**
      * Create a {@link Component} displaying a value for a particular attribute. Typically, this is just a plain
      * {@link Label}. However, for {@link Attribute Attributes} of {@link Attribute#type type} {@link URL},
-     * this is a special {@link SpecializedButtons.Link Link} button.
+     * this is a special {@link Link Link} button.
      *
      * @param attribute The attribute being displayed. This determines the type of component used.
      * @param value     The value to put in the component.
@@ -746,7 +749,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
     @NotNull
     private static Component createAttributeValueComp(@NotNull Attribute attribute, @Nullable Object value) {
         if (attribute.type == URL.class)
-            return SpecializedButtons.Link.of((String) value);
+            return Link.of((String) value);
         else
             return new Label(value == null ? "" : String.valueOf(value));
     }

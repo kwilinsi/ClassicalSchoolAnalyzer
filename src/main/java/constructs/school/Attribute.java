@@ -1,7 +1,7 @@
 package constructs.school;
 
 import constructs.correction.CorrectionManager;
-import constructs.correction.SchoolAttributeCorrection;
+import constructs.correction.schoolAttribute.SchoolAttributeCorrection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -180,7 +180,7 @@ public enum Attribute {
         if (input == null) return null;
 
         // Check corrections
-        List<SchoolAttributeCorrection> corrections = CorrectionManager.getSchoolAttribute();
+        List<SchoolAttributeCorrection> corrections = CorrectionManager.getSchoolAttributes();
         for (SchoolAttributeCorrection correction : corrections)
             if (correction.matches(this, input))
                 input = correction.getNewValue();
