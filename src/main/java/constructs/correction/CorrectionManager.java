@@ -1,6 +1,5 @@
 package constructs.correction;
 
-import com.google.gson.Gson;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import constructs.ConstructManager;
 import constructs.correction.districtMatch.DistrictMatchCorrection;

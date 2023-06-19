@@ -29,6 +29,6 @@ public record Trigger(@NotNull Attribute attribute,
      * @return <code>True</code> if and only if this trigger matches.
      */
     boolean matches(@NotNull School school) {
-        return AttributeComparison.compareValues(attribute, school, value).matchesAt(matchLevel);
+        return AttributeComparison.compareValues(attribute, school.get(attribute), value).matchesAt(matchLevel);
     }
 }
