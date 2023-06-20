@@ -49,10 +49,6 @@ public class SchoolAttributeCorrection extends Correction {
         this.newValue = newValue;
     }
 
-    public Attribute getAttribute() {
-        return attribute;
-    }
-
     public Object getNewValue() {
         return newValue;
     }

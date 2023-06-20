@@ -18,8 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HillsdaleExtractor implements Extractor {
-    private static final Logger logger = LoggerFactory.getLogger(HillsdaleExtractor.class);
-
     @Override
     public String abbreviation() {
         return OrganizationManager.HILLSDALE.getNameAbbr();

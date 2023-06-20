@@ -21,8 +21,6 @@ import java.util.List;
  * {@link Rule#passes(CreatedSchool, District) pass}, the incoming school is added to the matching district.
  */
 public class DistrictMatchCorrection extends Correction {
-    private static final Logger logger = LoggerFactory.getLogger(DistrictMatchCorrection.class);
-
     /**
      * These are the rules that are {@link Rule#passes(CreatedSchool, District) checked} to determine whether a
      * particular incoming school is a {@link processing.schoolLists.matching.data.MatchData.Level#DISTRICT_MATCH

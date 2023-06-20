@@ -121,17 +121,6 @@ public class SchoolComparison extends MatchData {
     }
 
     /**
-     * Determine whether all compared {@link #attributes} are
-     * {@link AttributeComparison#isResolvable() resolvable}, meaning they don't require any user input. In other
-     * words, check whether the size of the attributes map is the same as the {@link #resolvableAttributes} counter.
-     *
-     * @return <code>True</code> if and only if all comparisons are all resolvable.
-     */
-    public boolean areAllResolvable() {
-        return attributes.size() == resolvableAttributes;
-    }
-
-    /**
      * Get the frequencies of each {@link AttributeComparison} {@link AttributeComparison.Level Level} in the
      * {@link #attributes} map.
      *
