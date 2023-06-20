@@ -31,10 +31,32 @@ public class DistrictOrganization implements Construct {
      */
     protected int district_id;
 
-    public DistrictOrganization(int id, int organization_id, int district_id) {
+    /**
+     * Initialize a district-organization relation.
+     *
+     * @param id              The {@link #id}.
+     * @param organization_id The {@link #organization_id}.
+     * @param district_id     The {@link #district_id}.
+     * @throws IllegalArgumentException If the organization id is <code>-1</code>, as it should always be known.
+     */
+    public DistrictOrganization(int id, int organization_id, int district_id) throws IllegalArgumentException {
+        if (organization_id == -1)
+            throw new IllegalStateException("Invalid organization id -1 for district-organization relation");
+
         this.id = id;
         this.organization_id = organization_id;
         this.district_id = district_id;
+    }
+
+    /**
+     * Initialize a district-organization relation with a default unset {@link #id} of <code>-1</code>.
+     *
+     * @param organization_id The {@link #organization_id}.
+     * @param district_id     The {@link #district_id}.
+     * @throws IllegalArgumentException If the organization id is <code>-1</code>, as it should always be known.
+     */
+    public DistrictOrganization(int organization_id, int district_id) throws IllegalArgumentException {
+        this(-1, organization_id, district_id);
     }
 
     @Override
@@ -47,10 +69,16 @@ public class DistrictOrganization implements Construct {
         this.id = id;
     }
 
+    public int getDistrictId() {
+        return district_id;
+    }
+
     @Override
     public void addToInsertStatement(@NotNull PreparedStatement statement) throws SQLException {
         statement.setInt(1, organization_id);
         statement.setInt(2, district_id);
+
+        statement.addBatch();
     }
 
     @Override
@@ -62,7 +90,7 @@ public class DistrictOrganization implements Construct {
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof DistrictOrganization d)
-            return d.district_id == district_id && d.organization_id == organization_id;
+            return this.getDistrictId() == d.getDistrictId() && organization_id == d.organization_id;
         return false;
     }
 }
