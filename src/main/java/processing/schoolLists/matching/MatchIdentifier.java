@@ -95,9 +95,13 @@ public class MatchIdentifier {
         bulkCompare(otherAttributes, incomingSchool, matches);
 
         // If any matches don't require user input at all, use them
-        for (SchoolComparison match : matches)
-            if (match.areAllResolvable())
-                return match.logMatchInfo("MATCHED").setLevel(MatchData.Level.SCHOOL_MATCH);
+        for (SchoolComparison match : matches) {
+            CachedDistrict district = associatedDistrict(match.getExistingSchool(), districtCache);
+            if (district == null)
+                throw new IllegalStateException("Unable to find district for " + match.getExistingSchool());
+            match.setDistrict(district);
+            return match.logMatchInfo("MATCHED").setLevel(MatchData.Level.SCHOOL_MATCH);
+        }
 
         // ------------------------------
         // Associate Districts
@@ -177,11 +181,37 @@ public class MatchIdentifier {
     }
 
     /**
+     * Find the {@link CachedDistrict} associated with a particular {@link School} from a list of districts. This
+     * uses only the school's {@link School#getDistrictId() district id} to identify the match. The
+     * {@link CachedSchool#getDistrict() district} associated with {@link CachedSchool CachedSchools} is not checked,
+     * as if that's present, the district is already associated anyway.
+     * <p>
+     * If the school does not have any district set, or its district is not in the given list, <code>null</code> is
+     * returned.
+     *
+     * @param school          The school.
+     * @param cachedDistricts The list of districts to check.
+     * @return The district associated with the school, or <code>null</code> if none could be found.
+     */
+    @Nullable
+    private static CachedDistrict associatedDistrict(@NotNull School school,
+                                                     @NotNull List<@NotNull CachedDistrict> cachedDistricts) {
+        int id = school.getDistrictId();
+        if (id != -1) {
+            for (CachedDistrict district : cachedDistricts)
+                if (district.getId() == id)
+                    return district;
+        }
+
+        return null;
+    }
+
+    /**
      * Associate a list of {@link CachedDistrict CachedDistricts} with a list of probable {@link SchoolComparison
      * SchoolComparisons}. Pair each of these districts with a list of school match objects for each of its member
      * schools.
      * <p>
-     * Importantly, the list of schools associated with each district comes directly from the
+     * Importantly, the list of school comparisons associated with each district comes directly from the
      * <code>allComparisons</code> list, meaning that <code>allComparisons.contains()</code> will be
      * <code>true</code> for every {@link SchoolComparison} returned by this function.
      * <p>
@@ -211,26 +241,27 @@ public class MatchIdentifier {
         // Define a function for getting the district from a school comparison
         BiFunction<@NotNull SchoolComparison, Collection<CachedDistrict>, @Nullable CachedDistrict> findDistrict =
                 (comparison, districts) -> {
-            CachedSchool school = comparison.getExistingSchool();
-            int id = school.getDistrictId();
-            if (id == -1) {
-                CachedDistrict district = school.getDistrict();
-                if (district == null) {
-                    logger.warn("Unable to find district matching existing school {}", comparison.getExistingSchool());
-                } else {
-                    for (CachedDistrict cachedDistrict : districts)
-                        // Intentional use of == to compare the object references
-                        if (cachedDistrict == district)
-                            return cachedDistrict;
-                }
-            } else {
-                for (CachedDistrict cachedDistrict : districts)
-                    if (cachedDistrict.getId() == id)
-                        return cachedDistrict;
-            }
+                    CachedSchool school = comparison.getExistingSchool();
+                    int id = school.getDistrictId();
+                    if (id == -1) {
+                        CachedDistrict district = school.getDistrict();
+                        if (district == null) {
+                            logger.warn("Unable to find district matching existing school {}",
+                                    comparison.getExistingSchool());
+                        } else {
+                            for (CachedDistrict cachedDistrict : districts)
+                                // Intentional use of == to compare the object references
+                                if (cachedDistrict == district)
+                                    return cachedDistrict;
+                        }
+                    } else {
+                        for (CachedDistrict cachedDistrict : districts)
+                            if (cachedDistrict.getId() == id)
+                                return cachedDistrict;
+                    }
 
-            return null;
-        };
+                    return null;
+                };
 
         // Define a function for adding a comparison to a district if that district is already listed or adding the
         // district if it isn't added yet

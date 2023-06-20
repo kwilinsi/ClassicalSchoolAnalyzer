@@ -151,7 +151,7 @@ public class CachedSchool extends School implements CachedConstruct {
      *
      * @param district The {@link #district}.
      */
-    public void setDistrict(@NotNull CachedDistrict district) {
+    public void setDistrict(@Nullable CachedDistrict district) {
         this.district = district;
     }
 

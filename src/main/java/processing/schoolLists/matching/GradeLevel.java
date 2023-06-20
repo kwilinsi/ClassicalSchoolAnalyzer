@@ -282,9 +282,6 @@ public enum GradeLevel {
                 char c = str.charAt(0);
                 Function<String, Boolean> condition;
 
-                // TODO DEBUGGING STUFF DELETE THIS
-                System.out.printf("Unknown char %c is int %d (\\u%04X)", c, (int) c, (int) c);
-
                 // If the next character is a number, remove all upcoming numbers.
                 // If it's a letter, remove all upcoming letters.
                 // If some other recognized symbol (punctuation), remove all upcoming recognized symbols.
