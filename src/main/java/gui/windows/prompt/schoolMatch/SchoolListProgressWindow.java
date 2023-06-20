@@ -423,6 +423,29 @@ public class SchoolListProgressWindow extends MyBaseWindow {
     }
 
     /**
+     * This does the following:
+     * <ul>
+     *     <li>{@link #setPhase(Phase) Update} the {@link #phaseLabel phase} to {@link Phase#FINISHED FINISHED}.
+     *     <li>{@link #clearTasks() Clear} all tasks.
+     *     <li>Show a concluding message in a popup dialog.
+     *     <li>Once the user acknowledges the message, {@link #close() close} the window.
+     * </ul>
+     *
+     * @param schoolCount The number of schools that were processed. This is shown in the dialog message.
+     */
+    public synchronized void finishAndWait(int schoolCount) {
+        setPhase(Phase.FINISHED);
+        clearTasks();
+        MessageDialog.showMessageDialog(
+                Main.GUI.getWindowGUI(),
+                "",
+                GUIUtils.wrapLabelText("Finished processing %s schools. Press enter to continue.", schoolCount),
+                MessageDialogButton.Continue
+        );
+        close();
+    }
+
+    /**
      * {@link Label#setText(String) Set} the label text on the {@link #subProgressLabel}. This is done by combining
      * the {@link #subProgressPrefix prefix} with the current progress bar {@link ProgressBar#getValue() value} and
      * {@link ProgressBar#getMax() maximum} in a fraction. The fraction is right aligned and padded with spaces to

@@ -4,7 +4,6 @@ import constructs.ConstructManager;
 import constructs.correction.CorrectionManager;
 import constructs.correction.schoolCorrection.SchoolCorrection;
 import constructs.district.CachedDistrict;
-import constructs.district.District;
 import constructs.district.DistrictManager;
 import constructs.districtOrganization.CachedDistrictOrganization;
 import constructs.organization.Organization;
@@ -188,6 +187,6 @@ public class SchoolManager {
             return;
         }
 
-        progress.setPhase(Phase.FINISHED).clearTasks();
+        progress.finishAndWait(schools.size());
     }
 }
