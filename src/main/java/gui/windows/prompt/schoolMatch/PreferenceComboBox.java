@@ -43,7 +43,7 @@ class PreferenceComboBox extends ComboBox<Preference> {
 
     /**
      * This {@link BiConsumer} is {@link BiConsumer#accept(Object, Object) run} whenever the user changes the
-     * preference. It is given the current {@link Preference} and {@link #otherOption}.
+     * preference. It is given the current {@link Preference Preference} and {@link #otherOption}.
      * <p>
      * It can be used to save that change in a corresponding {@link SchoolComparison
      * SchoolComparison} instance.
@@ -155,13 +155,13 @@ class PreferenceComboBox extends ComboBox<Preference> {
      *                      chooses to cancel without any change.
      */
     private void promptOnOther(int previousIndex) {
-        String output = new TextInputDialogBuilder()
+        String output = Main.GUI.textDialog(new TextInputDialogBuilder()
                 .setTitle("")
                 .setDescription("Enter the custom OTHER value: ")
                 .setTextBoxSize(new TerminalSize(35, 3))
                 .setInitialContent(otherOption == null ? "" : otherOption.toString())
                 .build()
-                .showDialog(Main.GUI.getWindowGUI());
+        );
 
         // Update the otherOption. Unless it's null (meaning the user cancelled). If the user cancelled, revert to
         // the previously selected index, unless that was also OTHER

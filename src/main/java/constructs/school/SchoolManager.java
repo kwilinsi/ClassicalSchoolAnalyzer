@@ -10,6 +10,7 @@ import constructs.organization.Organization;
 import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
 import gui.windows.prompt.schoolMatch.SchoolListProgressWindow.Phase;
 import database.Database;
+import main.Main;
 import processing.schoolLists.matching.AttributeComparison;
 import processing.schoolLists.matching.MatchIdentifier;
 import processing.schoolLists.matching.data.DistrictMatch;
@@ -34,7 +35,8 @@ public class SchoolManager {
      */
     public static void updateSchoolList(Collection<Organization> organizations, boolean useCache) {
         // Initialize the progress bar window
-        SchoolListProgressWindow progress = SchoolListProgressWindow.of().show();
+        SchoolListProgressWindow progress = SchoolListProgressWindow.of();
+        Main.GUI.addWindow(progress);
 
         // ------------------------------
         // Retrieve Cached Constructs

@@ -162,8 +162,7 @@ public class CorrectionManager {
 
         logger.debug("Creating new {} Correction with {}", selection.name(), window.getClass());
 
-        MessageDialogButton button = window.show(Main.GUI.getWindowGUI());
-        if (button == MessageDialogButton.Cancel)
+        if (window.show() == MessageDialogButton.Cancel)
             return;
 
         try {

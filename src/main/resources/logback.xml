@@ -4,13 +4,14 @@
         <file>installation/log.txt</file>
 
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} %-16.-16thread %-15.-15logger{0} %-5level %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} %-25.-25thread %-20.-20logger{0} %-5level %msg%n</pattern>
         </encoder>
     </appender>
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{mm:ss} %boldCyan(%-14.-14thread) %boldGreen(%-12.-12logger{0}) %highlight(%-5level) %msg%n</pattern>
+            <pattern>%d{mm:ss} %boldCyan(%-20.-20thread) %boldGreen(%-15.-15logger{0}) %highlight(%-5level) %msg%n
+            </pattern>
         </encoder>
     </appender>
 
@@ -20,7 +21,8 @@
             <onMatch>DENY</onMatch>
         </filter>
         <encoder>
-            <pattern>%d{mm:ss} %boldCyan(%-10.-10thread) %boldGreen(%-12.-12logger{0}) %highlight(%-5level) %msg%n</pattern>
+            <pattern>%d{mm:ss} %boldCyan(%-14.-14thread) %boldGreen(%-12.-12logger{0}) %highlight(%-5level) %msg%n
+            </pattern>
         </encoder>
     </appender>
 

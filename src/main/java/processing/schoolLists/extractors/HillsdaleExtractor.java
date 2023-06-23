@@ -9,8 +9,6 @@ import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import processing.schoolLists.extractors.helpers.ExtUtils;
 import processing.schoolLists.extractors.helpers.HillsdaleParse;
 

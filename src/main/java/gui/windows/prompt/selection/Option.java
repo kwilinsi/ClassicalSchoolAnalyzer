@@ -1,8 +1,6 @@
 package gui.windows.prompt.selection;
 
-import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
-import gui.utils.GUIUtils;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -106,12 +104,8 @@ public class Option<T> {
         if (confirmationMessage == null) {
             return true;
         } else {
-            return MessageDialogButton.Yes == MessageDialog.showMessageDialog(
-                    Main.GUI.getWindowGUI(),
-                    "Confirmation",
-                    GUIUtils.wrapLabelText(confirmationMessage),
-                    MessageDialogButton.No,
-                    MessageDialogButton.Yes
+            return MessageDialogButton.Yes == Main.GUI.dialog(
+                    "Confirmation", confirmationMessage, MessageDialogButton.No, MessageDialogButton.Yes
             );
         }
     }

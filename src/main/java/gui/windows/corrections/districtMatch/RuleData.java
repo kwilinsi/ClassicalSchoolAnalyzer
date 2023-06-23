@@ -66,7 +66,7 @@ class RuleData {
      *
      * @param index The initial index.
      */
-    public RuleData(DistrictMatchCorrectionWindow districtMatchCorrectionWindow, int index) {
+    public RuleData(@NotNull DistrictMatchCorrectionWindow districtMatchCorrectionWindow, int index) {
         //noinspection UnnecessaryUnicodeEscape
         upButton = SymbolButton.of('\u25B2', () -> districtMatchCorrectionWindow.movePanelUp(index));
         closeButton = SymbolButton.of('X', () -> districtMatchCorrectionWindow.deletePanel(index));

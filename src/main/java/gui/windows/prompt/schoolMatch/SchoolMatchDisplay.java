@@ -206,7 +206,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
      */
     @NotNull
     @Unmodifiable
-    public static List<Attribute> identifyBestDisplayAttributes(@NotNull List<SchoolComparison> comparisons) {
+    private static List<Attribute> identifyBestDisplayAttributes(@NotNull List<SchoolComparison> comparisons) {
         int max = Config.MAX_SCHOOL_COMPARISON_GUI_ATTRIBUTES.getInt();
         if (max < 0 || max > Attribute.values().length)
             max = Attribute.values().length;
@@ -501,7 +501,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                 DistrictUpdateDialog dialog = DistrictUpdateDialog.of(
                         district, schoolComparison.getIncomingSchool(), schoolComparison.getExistingSchool()
                 );
-                MessageDialogButton selection = dialog.show(Main.GUI.getWindowGUI());
+                MessageDialogButton selection = dialog.show();
 
                 switch (selection) {
                     case Abort -> {
@@ -536,17 +536,13 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                     return;
                 }
 
-                MessageDialog.showMessageDialog(
-                        Main.GUI.getWindowGUI(),
+                Main.GUI.dialog(
                         "Error: Unresolved Attributes",
-                        GUIUtils.wrapLabelText(
-                                """
-                                        The following attributes have Preference "NONE": %s
+                        """
+                                The following attributes have Preference "NONE": %s
 
-                                        You must resolve those attributes before selecting a match with this school.""",
-                                Utils.listAttributes(unresolved)
-                        ),
-                        MessageDialogButton.OK
+                                You must resolve those attributes before selecting a match with this school."""
+                                .formatted(Utils.listAttributes(unresolved))
                 );
             }
 
@@ -597,12 +593,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                 .addTo(base);
 
         // Show the dialog
-        EnhancedMessageDialog.show(
-                Main.GUI.getWindowGUI(),
-                base,
-                TextColor.ANSI.WHITE_BRIGHT,
-                MessageDialogButton.Close
-        );
+        EnhancedMessageDialog.show(base, TextColor.ANSI.WHITE_BRIGHT, MessageDialogButton.Close);
     }
 
     /**
@@ -660,7 +651,6 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         }
 
         MessageDialogButton button = EnhancedMessageDialog.show(
-                Main.GUI.getWindowGUI(),
                 base,
                 TextColor.ANSI.WHITE,
                 MessageDialogButton.Cancel,
@@ -715,12 +705,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                     .addComponent(createAttributeValueCompSchool(existingSchool, attribute));
         }
 
-        EnhancedMessageDialog.show(
-                Main.GUI.getWindowGUI(),
-                base,
-                TextColor.ANSI.WHITE,
-                MessageDialogButton.Close
-        );
+        EnhancedMessageDialog.show(base, TextColor.ANSI.WHITE, MessageDialogButton.Close);
     }
 
     /**

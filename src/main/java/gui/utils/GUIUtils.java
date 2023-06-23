@@ -1,6 +1,5 @@
 package gui.utils;
 
-import ch.qos.logback.classic.spi.ILoggingEvent;
 import com.googlecode.lanterna.SGR;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.bundle.LanternaThemes;
@@ -11,24 +10,13 @@ import constructs.school.Attribute;
 import constructs.school.School;
 import org.apache.commons.text.WordUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import processing.schoolLists.matching.AttributeComparison;
 import utils.Config;
-import utils.Utils;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class GUIUtils {
-    /**
-     * This is the format used for displaying the timestamps of log entries.
-     *
-     * @see #logEntry(ILoggingEvent)
-     */
-    private static final DateTimeFormatter LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("mm:ss");
-
     /**
      * Create a {@link Label} formatted to look like a proper header. It has the following attributes:
      * <ul>
@@ -123,60 +111,6 @@ public class GUIUtils {
         footer.setLayoutManager(new LinearLayout(Direction.HORIZONTAL));
         footer.addComponent(footerLabel(text));
         return footer;
-    }
-
-    /**
-     * Take a {@link ILoggingEvent log event} and create from it a single-line {@link Panel} containing a nicely
-     * formatted log message.
-     *
-     * @param event The log event to format.
-     * @return The formatted log message.
-     */
-    @NotNull
-    public static Panel logEntry(@NotNull ILoggingEvent event) {
-        Panel logEntry = new Panel();
-        logEntry.setLayoutManager(new LinearLayout(Direction.HORIZONTAL));
-
-        // Add the timestamp
-        long timeStamp = event.getTimeStamp();
-        Instant instant = Instant.ofEpochMilli(timeStamp);
-        LocalDateTime lt = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
-        Label time = new Label(lt.format(LOG_TIME_FORMAT));
-        time.setForegroundColor(TextColor.ANSI.WHITE);
-        logEntry.addComponent(time);
-
-        // Add the thread
-        Label thread = new Label(Utils.padTrimString(event.getThreadName(), 14, false));
-        thread.setForegroundColor(TextColor.ANSI.CYAN_BRIGHT);
-        logEntry.addComponent(thread);
-
-        // Add the logger name (e.g. the class name)
-        String[] name = event.getLoggerName().split("\\.");
-        Label logger = new Label(Utils.padTrimString(name[name.length - 1], 12, false));
-        logger.setForegroundColor(TextColor.ANSI.GREEN_BRIGHT);
-        logger.addStyle(SGR.BOLD);
-        logEntry.addComponent(logger);
-
-        // Add the log level
-        String level = event.getLevel().toString();
-        Label levelLbl = new Label(Utils.padTrimString(level, 5, false));
-        switch (level) {
-            case "ERROR" -> levelLbl.setForegroundColor(TextColor.ANSI.RED);
-            case "WARN" -> levelLbl.setForegroundColor(TextColor.ANSI.YELLOW);
-            case "INFO" -> levelLbl.setForegroundColor(TextColor.ANSI.CYAN);
-            case "DEBUG" -> levelLbl.setForegroundColor(TextColor.ANSI.GREEN);
-            case "TRACE" -> levelLbl.setForegroundColor(TextColor.ANSI.WHITE_BRIGHT);
-        }
-        levelLbl.addStyle(SGR.BOLD);
-        logEntry.addComponent(levelLbl);
-
-        // Add the message
-        Label message = new Label(event.getFormattedMessage());
-        message.setForegroundColor(TextColor.ANSI.WHITE_BRIGHT);
-        logEntry.addComponent(message);
-
-        // Return the completed panel
-        return logEntry;
     }
 
     /**
@@ -288,21 +222,9 @@ public class GUIUtils {
      * @return The formatted text.
      */
     @NotNull
-    public static String wrapLabelText(@NotNull String text) {
-        return WordUtils.wrap(text, Config.GUI_POPUP_TEXT_WRAP_LENGTH.getInt(), "\n", true);
-    }
-
-    /**
-     * Format text for a {@link Label} like {@link String#format(String, Object...) String.format()}, and wrap it to
-     * a readable length with {@link #wrapLabelText(String) wrapLabelText()}.
-     *
-     * @param text The text to format and wrap.
-     * @return The formatted text.
-     */
-    @NotNull
-    public static String wrapLabelText(@NotNull String text, Object... args) {
+    public static String wrapLabelText(@Nullable String text) {
         return WordUtils.wrap(
-                String.format(text, args), Config.GUI_POPUP_TEXT_WRAP_LENGTH.getInt(), "\n", true
+                text == null ? "" : text, Config.GUI_POPUP_TEXT_WRAP_LENGTH.getInt(), "\n", true
         );
     }
 

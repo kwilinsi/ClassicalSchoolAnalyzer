@@ -6,11 +6,8 @@ import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import constructs.correction.schoolCorrection.Action;
-import constructs.correction.schoolCorrection.ChangeAttributesAction;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -21,11 +18,6 @@ public class CustomTypeAdapterFactory implements TypeAdapterFactory {
 
     public CustomTypeAdapterFactory(Map<Class<?>, Class<?>> typeAdapters) {
         this.typeAdapters = typeAdapters;
-    }
-
-    public CustomTypeAdapterFactory() {
-        this(new HashMap<>());
-        typeAdapters.put(Action.class, ChangeAttributesAction.class);
     }
 
     @Override

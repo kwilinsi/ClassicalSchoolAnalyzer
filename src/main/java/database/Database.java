@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
@@ -18,12 +19,18 @@ public class Database {
      * This is the data source from which all {@link #getConnection() connections} are created. It is initialized once
      * per program execution via {@link #load()}.
      */
-    private static HikariDataSource dataSource;
+    @Nullable
+    private static HikariDataSource dataSource = null;
 
     /**
      * Load the settings for HikariCP and create a connection to the database.
+     * <p>
+     * If the {@link #dataSource} is not <code>null</code>, indicating the database is already loaded, this method
+     * has no effect.
      */
-    static void load() {
+    public static synchronized void load() {
+        if (dataSource != null) return;
+
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(
                 String.format("jdbc:mysql://%s:%d/%s?useUnicode=true",
@@ -69,7 +76,7 @@ public class Database {
      * @throws SQLException If there is an error creating the connection.
      */
     @NotNull
-    public static Connection getConnection() throws SQLException {
+    public static synchronized Connection getConnection() throws SQLException {
         if (dataSource == null) load();
 
         try {
@@ -77,6 +84,18 @@ public class Database {
         } catch (SQLException e) {
             logger.error("Error creating connection to database.", e);
             throw e;
+        }
+    }
+
+    /**
+     * Terminate the database connection. Call this when the program exits.
+     * <p>
+     * If the {@link #dataSource} is <code>null</code>, this has no effect.
+     */
+    public static void shutdown() {
+        if (dataSource != null) {
+            dataSource.close();
+            dataSource = null;
         }
     }
 }

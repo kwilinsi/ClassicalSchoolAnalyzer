@@ -1,13 +1,10 @@
 package main;
 
-import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
-import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import constructs.correction.CorrectionManager;
 import constructs.organization.Organization;
 import constructs.organization.OrganizationManager;
 import constructs.school.*;
 import database.DatabaseManager;
-import gui.utils.GUIUtils;
 import gui.windows.prompt.selection.MultiSelectionPrompt;
 import gui.windows.prompt.selection.Option;
 import gui.windows.prompt.selection.SelectionPrompt;
@@ -33,12 +30,7 @@ public class Actions {
      * This is called by {@link Action} methods for actions that are not yet implemented.
      */
     public static void notImplemented() {
-        MessageDialog.showMessageDialog(
-                Main.GUI.getWindowGUI(),
-                "Not Implemented",
-                GUIUtils.wrapLabelText("Sorry, this feature is not yet implemented."),
-                MessageDialogButton.OK
-        );
+        Main.GUI.dialog( "Not Implemented", "Sorry, this feature is not yet implemented.");
     }
 
     /**

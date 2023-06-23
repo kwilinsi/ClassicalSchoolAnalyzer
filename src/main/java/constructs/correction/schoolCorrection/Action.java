@@ -16,11 +16,4 @@ public interface Action {
      * standard behavior of the action or due to some failure.
      */
     boolean apply(@NotNull School school);
-
-    /**
-     * Get the action {@link ActionType CorrectionType} associated with this action.
-     *
-     * @return The action type.
-     */
-    ActionType getType();
 }

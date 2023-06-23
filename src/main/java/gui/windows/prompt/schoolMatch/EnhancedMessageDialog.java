@@ -5,6 +5,7 @@ import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.DialogWindow;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import gui.utils.GUIUtils;
+import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -59,22 +60,20 @@ class EnhancedMessageDialog extends DialogWindow {
     }
 
     /**
-     * {@inheritDoc}
+     * {@link gui.GUI#addWindow(Window) Show} this dialog, and {@link #waitUntilClosed() wait} for the user to select
+     * one of the buttons.
      *
-     * @param textGUI Text GUI to add the dialog to
-     * @return The selected button's enum value
+     * @return The user's selection.
      */
-    @Override
-    public MessageDialogButton showDialog(WindowBasedTextGUI textGUI) {
-        super.showDialog(textGUI);
+    public MessageDialogButton show() {
+        Main.GUI.addWindow(this);
+        waitUntilClosed();
         return result;
     }
 
     /**
-     * Create a new {@link EnhancedMessageDialog} and {@link #showDialog(WindowBasedTextGUI) show} it, waiting for
-     * the user to select one of the buttons.
+     * Create and {@link #show() show} a new dialog, waiting for the user to select one of the buttons.
      *
-     * @param textGUI    The text GUI to which to add the dialog.
      * @param title      The window title.
      * @param contents   The main contents panel.
      * @param background The window background color.
@@ -82,29 +81,26 @@ class EnhancedMessageDialog extends DialogWindow {
      * @return The selected button.
      * @throws IllegalArgumentException If the list of buttons is empty.
      */
-    public static MessageDialogButton show(@NotNull WindowBasedTextGUI textGUI,
-                                           @NotNull String title,
+    public static MessageDialogButton show(@NotNull String title,
                                            @NotNull Panel contents,
                                            @NotNull TextColor.ANSI background,
                                            @NotNull MessageDialogButton... buttons) throws IllegalArgumentException {
-        return new EnhancedMessageDialog(title, contents, background, buttons).showDialog(textGUI);
+        return new EnhancedMessageDialog(title, contents, background, buttons).show();
     }
 
     /**
-     * {@link #show(WindowBasedTextGUI, String, Panel, TextColor.ANSI, MessageDialogButton...) Display} a new dialog
-     * with an empty title.
+     * Create and {@link #show(String, Panel, TextColor.ANSI, MessageDialogButton...) show} a new dialog with an empty
+     * title.
      *
-     * @param textGUI    The window GUI to which to add the dialog.
      * @param contents   The main contents panel.
      * @param background The window background color.
      * @param buttons    One or more buttons to put at the bottom of the dialog.
      * @return The selected button.
      * @throws IllegalArgumentException If the list of buttons is empty.
      */
-    public static MessageDialogButton show(@NotNull WindowBasedTextGUI textGUI,
-                                           @NotNull Panel contents,
+    public static MessageDialogButton show(@NotNull Panel contents,
                                            @NotNull TextColor.ANSI background,
                                            @NotNull MessageDialogButton... buttons) throws IllegalArgumentException {
-        return show(textGUI, "", contents, background, buttons);
+        return show("", contents, background, buttons);
     }
 }

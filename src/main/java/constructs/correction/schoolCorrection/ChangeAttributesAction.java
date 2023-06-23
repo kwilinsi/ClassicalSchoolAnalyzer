@@ -31,9 +31,4 @@ public class ChangeAttributesAction implements Action {
             school.put(attribute, newValues.get(attribute));
         return true;
     }
-
-    @Override
-    public ActionType getType() {
-        return ActionType.CHANGE_ATTRIBUTES;
-    }
 }

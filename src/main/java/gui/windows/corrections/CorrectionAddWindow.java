@@ -9,7 +9,7 @@ import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import constructs.correction.CorrectionType;
 import constructs.correction.Correction;
 import constructs.correction.CorrectionManager;
-import gui.utils.GUIUtils;
+import gui.GUI;
 import gui.windows.MyBaseWindow;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
@@ -25,7 +25,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
     /**
      * The button the user chose to close the window.
      *
-     * @see #show(WindowBasedTextGUI)
+     * @see #show()
      */
     private MessageDialogButton selectedButton;
 
@@ -75,7 +75,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      * {@link TextBox.Style#SINGLE_LINE SINGLE_LINE} {@link TextBox}
      * set to 30 columns.
      *
-     * @param type  The {@link CorrectionType CorrectionType} of Correction. This is used in the header.
+     * @param type The {@link CorrectionType CorrectionType} of Correction. This is used in the header.
      */
     protected CorrectionAddWindow(@NotNull CorrectionType type) {
         this(type, new TextBox(new TerminalSize(30, 1)));
@@ -134,14 +134,14 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
     }
 
     /**
-     * Show this window, and wait for the user to select one of the buttons.
+     * {@link GUI#addWindow(Window) Show} this window, and {@link #waitUntilClosed() wait} for the user to select one
+     * of the buttons.
      *
-     * @param gui The main GUI to which this window should be added.
      * @return The user's selection: either {@link MessageDialogButton#OK OK} or {@link MessageDialogButton#Cancel
      * Cancel}.
      */
-    public MessageDialogButton show(WindowBasedTextGUI gui) {
-        gui.addWindow(this);
+    public MessageDialogButton show() {
+        Main.GUI.addWindow(this);
         waitUntilClosed();
         return selectedButton;
     }
@@ -155,12 +155,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      * @see #showWarning(String, String)
      */
     public void showError(@NotNull String error, @NotNull String message) {
-        MessageDialog.showMessageDialog(
-                Main.GUI.getWindowGUI(),
-                "Error: " + error,
-                GUIUtils.wrapLabelText(message),
-                MessageDialogButton.OK
-        );
+        Main.GUI.dialog("Error: " + error, message);
     }
 
     /**
@@ -175,10 +170,9 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      * @see #showError(String, String)
      */
     public boolean showWarning(@NotNull String warning, @NotNull String message) {
-        return MessageDialogButton.Continue == MessageDialog.showMessageDialog(
-                Main.GUI.getWindowGUI(),
+        return MessageDialogButton.Continue == Main.GUI.dialog(
                 "Warning: " + warning,
-                GUIUtils.wrapLabelText(message + " Are you sure you want to continue?"),
+                message + " Are you sure you want to continue?",
                 MessageDialogButton.Cancel,
                 MessageDialogButton.Continue
         );

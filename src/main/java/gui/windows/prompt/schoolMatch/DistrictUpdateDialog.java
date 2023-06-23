@@ -10,8 +10,10 @@ import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
 import gui.buttons.Link;
+import gui.buttons.RadioButton;
 import gui.utils.GUIUtils;
 import gui.windows.MyBaseWindow;
+import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -62,7 +64,7 @@ public class DistrictUpdateDialog extends MyBaseWindow {
     /**
      * The button the user chose to close the window.
      *
-     * @see #show(WindowBasedTextGUI)
+     * @see #show()
      */
     private MessageDialogButton selectedButton;
 
@@ -120,13 +122,13 @@ public class DistrictUpdateDialog extends MyBaseWindow {
     }
 
     /**
-     * Show this dialog, and wait for the user to select one of the buttons.
+     * {@link gui.GUI#addWindow(Window) Show} this dialog, and {@link #waitUntilClosed() wait} for the user to select
+     * one of the buttons.
      *
-     * @param gui The main GUI to which this window should be added.
      * @return The user's selection.
      */
-    public MessageDialogButton show(WindowBasedTextGUI gui) {
-        gui.addWindow(this);
+    public MessageDialogButton show() {
+        Main.GUI.addWindow(this);
         waitUntilClosed();
         return selectedButton;
     }
@@ -140,7 +142,7 @@ public class DistrictUpdateDialog extends MyBaseWindow {
     @Nullable
     public String getSelectedName() throws IllegalStateException {
         for (int i = 0; i < 4; i++)
-            if (nameButtons[i].isSelected)
+            if (nameButtons[i].isSelected())
                 if (i == 3)
                     return nameCustomBox.getText();
                 else
@@ -158,7 +160,7 @@ public class DistrictUpdateDialog extends MyBaseWindow {
     @Nullable
     public String getSelectedUrl() throws IllegalStateException {
         for (int i = 0; i < 4; i++)
-            if (urlButtons[i].isSelected)
+            if (urlButtons[i].isSelected())
                 if (i == 3)
                     return urlCustomBox.getText();
                 else
@@ -184,7 +186,7 @@ public class DistrictUpdateDialog extends MyBaseWindow {
      *                      <code>false</code> and the button is already selected, nothing happens. Note that
      *                      regardless of this state, re-selecting the "current" button has no effect.
      */
-    public void onButtonSelected(boolean isName, int index, boolean allowDeselect) {
+    private void onButtonSelected(boolean isName, int index, boolean allowDeselect) {
         RadioButton[] buttons = isName ? nameButtons : urlButtons;
 
         if (buttons[index].isSelected()) {
@@ -326,72 +328,5 @@ public class DistrictUpdateDialog extends MyBaseWindow {
     @NotNull
     private static String stringValueOf(@Nullable Object obj) {
         return obj == null ? "" : obj.toString();
-    }
-
-    private static class RadioButton extends Button {
-        /**
-         * The appearance of the button when it's not selected.
-         */
-        private static final String NOT_SELECTED = "[ ]";
-
-        /**
-         * The appearance of the button when it's selected.
-         */
-        private static final String SELECTED = "[X]";
-
-        /**
-         * Whether this button is currently selected.
-         */
-        private boolean isSelected = false;
-
-        private RadioButton(Runnable runnable) {
-            super(NOT_SELECTED, runnable);
-            setRenderer(new RadioButtonRenderer());
-        }
-
-        /**
-         * Set whether the button is {@link #isSelected selected}. If this changes the button's state, it is
-         * automatically {@link #invalidate() invalidated}.
-         *
-         * @param selected The new selection state for this button.
-         */
-        public void setSelected(boolean selected) {
-            if (isSelected != selected) {
-                isSelected = selected;
-                invalidate();
-            }
-        }
-
-        /**
-         * Get whether button is {@link #isSelected selected}.
-         *
-         * @return <code>True</code> if and only if it's selected.
-         */
-        public boolean isSelected() {
-            return isSelected;
-        }
-    }
-
-    /**
-     * A custom renderer for {@link RadioButton RadioButtons}.
-     */
-    private static class RadioButtonRenderer extends Button.FlatButtonRenderer {
-        @Override
-        public void drawComponent(TextGUIGraphics graphics, Button button) {
-            if (button instanceof RadioButton rb) {
-                graphics.applyThemeStyle(rb.getThemeDefinition().getInsensitive());
-
-                if (rb.isFocused()) {
-                    graphics.setBackgroundColor(TextColor.ANSI.BLUE_BRIGHT)
-                            .setForegroundColor(TextColor.ANSI.WHITE_BRIGHT)
-                            .enableModifiers(SGR.BOLD);
-                }
-
-                graphics.putString(0, 0, rb.isSelected ? RadioButton.SELECTED : RadioButton.NOT_SELECTED);
-
-            } else {
-                super.drawComponent(graphics, button);
-            }
-        }
     }
 }

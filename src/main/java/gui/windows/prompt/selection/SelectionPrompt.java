@@ -82,7 +82,7 @@ public class SelectionPrompt<T> extends Prompt<T> {
 
         // Actually select the option the user chose and add a slight pause for effect
         actions.setSelectedIndex(digit - 1);
-        Main.GUI.update();
+        Main.GUI.updateNow();
         try {
             Thread.sleep(50);
         } catch (InterruptedException ignore) {

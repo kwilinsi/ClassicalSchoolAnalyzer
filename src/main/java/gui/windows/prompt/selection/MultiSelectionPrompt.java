@@ -1,11 +1,9 @@
 package gui.windows.prompt.selection;
 
 import com.googlecode.lanterna.gui2.*;
-import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import com.googlecode.lanterna.input.KeyStroke;
 import com.googlecode.lanterna.input.KeyType;
-import gui.utils.GUIUtils;
 import gui.windows.prompt.Prompt;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
@@ -24,6 +22,7 @@ import java.util.stream.Stream;
  * Note that this prompt has a {@link MessageDialogButton#Cancel Cancel} button which, if selected, will yield
  * <code>null</code>.
  */
+@SuppressWarnings("unused")
 public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
     /**
      * The checkboxes the user can choose from.
@@ -244,12 +243,8 @@ public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
         if (validator != null) {
             Pair<Boolean, String> result = validator.apply(items.stream().map(Option::getValue).toList());
             if (!result.a) {
-                MessageDialog.showMessageDialog(
-                        Main.GUI.getWindowGUI(),
-                        "Error",
-                        GUIUtils.wrapLabelText(result.b == null ? "The validator failed for the current selections. " +
-                                "Try a different selection." : result.b),
-                        MessageDialogButton.OK
+                Main.GUI.dialog("Error", result.b == null ?
+                        "The validator failed for the current selections. Try a different selection." : result.b
                 );
                 return;
             }
@@ -259,10 +254,9 @@ public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
         if (confirmation != null) {
             String message = confirmation.apply(items.stream().map(Option::getValue).toList());
             if (message != null)
-                if (MessageDialogButton.No == MessageDialog.showMessageDialog(
-                        Main.GUI.getWindowGUI(),
+                if (MessageDialogButton.No == Main.GUI.dialog(
                         "Confirm Selection",
-                        GUIUtils.wrapLabelText(message + " Are you sure you want to continue?"),
+                        message + " Are you sure you want to continue?",
                         MessageDialogButton.No,
                         MessageDialogButton.Yes
                 ))
@@ -271,12 +265,9 @@ public class MultiSelectionPrompt<T> extends Prompt<List<T>> {
 
         // Show a warning if nothing is selected
         if (items.size() == 0) {
-            if (MessageDialogButton.No == MessageDialog.showMessageDialog(
-                    Main.GUI.getWindowGUI(),
+            if (MessageDialogButton.No == Main.GUI.dialog(
                     "Confirm Selection",
-                    GUIUtils.wrapLabelText(
-                            "None of the options are currently selected. Are you sure want to continue?"
-                    ),
+                    "None of the options are currently selected. Are you sure want to continue?",
                     MessageDialogButton.No,
                     MessageDialogButton.Yes
             ))

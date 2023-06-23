@@ -4,10 +4,7 @@ import com.googlecode.lanterna.SGR;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.Button;
 import com.googlecode.lanterna.gui2.TextGUIGraphics;
-import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
-import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import constructs.school.Attribute;
-import gui.utils.GUIUtils;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -127,12 +124,7 @@ public class Link extends Button {
      * @param message The message to display.
      */
     public void errorOpening(@NotNull String message) {
-        MessageDialog.showMessageDialog(
-                Main.GUI.getWindowGUI(),
-                "Error",
-                GUIUtils.wrapLabelText(message),
-                MessageDialogButton.OK
-        );
+        Main.GUI.dialog("Error", message);
     }
 
     /**

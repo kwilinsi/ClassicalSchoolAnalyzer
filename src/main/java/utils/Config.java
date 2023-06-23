@@ -286,13 +286,13 @@ public enum Config {
             String description = "\nMissing a required configuration setting.\nPlease provide the " + this.key() + ":";
             int width = Arrays.stream(description.split("\n")).mapToInt(String::length).max().orElse(40);
 
-            val = new TextInputDialogBuilder()
+            val = Main.GUI.textDialog(new TextInputDialogBuilder()
                     .setTitle("Configuration Required")
                     .setDescription(description)
                     .setPasswordInput(this.isPassword)
                     .setTextBoxSize(new TerminalSize(width, isPassword ? 1 : 3))
                     .build()
-                    .showDialog(Main.GUI.getWindowGUI());
+            );
         } else {
             val = String.valueOf(this.defaultValue);
         }

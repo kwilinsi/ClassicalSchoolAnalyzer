@@ -11,9 +11,4 @@ public class OmitAction implements Action {
     public boolean apply(@NotNull School school) {
         return false;
     }
-
-    @Override
-    public ActionType getType() {
-        return ActionType.OMIT;
-    }
 }

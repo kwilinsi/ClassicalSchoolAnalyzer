@@ -2,7 +2,6 @@ package gui.windows.prompt.schoolMatch;
 
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.*;
-import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import gui.GUI;
 import gui.utils.GUIUtils;
@@ -18,8 +17,10 @@ import java.util.List;
 /**
  * This window is designed to show progress bars while {@link main.Action#UPDATE_SCHOOL_LIST updating} the school list.
  * <p>
- * Note that all methods for updating this GUI are marked <code>synchronized</code>. This allows multiple threads to
- * independently {@link #incrementSubProgress() increment} the {@link #subProgressBar}, for example.
+ * Note that all custom methods for updating this window route {@link GUI#run(Runnable) route} any modifications through
+ * the {@link GUI} thread. This allows multiple threads to independently {@link #incrementSubProgress() increment} the
+ * {@link #subProgressBar}, for example. As a side effect, the methods may return before their changes are actually
+ * visible on the screen.
  */
 @SuppressWarnings("UnusedReturnValue")
 public class SchoolListProgressWindow extends MyBaseWindow {
@@ -212,26 +213,13 @@ public class SchoolListProgressWindow extends MyBaseWindow {
     }
 
     /**
-     * Show this window by adding it to the {@link GUI#getWindowGUI() windowGUI}. This method does <i>not</i> wait
-     * for the window to {@link #close() close}.
-     *
-     * @return Itself, for chaining.
-     */
-    public synchronized SchoolListProgressWindow show() {
-        Main.GUI.getWindowGUI().addWindow(this);
-        Main.GUI.update();
-        return this;
-    }
-
-    /**
      * Update the {@link #generalTask} label.
      *
      * @param task The task text. If this is <code>null</code>, the task is cleared.
      * @return Itself, for chaining.
      */
-    public synchronized SchoolListProgressWindow setGeneralTask(@Nullable String task) {
-        generalTask.setText(task == null ? "" : task);
-        update();
+    public SchoolListProgressWindow setGeneralTask(@Nullable String task) {
+        Main.GUI.run(() -> generalTask.setText(task == null ? "" : task));
         return this;
     }
 
@@ -241,9 +229,8 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      * @param task The task text. If this is <code>null</code>, the task is cleared.
      * @return Itself, for chaining.
      */
-    public synchronized SchoolListProgressWindow setSubTask(@Nullable String task) {
-        subTask.setText(task == null ? "" : task);
-        update();
+    public SchoolListProgressWindow setSubTask(@Nullable String task) {
+        Main.GUI.run(() -> subTask.setText(task == null ? "" : task));
         return this;
     }
 
@@ -252,10 +239,11 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      *
      * @return Itself, for chaining.
      */
-    public synchronized SchoolListProgressWindow clearTasks() {
-        generalTask.setText("");
-        subTask.setText("");
-        update();
+    public SchoolListProgressWindow clearTasks() {
+        Main.GUI.run(() -> {
+            generalTask.setText("");
+            subTask.setText("");
+        });
         return this;
     }
 
@@ -266,13 +254,14 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      * @param phase The current phase.
      * @return Itself, for chaining.
      */
-    public synchronized SchoolListProgressWindow setPhase(@NotNull Phase phase) {
-        mainProgressBar.setValue(phase.ordinal() + 1);
-        subProgressBar.setValue(subProgressBar.getMin());
-        phaseLabel.setText(
-                (phase == Phase.FINISHED ? "" : String.format("Step %d: ", phase.ordinal() + 1)) + phase.message
-        );
-        update();
+    public SchoolListProgressWindow setPhase(@NotNull Phase phase) {
+        Main.GUI.run(() -> {
+            mainProgressBar.setValue(phase.ordinal() + 1);
+            subProgressBar.setValue(subProgressBar.getMin());
+            phaseLabel.setText(
+                    (phase == Phase.FINISHED ? "" : String.format("Step %d: ", phase.ordinal() + 1)) + phase.message
+            );
+        });
         return this;
     }
 
@@ -288,7 +277,7 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      * @return Itself, for chaining.
      * @see #resetSubProgressBar(int, String)
      */
-    public synchronized SchoolListProgressWindow resetSubProgressBar(int max) {
+    public SchoolListProgressWindow resetSubProgressBar(int max) {
         return resetSubProgressBar(max, null);
     }
 
@@ -303,17 +292,17 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      * @return Itself, for chaining.
      * @see #resetSubProgressBar(int)
      */
-    public synchronized SchoolListProgressWindow resetSubProgressBar(int max, @Nullable String prefix) {
-        if (max == 0)
-            subProgressBar.setMin(-2).setMax(-1).setValue(-2);
-        else
-            subProgressBar.setMin(0).setMax(max).setValue(0);
+    public SchoolListProgressWindow resetSubProgressBar(int max, @Nullable String prefix) {
+        Main.GUI.run(() -> {
+            if (max == 0)
+                subProgressBar.setMin(-2).setMax(-1).setValue(-2);
+            else
+                subProgressBar.setMin(0).setMax(max).setValue(0);
 
-        subProgressPrefix = prefix;
-        updateProgressBarWidth();
-        setProgressLabel();
-
-        update();
+            subProgressPrefix = prefix;
+            updateProgressBarWidth();
+            setProgressLabel();
+        });
         return this;
     }
 
@@ -324,10 +313,11 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      * @return Itself, for chaining.
      * @see #increaseSubProgressMax(int)
      */
-    public synchronized SchoolListProgressWindow incrementSubProgress() {
-        subProgressBar.setValue(subProgressBar.getValue() + 1);
-        setProgressLabel();
-        update();
+    public SchoolListProgressWindow incrementSubProgress() {
+        Main.GUI.run(() -> {
+            subProgressBar.setValue(subProgressBar.getValue() + 1);
+            setProgressLabel();
+        });
         return this;
     }
 
@@ -339,9 +329,8 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      * @return Itself, for chaining.
      * @see #incrementSubProgress()
      */
-    public synchronized SchoolListProgressWindow increaseSubProgressMax(int delta) {
-        subProgressBar.setMax(subProgressBar.getMax() + delta);
-        update();
+    public SchoolListProgressWindow increaseSubProgressMax(int delta) {
+        Main.GUI.run(() -> subProgressBar.setMax(subProgressBar.getMax() + delta));
         return this;
     }
 
@@ -351,34 +340,34 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      *
      * @return Itself, for chaining.
      */
-    public synchronized SchoolListProgressWindow completeSubProgress() {
-        subProgressBar.setValue(subProgressBar.getValue());
-        update();
+    public SchoolListProgressWindow completeSubProgress() {
+        Main.GUI.run(() -> subProgressBar.setValue(subProgressBar.getValue()));
         return this;
     }
 
     /**
      * Some fatal error occurred, and all progress must now halt. The <code>message</code> and <code>error</code> are
      * logged, and a dialog appears showing the error message. When dismissed, the window {@link #close() closes}.
+     * <p>
+     * This is <code>synchronized</code> to prevent multiple simultaneous calls. If, when it is called, its
+     * {@link #getComponent() component} is <code>null</code>, this does nothing besides log the error.
      *
      * @param message The message to log and show the user.
      * @param error   The throwable that caused the program to error out. This is logged, and its
      *                {@link Throwable#getLocalizedMessage() message} is shown to the user.
      */
-    public synchronized void errorOut(@NotNull String message, @Nullable Throwable error) {
+    public void errorOut(@NotNull String message, @Nullable Throwable error) {
         if (error == null)
             logger.error(message);
         else
             logger.error(message, error);
 
-        MessageDialog.showMessageDialog(
-                Main.GUI.getWindowGUI(),
+        if (getComponent() == null) return;
+
+        Main.GUI.dialog(
                 "Fatal Error",
-                GUIUtils.wrapLabelText("A fatal error occurred, and the process must now halt.\n\n%s%s",
-                        message,
-                        error == null ? "" : "\n\n" + error.getLocalizedMessage()
-                ),
-                MessageDialogButton.OK
+                "A fatal error occurred, and the process must now halt.\n\n%s%s",
+                List.of(message, error == null ? "" : "\n\n" + error.getLocalizedMessage())
         );
 
         close();
@@ -390,12 +379,17 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      * returned. Otherwise, if the user acknowledges but {@link MessageDialogButton#Ignore Ignores} the error, nothing
      * else happens.
      * <p>
+     * This is <code>synchronized</code> to prevent multiple simultaneous calls. If, when it is called, its
+     * {@link #getComponent() component} is <code>null</code>, this does nothing besides log the error, and it
+     * returns <code>false</code>.
+     * <p>
      * This is similar to {@link #errorOut(String, Throwable) errorOut()}, except that the user is given the
      * opportunity to continue processing.
      *
      * @param message The message to log and show the user.
      * @param error   The error the program encountered. This is logged, and its
      *                {@link Throwable#getLocalizedMessage() message} is shown to the user.
+     * @return Whether the window is closed as a result of this call.
      */
     public synchronized boolean errorPrompt(@NotNull String message, @Nullable Throwable error) {
         if (error == null)
@@ -403,14 +397,12 @@ public class SchoolListProgressWindow extends MyBaseWindow {
         else
             logger.error(message, error);
 
-        MessageDialogButton selection = MessageDialog.showMessageDialog(
-                Main.GUI.getWindowGUI(),
+        if (getComponent() == null) return false;
+
+        MessageDialogButton selection = Main.GUI.dialog(
                 "Error",
-                GUIUtils.wrapLabelText(
-                        "An error occurred. Select Ignore to continue or Abort to stop the process.\n\n%s%s",
-                        message,
-                        error == null ? "" : "\n\n" + error.getLocalizedMessage()
-                ),
+                "An error occurred. Select Ignore to continue or Abort to stop the process.\n\n%s%s"
+                        .formatted(message, error == null ? "" : "\n\n" + error.getLocalizedMessage()),
                 MessageDialogButton.Ignore,
                 MessageDialogButton.Abort
         );
@@ -433,13 +425,12 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      *
      * @param schoolCount The number of schools that were processed. This is shown in the dialog message.
      */
-    public synchronized void finishAndWait(int schoolCount) {
+    public void finishAndWait(int schoolCount) {
         setPhase(Phase.FINISHED);
         clearTasks();
-        MessageDialog.showMessageDialog(
-                Main.GUI.getWindowGUI(),
-                "",
-                GUIUtils.wrapLabelText("Finished processing %s schools. Press enter to continue.", schoolCount),
+        Main.GUI.dialog(
+                null,
+                "Finished processing %s schools. Press enter to continue.".formatted(schoolCount),
                 MessageDialogButton.Continue
         );
         close();
@@ -457,6 +448,9 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      * If the progress bar's {@link ProgressBar#getMax() max} is <code>-1</code> and the prefix isn't <code>null</code>,
      * it's assumed that the true maximum hasn't been determined yet. In that case, the label is shown, but a question
      * mark is used for the denominator to indicate insufficient information.
+     * <p>
+     * This does not redirect any calls to the GUI thread. The caller must explicitly {@link GUI#run(Runnable) run}
+     * it on the GUI thread.
      */
     private synchronized void setProgressLabel() {
         if (subProgressPrefix != null)
@@ -473,6 +467,9 @@ public class SchoolListProgressWindow extends MyBaseWindow {
     /**
      * Whenever a new {@link #subProgressPrefix prefix} and {@link #subProgressBar} {@link ProgressBar#getMax()
      * maximum} are set, call this to update the widths of the components to make them align properly.
+     * <p>
+     * This does not redirect any calls to the GUI thread. The caller must explicitly {@link GUI#run(Runnable) run}
+     * it on the GUI thread.
      */
     private synchronized void updateProgressBarWidth() {
         if (subProgressPrefix == null) {
@@ -489,13 +486,5 @@ public class SchoolListProgressWindow extends MyBaseWindow {
                     (subProgressPrefix.length() + String.valueOf(subProgressBar.getMax()).length() * 2 + 6)
             );
         }
-    }
-
-    /**
-     * Update the {@link #getTextGUI() GUI} to display new changes. This is done in a separate thread.
-     */
-    private synchronized void update() {
-        logger.debug("Updating gui");
-        Main.GUI.update();
     }
 }

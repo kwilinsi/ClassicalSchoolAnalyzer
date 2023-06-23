@@ -1,9 +1,10 @@
 package main;
 
 import constructs.correction.CorrectionManager;
+import database.Database;
 import gui.GUI;
-import gui.windows.prompt.selection.Option;
-import gui.windows.prompt.selection.SelectionPrompt;
+import gui.windows.Background;
+import gui.windows.MainMenu;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Utils;
@@ -13,55 +14,51 @@ import java.io.IOException;
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    public static final GUI GUI = new GUI();
+    public static final GUI GUI;
+
+    static {
+        GUI guiTemp = null;
+        try {
+            guiTemp = new GUI();
+        } catch (IOException e) {
+            logger.error("Failed to initialize GUI", e);
+            System.exit(1);
+        }
+        GUI = guiTemp;
+    }
 
     public static void main(String[] args) {
         logger.info("Initialized logger.");
 
-        // Start the GUI
-        Thread guiThread = new Thread(GUI, "gui-thread");
-        guiThread.start();
+        // Add the home screen to the GUI
+        Background background = new Background();
+        GUI.addWindow(background);
+
+        // Load the database
+        logger.info("Loading the database...");
+        Utils.runParallel(Database::load, "Failed to load the database", "database");
 
         // Load the Corrections table from the database
-        Utils.runParallel(
-                CorrectionManager::load, "Failed to load Corrections table", "corrections"
-        );
+        logger.info("Loading Corrections...");
+        Utils.runParallel(CorrectionManager::load, "Failed to load Corrections", "corrections");
 
-        while (true) {
-            SelectionPrompt<Action> prompt = SelectionPrompt.of(
-                    "Main Menu",
-                    "Please select an action to perform:",
-                    Option.of("Download school list", Action.UPDATE_SCHOOL_LIST),
-                    Option.of("Download school websites", Action.DOWNLOAD_SCHOOL_WEBSITES),
-                    Option.of("Perform analysis", Action.PERFORM_ANALYSIS),
-                    Option.of("Manage database", Action.MANAGE_DATABASE),
-                    Option.of("Manage corrections", Action.MANAGE_CORRECTIONS),
-                    Option.of("Clear data directory", Action.CLEAR_DATA_DIRECTORY,
-                            "This will delete all downloaded files in the data directory.\n" +
-                                    "Are you sure you wish to continue?"),
-                    Option.of("Test script", Action.TEST),
-                    Option.of("Exit", null, "Are you sure you wish to exit " +
-                            "Classical School Analyzer?")
-            );
-
-            Action selection = GUI.showPrompt(prompt);
-            if (selection == null)
-                break;
-            selection.run();
-        }
-
-        exit();
+        // Add the main menu
+        logger.debug("Adding the main menu");
+        GUI.addWindow(MainMenu.MAIN_MENU);
     }
 
     /**
-     * This is called by the GUI thread when the user closes the GUI. It immediately terminates the program.
+     * Terminate the entire program, closing any open processes. This does the following:
+     * <ol>
+     *     <li>{@link GUI#shutdown() Shutdown} the GUI.
+     *     <li>{@link Database#shutdown() Shutdown} the database connection.
+     *     <li>{@link System#exit(int) Exit} the program with code <code>0</code>.
+     * </ol>
+     * This method never returns normally.
      */
-    public static void exit() {
-        try {
-            GUI.getScreen().stopScreen();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public static void shutdown() {
+        GUI.shutdown();
+        Database.shutdown();
         System.exit(0);
     }
 }
