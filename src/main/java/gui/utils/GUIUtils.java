@@ -8,6 +8,7 @@ import com.googlecode.lanterna.graphics.Theme;
 import com.googlecode.lanterna.gui2.*;
 import constructs.school.Attribute;
 import constructs.school.School;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.WordUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -213,19 +214,48 @@ public class GUIUtils {
     }
 
     /**
-     * Given some text for a {@link Label}, wrap it using {@link WordUtils#wrap(String, int, String, boolean)}.
+     * Given some text for a {@link Label}, wrap it using
+     * {@link WordUtils#wrap(String, int, String, boolean) WordUtils.wrap()}. As that method accepts only single
+     * lines as input, each line of the <code>text</code> is processed independently.
      * <p>
      * The wrap length is based on {@link Config#GUI_POPUP_TEXT_WRAP_LENGTH GUI_POPUP_TEXT_WRAP_LENGTH}. This will
      * force wrap long words. The newline character is <code>"\n"</code>.
      *
-     * @param text The text to wrap.
+     * @param text The text to wrap. If this is <code>null</code>, an empty string is returned.
      * @return The formatted text.
      */
     @NotNull
     public static String wrapLabelText(@Nullable String text) {
-        return WordUtils.wrap(
-                text == null ? "" : text, Config.GUI_POPUP_TEXT_WRAP_LENGTH.getInt(), "\n", true
-        );
+        if (text == null) return "";
+
+        int maxLength = Config.GUI_POPUP_TEXT_WRAP_LENGTH.getInt();
+        String[] lines = StringUtils.split(text, '\n');
+        for (int i = 0; i < lines.length; i++)
+            lines[i] = WordUtils.wrap(lines[i], maxLength, "\n", true);
+
+        return String.join("\n", lines);
+    }
+
+    /**
+     * Take some attribute value input and {@link StringUtils#abbreviate(String, int) abbreviate} it if it's over the
+     * {@link Config#MAX_ATTRIBUTE_DISPLAY_LENGTH MAX_ATTRIBUTE_DISPLAY_LENGTH}. If the max length is set to
+     * <code>-1</code>, the string is not abbreviated.
+     *
+     * @param value The value to abbreviate. If this is <code>null</code>, an empty string is returned. This is
+     *              converted to a string via {@link Object#toString() Object.toString()}.
+     * @return The input value, abbreviated if necessary.
+     */
+    @NotNull
+    public static String abbreviate(@Nullable Object value) {
+        if (value == null)
+            return "";
+        else {
+            int maxLength = Config.MAX_ATTRIBUTE_DISPLAY_LENGTH.getInt();
+            if (maxLength == -1)
+                return value.toString();
+            else
+                return StringUtils.abbreviate(value.toString(), maxLength);
+        }
     }
 
     /**

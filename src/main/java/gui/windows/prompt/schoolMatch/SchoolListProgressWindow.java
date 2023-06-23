@@ -206,10 +206,8 @@ public class SchoolListProgressWindow extends MyBaseWindow {
                 .addComponent(subProgressPanel)
                 .addComponent(new Separator(Direction.HORIZONTAL),
                         GridLayout.createHorizontallyFilledLayoutData())
-                .addComponent(new Panel()
-                        .addComponent(phaseLabel)
-                        .addComponent(mainProgressBar)
-                );
+                .addComponent(phaseLabel)
+                .addComponent(mainProgressBar);
     }
 
     /**

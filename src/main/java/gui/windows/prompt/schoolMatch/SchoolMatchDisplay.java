@@ -303,7 +303,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                 .addComponent(GUIUtils.attributeLabel("id", true))
                 .addComponent(new Label(String.valueOf(district.getId())))
                 .addComponent(GUIUtils.attributeLabel("name", true))
-                .addComponent(new Label(district.getName()))
+                .addComponent(new Label(GUIUtils.abbreviate(district.getName())))
                 .addComponent(GUIUtils.attributeLabel("url", true))
                 .addComponent(Link.of(district.getWebsiteURL()))
                 .addTo(districtInfo);
@@ -725,6 +725,8 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
      * Create a {@link Component} displaying a value for a particular attribute. Typically, this is just a plain
      * {@link Label}. However, for {@link Attribute Attributes} of {@link Attribute#type type} {@link URL},
      * this is a special {@link Link Link} button.
+     * <p>
+     * For a plain label, the value is first passed through {@link GUIUtils#abbreviate(Object) GUIUtils.abbreviate()}.
      *
      * @param attribute The attribute being displayed. This determines the type of component used.
      * @param value     The value to put in the component.
@@ -736,7 +738,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         if (attribute.type == URL.class)
             return Link.of((String) value);
         else
-            return new Label(value == null ? "" : String.valueOf(value));
+            return new Label(GUIUtils.abbreviate(value));
     }
 
     /**

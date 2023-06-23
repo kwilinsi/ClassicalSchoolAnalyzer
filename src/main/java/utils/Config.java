@@ -2,9 +2,6 @@ package utils;
 
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.dialogs.TextInputDialogBuilder;
-import constructs.district.District;
-import constructs.organization.OrganizationManager;
-import constructs.school.Attribute;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -139,18 +136,31 @@ public enum Config {
      * Note that this is a soft maximum. If it's necessary to show more attributes, because there are some that
      * necessitate user input, those will still be shown.
      * <p>
-     * This should never be larger than the number of {@link Attribute} enums. To disable the limit altogether, set
-     * this to <code>-1</code>. To use the fewest possible attributes in all cases, set this to <code>0</code>.
+     * This should never be larger than the number of {@link constructs.school.Attribute Attribute} enums. To disable
+     * the limit altogether, set this to <code>-1</code>. To use the fewest possible attributes in all cases, set
+     * this to <code>0</code>.
      * <p>
      * <b>Default:</b> <code>15</code>
      */
     MAX_SCHOOL_COMPARISON_GUI_ATTRIBUTES(15, false),
 
     /**
-     * This is the typical domain used by {@link OrganizationManager#GHI GHI} schools for their websites.
-     * The schools each have a subdomain on this page. This is relavent when setting District
-     * {@link District#getWebsiteURL() website URLs}. See {@link processing.schoolLists.matching.MatchIdentifier
-     * MatchIdentifier}.
+     * The maximum number of characters to print in a GUI window displaying the value of some
+     * {@link constructs.school.Attribute Attribute}.
+     * <p>
+     * To disable the limit altogether, set this to <code>-1</code>. Do <b>not</b> set this to any value between 0
+     * and 3, inclusive. This will cause {@link org.apache.commons.lang3.StringUtils#abbreviate(String, int)
+     * StringUtils.abbreviate()} to throw an {@link IllegalArgumentException}.
+     * <p>
+     * <b>Default:</b> <code>50</code>
+     */
+    MAX_ATTRIBUTE_DISPLAY_LENGTH(50, false),
+
+    /**
+     * This is the typical domain used by {@link constructs.organization.OrganizationManager#GHI GHI} schools for their
+     * websites. The schools each have a subdomain on this page. This is relavent when setting District
+     * {@link constructs.district.District#getWebsiteURL() website URLs}. See
+     * {@link processing.schoolLists.matching.MatchIdentifier MatchIdentifier}.
      * <p>
      * <b>Default:</b> <code>"greatheartsamerica.org"</code>
      */

@@ -3,8 +3,10 @@ package gui.buttons;
 import com.googlecode.lanterna.SGR;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.Button;
+import com.googlecode.lanterna.gui2.Label;
 import com.googlecode.lanterna.gui2.TextGUIGraphics;
 import constructs.school.Attribute;
+import gui.utils.GUIUtils;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,7 +34,7 @@ public class Link extends Button {
     private URI uri;
 
     private Link(@Nullable String label) {
-        super(label == null ? "" : label);
+        super(GUIUtils.abbreviate(label));
 
         setRenderer(new LinkRenderer());
         setUrl(label);
@@ -42,7 +44,8 @@ public class Link extends Button {
     /**
      * Create a new link, whose label is the URL to open when this link is selected.
      *
-     * @param label The URL.
+     * @param label The URL. This is automatically {@link GUIUtils#abbreviate(Object) abbreviated} in the
+     *              {@link Label} if it's too long.
      * @return The new button.
      */
     @NotNull
@@ -53,10 +56,10 @@ public class Link extends Button {
     /**
      * Change the label and {@link #uri} associated with this button. This may also change the theme.
      *
-     * @param text The new URL text.
+     * @param text The new URL text. This is automatically {@link GUIUtils#abbreviate(Object) abbreviated} if necessary.
      */
     public void setUrl(@Nullable String text) {
-        setLabel(text == null ? "" : text);
+        setLabel(GUIUtils.abbreviate(text));
 
         if (Attribute.website_url.isEffectivelyNull(text)) {
             uri = null;

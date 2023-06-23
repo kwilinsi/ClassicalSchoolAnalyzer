@@ -79,8 +79,9 @@ public class SchoolManager {
                 progress.resetSubProgressBar(0);
                 schools.addAll(organization.retrieveSchools(useCache, progress));
             } catch (IOException e) {
+                //noinspection UnnecessaryUnicodeEscape
                 if (progress.errorPrompt("Failed to load and process school list for " + organization +
-                        " — omitting it", e))
+                        " \u2014 omitting it", e))
                     return;
             }
         }

@@ -58,7 +58,7 @@ public class AddressParser {
         allArgs[0] = Config.PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH.get();
         System.arraycopy(args, 0, allArgs, 1, args.length);
         ProcessBuilder builder = new ProcessBuilder(allArgs);
-        logger.debug("Calling python address parser: {}'", Utils.joinCommand(builder.command()));
+        logger.trace("Calling python address parser: {}'", Utils.joinCommand(builder.command()));
         return builder.start();
     }
 
@@ -88,7 +88,8 @@ public class AddressParser {
 
             reader.close();
             if (map.containsKey("error"))
-                logger.debug("{} — {}: {}", map.get("error"), map.get("message"), map.get("stacktrace"));
+                //noinspection UnnecessaryUnicodeEscape
+                logger.error("{} \u2014 {}: {}", map.get("error"), map.get("message"), map.get("stacktrace"));
             return map.get("output_file");
         } catch (IOException e) {
             logger.error("Failed to run the python address parser and read its output. " +
@@ -118,7 +119,8 @@ public class AddressParser {
             reader.close();
 
             if (map.containsKey("error")) {
-                logger.debug("Error while normalizing addresses '{}': {}", address, map.get("error"));
+                logger.warn("Error normalizing address '{}'", address);
+                logError(map.get("error"));
                 return null;
             } else {
                 return map;
@@ -220,8 +222,10 @@ public class AddressParser {
                 output.add(null);
             } else {
                 String norm = map.get("normalized");
-                if (map.containsKey("error"))
-                    logger.debug("Error normalizing '{}': {}", addresses.get(i), map.get("error"));
+                if (map.containsKey("error")) {
+                    logger.warn("Error normalizing address '{}'", addresses.get(i));
+                    logError(map.get("error"));
+                }
 
                 output.add(norm);
                 if (norm != null)
@@ -264,7 +268,8 @@ public class AddressParser {
             reader.close();
 
             if (map.containsKey("error")) {
-                logger.debug("Error while normalizing {} '{}': {}", attribute.name(), value, map.get("error"));
+                logger.warn("Error normalizing {} '{}'", attribute.name(), value);
+                logError(map.get("error"));
                 return null;
             } else {
                 return map.get("normalized");
@@ -361,7 +366,8 @@ public class AddressParser {
             reader.close();
 
             if (map.containsKey("error")) {
-                logger.debug("Error while comparing addresses '{}' and '{}': {}", addr1, addr2, map.get("error"));
+                logger.warn("Error while comparing addresses '{}' and '{}'", addr1, addr2);
+                logError(map.get("error"));
                 return null;
             } else {
                 return map;
@@ -407,7 +413,7 @@ public class AddressParser {
         }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(outputPath))) {
-            logger.debug("Parsing '{}' with Gson", outputPath);
+            logger.trace("Parsing '{}' with Gson", outputPath);
             List<Map<String, String>> result = new Gson().fromJson(reader, LIST_MAP_TYPE);
             List<Map<String, String>> output = new ArrayList<>();
 
@@ -421,9 +427,8 @@ public class AddressParser {
             for (int i = 0; i < result.size(); i++) {
                 Map<String, String> map = result.get(i);
                 if (map.containsKey("error")) {
-                    logger.debug(
-                            "Error comparing address '{}' to '{}': {}", address, comparisons.get(i), map.get("error")
-                    );
+                    logger.warn("Error comparing address '{}' to '{}'", address, comparisons.get(i));
+                    logError(map.get("error"));
                     output.add(null);
                 } else {
                     output.add(map);
@@ -475,5 +480,30 @@ public class AddressParser {
         }
 
         return null;
+    }
+
+    /**
+     * Log the given error message. This is intended for errors obtained from a JSON string associated with the
+     * <code>"error"</code> key.
+     * <p>
+     * This logs the error at the debug level. It's expected that a warning was already logged.
+     * <p>
+     * This automatically removes the string <code>"ERROR:"</code> from the start of any lines within the message.
+     * That prevents IntelliJ from flagging it as some sort of breaking exception, when in fact errors like this are
+     * expected for malformed addresses.
+     *
+     * @param error The error message to log.
+     */
+    private static void logError(@NotNull String error) {
+        String[] lines = error.split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            // As long as the line starts with "error", remove the first word
+            while (lines[i].toLowerCase(Locale.ROOT).startsWith("error")) {
+                String[] words = lines[i].split(" ");
+                lines[i] = String.join(" ", Arrays.copyOfRange(words, 1, words.length));
+            }
+        }
+
+        logger.debug("- Error message: " + String.join("\n", lines));
     }
 }

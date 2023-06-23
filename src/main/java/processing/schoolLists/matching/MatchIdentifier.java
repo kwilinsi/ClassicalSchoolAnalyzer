@@ -96,11 +96,13 @@ public class MatchIdentifier {
 
         // If any matches don't require user input at all, use them
         for (SchoolComparison match : matches) {
-            CachedDistrict district = associatedDistrict(match.getExistingSchool(), districtCache);
-            if (district == null)
-                throw new IllegalStateException("Unable to find district for " + match.getExistingSchool());
-            match.setDistrict(district);
-            return match.logMatchInfo("MATCHED").setLevel(MatchData.Level.SCHOOL_MATCH);
+            if (match.areAllResolvable()) {
+                CachedDistrict district = associatedDistrict(match.getExistingSchool(), districtCache);
+                if (district == null)
+                    throw new IllegalStateException("Unable to find district for " + match.getExistingSchool());
+                match.setDistrict(district);
+                return match.logMatchInfo("MATCHED").setLevel(MatchData.Level.SCHOOL_MATCH);
+            }
         }
 
         // ------------------------------
