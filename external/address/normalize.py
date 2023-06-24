@@ -289,11 +289,11 @@ def state(state: Union[str, None],
         if parsed_state:
             return _package_norm(parsed_state, parsed_norm, parsed_state)
         else:
-            return _package_norm(None, parsed_norm, None, parsed['error'])
+            return _package_norm(None, parsed_norm, None, parsed.get('error'))
 
     # If there's no state from the address, use the normalized state
     if not parsed_state:
-        return _package_norm(norm_state, parsed_norm, None, parsed['error'])
+        return _package_norm(norm_state, parsed_norm, None, parsed.get('error'))
 
     # If the states are identical, use that
     if norm_state == parsed_state:

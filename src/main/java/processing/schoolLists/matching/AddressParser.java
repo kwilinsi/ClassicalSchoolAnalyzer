@@ -1,7 +1,9 @@
 package processing.schoolLists.matching;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
+import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
@@ -45,6 +47,14 @@ public class AddressParser {
     }.getType();
 
     /**
+     * This is the standard {@link Gson} instance for all communication (both {@link #saveToFile(Object, String)
+     * serialization} and deserialization) with the address parser script.
+     * <p>
+     * Notably, it will {@link GsonBuilder#serializeNulls() serialize nulls}, so that they're picked up by the parser.
+     */
+    private static final Gson GSON = new GsonBuilder().serializeNulls().setLenient().disableHtmlEscaping().create();
+
+    /**
      * Pass some arguments to the Python address parser at {@link Config#PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH},
      * creating and returning a new {@link Process}.
      *
@@ -58,7 +68,7 @@ public class AddressParser {
         allArgs[0] = Config.PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH.get();
         System.arraycopy(args, 0, allArgs, 1, args.length);
         ProcessBuilder builder = new ProcessBuilder(allArgs);
-        logger.trace("Calling python address parser: {}'", Utils.joinCommand(builder.command()));
+        logger.trace("Calling python address parser: '{}'", Utils.joinCommand(builder.command()));
         return builder.start();
     }
 
@@ -76,20 +86,28 @@ public class AddressParser {
         try {
             Process process = newProcess(args);
             InputStreamReader reader = new InputStreamReader(process.getInputStream());
-            Map<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
+
+            Map<String, String> map = null;
+            try {
+                map = GSON.fromJson(reader, MAP_TYPE);
+            } catch (JsonParseException e) {
+                logger.error("Failed to parse JSON response from address parser", e);
+            }
 
             if (map == null) {
-                logger.warn(
-                        "Unreachable state: map with python parser output is null.\n" +
+                logger.warn("Unreachable state: map with python parser output is null.\n" +
                                 "Input: " + process.info().commandLine().orElse(String.join(" ", args)),
-                        Utils.packageStackTrace(Thread.currentThread().getStackTrace()));
+                        Utils.packageStackTrace(Thread.currentThread().getStackTrace())
+                );
                 return null;
             }
 
             reader.close();
-            if (map.containsKey("error"))
+            if (map.containsKey("error")) {
                 //noinspection UnnecessaryUnicodeEscape
-                logger.error("{} \u2014 {}: {}", map.get("error"), map.get("message"), map.get("stacktrace"));
+                logger.error("{} \u2014 {}: {}\n - Input args: {}",
+                        map.get("error"), map.get("message"), map.get("stacktrace"), String.join(" ", args));
+            }
             return map.get("output_file");
         } catch (IOException e) {
             logger.error("Failed to run the python address parser and read its output. " +
@@ -111,12 +129,16 @@ public class AddressParser {
     public static Map<String, String> normalize(@Nullable String address) {
         logger.debug("Normalizing single address '{}'", address);
 
+        Process process;
         try {
-            Process process = newProcess("normalize", address == null ? "null" : address);
-            InputStreamReader reader = new InputStreamReader(process.getInputStream());
-            Map<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
+            process = newProcess("normalize", address == null ? "null" : address);
+        } catch (IOException e) {
+            logger.error("Failed to run process", e);
+            return null;
+        }
 
-            reader.close();
+        try (InputStreamReader reader = new InputStreamReader(process.getInputStream())) {
+            Map<String, String> map = GSON.fromJson(reader, MAP_TYPE);
 
             if (map.containsKey("error")) {
                 logger.warn("Error normalizing address '{}'", address);
@@ -125,9 +147,9 @@ public class AddressParser {
             } else {
                 return map;
             }
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (IOException | JsonParseException e) {
+            logger.error("Failed to parse JSON response from address parser", e);
+            return null;
         }
     }
 
@@ -158,7 +180,13 @@ public class AddressParser {
         }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(outputPath))) {
-            List<Map<String, String>> maps = new Gson().fromJson(reader, LIST_MAP_TYPE);
+            List<Map<String, String>> maps = null;
+            try {
+                maps = GSON.fromJson(reader, LIST_MAP_TYPE);
+            } catch (JsonParseException e) {
+                logger.error("Failed to parse JSON response from address parser", e);
+            }
+
             if (maps == null)
                 logger.error("Failed to read JSON from {}", outputPath);
             else if (maps.size() != addresses.size())
@@ -256,16 +284,21 @@ public class AddressParser {
                                             @Nullable String address) {
         logger.debug("Normalizing single {} '{}' with address {}", attribute.name(), value, address);
 
+
+        Process process;
         try {
-            Process process = newProcess(
-                    "normalize_" + attribute.name() + "_file",
+            process = newProcess(
+                    "normalize_" + attribute.name(),
                     value == null ? "null" : value,
                     address == null ? "null" : address
             );
-            InputStreamReader reader = new InputStreamReader(process.getInputStream());
-            Map<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
+        } catch (IOException e) {
+            logger.error("Failed to run process", e);
+            return null;
+        }
 
-            reader.close();
+        try (InputStreamReader reader = new InputStreamReader(process.getInputStream())) {
+            Map<String, String> map = GSON.fromJson(reader, MAP_TYPE);
 
             if (map.containsKey("error")) {
                 logger.warn("Error normalizing {} '{}'", attribute.name(), value);
@@ -274,9 +307,9 @@ public class AddressParser {
             } else {
                 return map.get("normalized");
             }
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (IOException | JsonParseException e) {
+            logger.error("Failed to parse JSON response from address parser", e);
+            return null;
         }
     }
 
@@ -313,7 +346,7 @@ public class AddressParser {
         if (path == null)
             return List.of();
 
-        String outputPath = runBulkProcess("normalize_" + attribute.name(), path);
+        String outputPath = runBulkProcess("normalize_" + attribute.name() + "_file", path);
 
         if (outputPath == null) {
             Utils.deleteFiles(path);
@@ -321,7 +354,7 @@ public class AddressParser {
         }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(outputPath))) {
-            List<Map<String, String>> maps = new Gson().fromJson(reader, LIST_MAP_TYPE);
+            List<Map<String, String>> maps = GSON.fromJson(reader, LIST_MAP_TYPE);
             if (maps == null)
                 logger.error("Failed to read JSON from {}", outputPath);
             else if (maps.size() != addresses.size())
@@ -361,7 +394,7 @@ public class AddressParser {
                     "compare", addr1 == null ? "null" : addr1, addr2 == null ? "null" : addr2
             );
             InputStreamReader reader = new InputStreamReader(process.getInputStream());
-            Map<String, String> map = new Gson().fromJson(reader, MAP_TYPE);
+            Map<String, String> map = GSON.fromJson(reader, MAP_TYPE);
 
             reader.close();
 
@@ -414,7 +447,7 @@ public class AddressParser {
 
         try (BufferedReader reader = new BufferedReader(new FileReader(outputPath))) {
             logger.trace("Parsing '{}' with Gson", outputPath);
-            List<Map<String, String>> result = new Gson().fromJson(reader, LIST_MAP_TYPE);
+            List<Map<String, String>> result = GSON.fromJson(reader, LIST_MAP_TYPE);
             List<Map<String, String>> output = new ArrayList<>();
 
             if (result == null)
@@ -471,7 +504,7 @@ public class AddressParser {
                 logger.info("Created " + file.getParentFile().getAbsolutePath() + " for address parsing tmp storage");
 
             FileWriter writer = new FileWriter(file);
-            new Gson().toJson(data, writer);
+            GSON.toJson(data, writer);
             writer.close();
 
             return file.getAbsolutePath();

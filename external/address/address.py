@@ -102,11 +102,10 @@ def run_normalize_city_file():
 
     if input_data:
         output_data = [normalize.city(
-            entry['city'], entry['address']) for entry in input_data]
+            entry['value'], entry['address']) for entry in input_data]
     else:
         output_data = None
 
-    _save_json(output_path, output_data)
     _save_json(output_path, output_data)
 
 
@@ -132,7 +131,7 @@ def run_normalize_state_file():
 
     if input_data:
         output_data = [normalize.state(
-            entry['state'], entry['address']) for entry in input_data]
+            entry['value'], entry['address']) for entry in input_data]
     else:
         output_data = None
 
