@@ -282,4 +282,49 @@ public class GUIUtils {
         removeLastComponent(panel);
         panel.addComponent(component);
     }
+
+    /**
+     * Force a string to have no more than the given maximum number of lines. If it has too many lines, it's
+     * shortened, and the last line says <code>"[Message trimmed for length: showing [x] / [y] characters]"</code>.
+     * <p>
+     * If the string is too long only because the last character is <code>"\n"</code>, the last character is removed.
+     * <p>
+     * This is designed to run relatively quickly, using a simple for loop to index the string without any calls to
+     * library methods.
+     *
+     * @param text     The text to trim. If this is <code>null</code>, an empty string is returned.
+     * @param maxLines The maximum number of lines. This must be at least 2 for proper functionality.
+     * @return The trimmed string.
+     */
+    @NotNull
+    public static String trimLineCount(@Nullable String text, int maxLines) {
+        if (text == null) return "";
+
+        int lines = 0;
+        int lastLineBreakIndex = -1;
+        int length = text.length();
+
+        // Iterate through every character looking for linebreaks
+        for (int i = 0; i < length; i++) {
+            if (text.charAt(i) == '\n') {
+                lines++;
+                if (lines == maxLines) {
+                    // If this newline is the last character, just chop it off
+                    if (i == length - 1)
+                        return text.substring(0, i);
+                    else
+                        return String.format(
+                                "%s\n[Message trimmed for length: showing %d/%d characters]",
+                                text.substring(0, lastLineBreakIndex),
+                                lastLineBreakIndex,
+                                length
+                        );
+                } else {
+                    lastLineBreakIndex = i;
+                }
+            }
+        }
+
+        return text;
+    }
 }

@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -44,6 +45,12 @@ public class Background extends MyBaseWindow {
      * @see #loggingEventToPanel(ILoggingEvent)
      */
     private static final int CLASS_NAME_LENGTH = 12;
+
+    /**
+     * The maximum number of lines to display for any given log message. See
+     * {@link GUIUtils#trimLineCount(String, int)}.
+     */
+    private static final int MAX_LINES_PER_MESSAGE = 5;
 
     /**
      * This panel displays a list of the most recent log messages.
@@ -140,6 +147,7 @@ public class Background extends MyBaseWindow {
                         .setForegroundColor(TextColor.ANSI.GREEN_BRIGHT)
                         .addStyle(SGR.BOLD))
                 .addComponent(levelLbl)
-                .addComponent(new Label(event.getFormattedMessage()).setForegroundColor(TextColor.ANSI.WHITE_BRIGHT));
+                .addComponent(new Label(GUIUtils.trimLineCount(event.getFormattedMessage(), MAX_LINES_PER_MESSAGE))
+                        .setForegroundColor(TextColor.ANSI.WHITE_BRIGHT));
     }
 }
