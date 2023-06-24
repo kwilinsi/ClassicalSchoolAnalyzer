@@ -153,10 +153,7 @@ public class ConstructManager {
         // Execute SQL statements
         if (progress != null) progress.completeSubProgress().setSubTask("Executing SQL inserts...");
 
-        int[] rowCounts = insertStmt.executeBatch();
-        for (int i = 0; i < rowCounts.length; i++)
-            if (rowCounts[i] != Statement.SUCCESS_NO_INFO)
-                logger.warn("SQL insert {} returned unexpected state {}", i, rowCounts[i]);
+        logResult(insertStmt.executeBatch(), "insert");
 
         // Update the construct keys, if applicable
         if (insertSQL.b) {
@@ -178,11 +175,8 @@ public class ConstructManager {
         if (isCached) {
             if (progress != null) progress.setSubTask("Executing SQL updates...");
 
-            for (PreparedStatement statement : updateStatements) {
-                int rows = statement.executeUpdate();
-                if (rows != 1)
-                    logger.warn("No rows updated for SQL statement {}", statement);
-            }
+            for (PreparedStatement statement : updateStatements)
+                logResult(statement.executeUpdate());
         }
     }
 
@@ -318,5 +312,46 @@ public class ConstructManager {
                     true);
         else
             return Pair.of("", false);
+    }
+
+    /**
+     * Check the {@link Statement#executeBatch() results} of a batch SQL statement, logging each result.
+     * <p>
+     * If the result is a success (greater than or equal to 0, indicating a row count, or
+     * {@link Statement#SUCCESS_NO_INFO SUCCESS_NO_INFO}), a <code>trace</code> message is logged. If the result os
+     * {@link Statement#EXECUTE_FAILED EXECUTE_FAILED} or unknown, a <code>warn</code> message is logged.
+     *
+     * @param statementType The type of SQL statements that were executed. This might be <code>"insert"</code> or
+     *                      <code>"update"</code>
+     * @param batchResult   The result.
+     */
+    private static void logResult(int[] batchResult, String statementType) {
+        for (int i = 0; i < batchResult.length; i++) {
+            int result = batchResult[i];
+            if (result >= 0)
+                logger.trace("- SQL {} statement at batch index {} updated {} {}",
+                        statementType, i, result, result == 1 ? "row" : "rows");
+            else if (result == Statement.SUCCESS_NO_INFO)
+                logger.trace("- SQL {} statement at batch index {} returned SUCCESS_NO_INFO", statementType, i);
+            else if (result == Statement.EXECUTE_FAILED)
+                logger.warn("- SQL {} statement at batch index {} returned EXECUTE_FAILED", statementType, i);
+            else
+                logger.warn("- SQL {} statement at batch index {} returned unreachable result {}",
+                        statementType, i, result);
+        }
+    }
+
+    /**
+     * Log a message based on the {@link Statement#executeUpdate(String) result} of an update statement.
+     *
+     * @param rowCount The result of executing the statement.
+     */
+    private static void logResult(int rowCount) {
+        if (rowCount == 0)
+            logger.trace("- SQL statement executed successfully");
+        else if (rowCount > 0)
+            logger.trace("- SQL statement updated {} {}", rowCount, rowCount == 1 ? "row" : "rows");
+        else
+            logger.warn("- SQL statement returned unexpected row count {}", rowCount);
     }
 }
