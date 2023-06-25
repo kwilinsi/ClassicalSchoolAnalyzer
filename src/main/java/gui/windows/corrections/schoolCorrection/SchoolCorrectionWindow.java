@@ -114,7 +114,7 @@ public class SchoolCorrectionWindow extends CorrectionAddWindow {
      * the trigger at the given index. This is used to check for duplicate triggers.
      *
      * @param attribute The attribute to check.
-     * @param index The index of the trigger to skip checking.
+     * @param index     The index of the trigger to skip checking.
      * @return <code>True</code> if and only if there is at least one trigger (not at the given index) using the
      * given attribute.
      */
@@ -173,7 +173,9 @@ public class SchoolCorrectionWindow extends CorrectionAddWindow {
                 return false;
             } else if (trigger.level().getSelectedIndex() == -1) {
                 showError("Missing Trigger Level",
-                        "The trigger for '" + trigger.attribute().getSelectedItem() + "' is missing a level.");
+                        "The trigger for '%s' is missing a level.",
+                        trigger.attribute().getSelectedItem()
+                );
                 return false;
             }
         }
@@ -181,7 +183,9 @@ public class SchoolCorrectionWindow extends CorrectionAddWindow {
         for (TriggerField trigger : triggerFields)
             if (trigger.value().getText().isBlank()) {
                 if (!showWarning("Empty Value",
-                        "The trigger for '" + trigger.attribute().getSelectedItem() + "' has an empty value."))
+                        "The trigger for '%s' has an empty value.",
+                        trigger.attribute().getSelectedItem()
+                ))
                     return false;
             }
 

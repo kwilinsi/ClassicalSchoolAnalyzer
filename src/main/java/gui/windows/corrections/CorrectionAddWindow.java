@@ -71,14 +71,13 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
     }
 
     /**
-     * Shortcut for {@link #CorrectionAddWindow(CorrectionType, TextBox)} with a default
-     * {@link TextBox.Style#SINGLE_LINE SINGLE_LINE} {@link TextBox}
-     * set to 30 columns.
+     * Shortcut for {@link #CorrectionAddWindow(CorrectionType, TextBox)} with a default, 2-row
+     * {@link TextBox.Style#MULTI_LINE MULTI_LINE} {@link TextBox} set to 35 columns.
      *
      * @param type The {@link CorrectionType CorrectionType} of Correction. This is used in the header.
      */
     protected CorrectionAddWindow(@NotNull CorrectionType type) {
-        this(type, new TextBox(new TerminalSize(30, 1)));
+        this(type, new TextBox(new TerminalSize(35, 2), TextBox.Style.MULTI_LINE));
     }
 
     /**
@@ -152,10 +151,23 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      *
      * @param error   The error header for the title. This is prefixed with <code>"Error: "</code>
      * @param message The description text.
+     * @see #showError(String, String, Object...)
      * @see #showWarning(String, String)
      */
     public void showError(@NotNull String error, @NotNull String message) {
         Main.GUI.dialog("Error: " + error, message);
+    }
+
+    /**
+     * Wrapper for {@link #showError(String, String)} that allows passing arguments like
+     * {@link String#format(String, Object...) String.format()}.
+     *
+     * @param error   The error header for the title. This is prefixed with <code>"Error: "</code>
+     * @param message The description text as a format string.
+     * @param args    The arguments for the description text.
+     */
+    public void showError(@NotNull String error, @NotNull String message, @Nullable Object... args) {
+        showError(error, String.format(message, args));
     }
 
     /**
@@ -167,6 +179,7 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
      * @param warning The warning header for the title. This is prefixed with <code>"Warning: "</code>.
      * @param message The description text, which is followed with a prompt.
      * @return <code>True</code> if and only if the user selects the <code>Continue</code> button.
+     * @see #showWarning(String, String, Object...)
      * @see #showError(String, String)
      */
     public boolean showWarning(@NotNull String warning, @NotNull String message) {
@@ -176,6 +189,18 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
                 MessageDialogButton.Cancel,
                 MessageDialogButton.Continue
         );
+    }
+
+    /**
+     * Wrapper for {@link #showWarning(String, String)} that allows passing arguments like
+     * {@link String#format(String, Object...) String.format()}.
+     *
+     * @param warning The warning header for the title. This is prefixed with <code>"Warning: "</code>
+     * @param message The description text as a format string. This is followed with a prompt.
+     * @param args    The arguments for the description text.
+     */
+    public boolean showWarning(@NotNull String warning, @NotNull String message, @Nullable Object... args) {
+        return showWarning(warning, String.format(message, args));
     }
 
     /**

@@ -125,6 +125,7 @@ public class GUI {
      * {@link Screen#stopScreen() Stop} the {@link #screen}.
      */
     public void shutdown() {
+        logger.info("Shutting down GUI...");
         try {
             screen.stopScreen();
         } catch (IOException e) {

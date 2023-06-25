@@ -46,22 +46,33 @@ public class SchoolManager {
         List<CachedDistrict> districtCache;
         Set<CachedDistrictOrganization> districtOrganizationCache;
 
+        progress.setGeneralTask("Loading database connection...")
+                .setSubTask("Waiting...")
+                .resetSubProgressBar(4);
+
         try (Connection connection = Database.getConnection()) {
-            progress.setPhase(Phase.RETRIEVING_SCHOOL_CACHE).setGeneralTask("Retrieving existing schools...");
+            progress.setPhase(Phase.RETRIEVING_SCHOOL_CACHE)
+                    .setGeneralTask("Retrieving existing schools...")
+                    .setSubTask("Loading database connection...")
+                    .incrementSubProgress();
             schoolsCache = ConstructManager.loadCacheNullable(connection, CachedSchool.class, progress);
             if (schoolsCache == null) return;
 
             progress.setPhase(Phase.RETRIEVING_DISTRICT_CACHE)
-                    .setGeneralTask("Retrieving existing districts...");
+                    .setGeneralTask("Retrieving existing districts...")
+                    .incrementSubProgress();
             districtCache = ConstructManager.loadCacheNullable(connection, CachedDistrict.class, progress);
             if (districtCache == null) return;
 
             progress.setPhase(Phase.RETRIEVING_DISTRICT_ORGANIZATION_CACHE)
-                    .setGeneralTask("Retrieving existing district-organization relations...");
+                    .setGeneralTask("Retrieving existing district-organization relations...")
+                    .incrementSubProgress();
             List<CachedDistrictOrganization> cdo = ConstructManager.loadCacheNullable(
                     connection, CachedDistrictOrganization.class, progress);
             if (cdo == null) return;
             districtOrganizationCache = new HashSet<>(cdo);
+
+            progress.completeSubProgress();
         } catch (SQLException e) {
             progress.errorOut("Failed to establish database connection", e);
             return;

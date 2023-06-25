@@ -1,6 +1,7 @@
 package constructs.correction;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import constructs.Construct;
 import org.jetbrains.annotations.NotNull;
@@ -72,6 +73,12 @@ public abstract class Correction implements Construct {
     @NotNull
     @Unmodifiable
     protected transient Map<Class<?>, Class<?>> deserialization_data;
+
+    /**
+     * This is the {@link Gson} instance used for encoding Corrections when
+     * {@link #addToInsertStatement(PreparedStatement) saving} them to the database.
+     */
+    private static final Gson GSON_ENCODER = new GsonBuilder().serializeNulls().create();
 
     /**
      * Initialize a new Correction.
@@ -148,7 +155,7 @@ public abstract class Correction implements Construct {
     @Override
     public void addToInsertStatement(@NotNull PreparedStatement statement) throws SQLException {
         statement.setString(1, type.name());
-        statement.setString(2, new Gson().toJson(this));
+        statement.setString(2, GSON_ENCODER.toJson(this));
         statement.setString(3, CorrectionType.encodeDeserializationData(deserialization_data));
         statement.setString(4, notes);
 

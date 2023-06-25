@@ -53,7 +53,7 @@ Next, use PyInstaller to build an executable that Java will run. On Windows, you
 The resulting executable is located at `./dist/address-parser.exe`. You can test it by providing it some address to parse. For example:
 
 ```
-.\dist\address.exe normalize "1234 wood st Polisville, NY 98765"
+.\dist\address.exe -t normalize "1234 wood st Polisville, NY 98765"
 ```
 
 It should return the following JSON-encoded string:
@@ -64,30 +64,44 @@ It should return the following JSON-encoded string:
 
 If the library encounters an error parsing the address, it will print a JSON object containing three keys:
 
-- `"error"` — A summary of what happened (failed to parse the address or you didn't give it an address).
+- `"error"` — A summary of what happened (e.g. it failed to parse the input, or you didn't give it any input).
 - `"message"` — The actual exception message.
 - `"stacktrace"` — The stacktrace of the error for debugging purposes.
 
 ## Parser Documentation
 
-Interacting with the parser is done via the command line. It assumes the following argument structure:
+Interacting with the parser is done via the command line. It recognizes the following argument structure:
 
 ```
-.\dist\address.exe [task] <input parameters>
+./dist/address.exe [-h] --task TASK [--lookup LOOKUP] [args ...]
 ```
 
-The `task` can be one of the following:
+The supported flags are as follows:
 
-- `normalize`
-- `normalize_file`
-- `compare`
-- `compare_file`
-- `normalize_city`
-- `normalize_city_file`
-- `normalize_state`
-- `normalize_state_file`
+- `-h`, `--help` — Show the help message and exit.
+- `-t`, `--task` — This is required. It must be one of the following:
+  - `normalize`
+  - `normalize_file`
+  - `compare`
+  - `compare_file`
+  - `normalize_city`
+  - `normalize_city_file`
+  - `normalize_state`
+  - `normalize_state_file`
 
-Each task requires its own set of parameters.
+  Each task requires its own set of parameters (the `args ...`). The parameters associated with each task are described in the appropriate section below.
+
+- `-l`, `--lookup` — This is an optional parameter pointing to a file with lookup data. That data can allow the normalization of manually-specified addresses that would otherwise fail the normalization process.
+
+  The specified file must be `json` data. It must be an array containing non-`null` objects, each with the following keys:
+    - `raw` — The raw address that, when matched, will be replaced with the corresponding parsed data. This is case in-sensitive and will be trimmed for comparisons. Null and control characters are removed from the strings compared to this one, so don't include those.
+    - `address_line_1` — The first line of the replacement parsed address.
+    - `address_line_` — The second line of the address.
+    - `city` — The city.
+    - `state` — The state.
+    - `postal_code` — The postal code.
+
+- `args ...` — These are other arguments associated with the `task`. They are described below.
 
 ---
 
@@ -98,7 +112,7 @@ This parses and normalizes one or more addresses passed via the command line.
 Use the following syntax:
 
 ```
-.\dist\address.exe normalize [address] <optional additional addresses>
+.\dist\address.exe -t normalize ADDRESS [optional additional addresses]
 ```
 
 The program will attempt to parse the given addresses, outputting a JSON array containing the addresses as objects. Each object will contain the following keys. Note that the addresses are listed in the same order they are given in the input.
@@ -114,7 +128,7 @@ The program will attempt to parse the given addresses, outputting a JSON array c
 **Example 1:**
 
 ```
-.\dist\address.exe normalize "1234 Lake blvd, Somewhere NY"
+.\dist\address.exe -t normalize "1234 Lake blvd, Somewhere NY"
 ```
 
 <details><summary>Output</summary><p>
@@ -138,7 +152,7 @@ The program will attempt to parse the given addresses, outputting a JSON array c
 **Example 1:**
 
 ```
-.\dist\address.exe normalize "12 N St city Alaska" "154 West Rd." "7 round st., my town, MI"
+.\dist\address.exe -t normalize "12 N St city Alaska" "154 West Rd." "7 round st., my town, MI"
 ```
 
 <details><summary>Output</summary><p>
@@ -184,7 +198,7 @@ This works similarly to [`normalize`](#task-normalize), except that the addresse
 Use the following syntax:
 
 ```
-.\dist\address.exe normalize_file [file_path]
+.\dist\address.exe -t normalize_file FILE_PATH
 ```
 
 The file must contain a JSON array, where each element is an address string to normalize.
@@ -202,7 +216,7 @@ This compares two different addresses to see if they're the same.
 Use the following syntax:
 
 ```
-.\dist\address.exe compare [address 1] [address 2]
+.\dist\address.exe -t compare ADDRESS1 ADDRESS2
 ```
 
 This will return a single JSON object containing the following keys:
@@ -219,7 +233,7 @@ This will return a single JSON object containing the following keys:
 **Example:**
 
 ```
-.\dist\address.exe compare "105 Round StNowhere North Carolina" "105 round st nowhere nc 12345"
+.\dist\address.exe -t compare "105 Round StNowhere North Carolina" "105 round st nowhere nc 12345"
 ```
 
 <details><summary>Output</summary><p>
@@ -249,7 +263,7 @@ This is similar to [`compare`](#task-compare), except that the addresses are sto
 Use the following syntax:
 
 ```
-.\dist\address.exe compare_file [address] [file_path]
+.\dist\address.exe -t compare_file ADDRESS FILE_PATH
 ```
 
 This will compare the `address` to every address in the file. The file must contain a JSON array, where each element is an address string to compare.
@@ -267,7 +281,7 @@ Normalize a single city passed via the command line. This is done using both a c
 Use the following syntax:
 
 ```
-.\dist\address.exe normalize_city [city] [address]
+.\dist\address.exe -t normalize_city CITY ADDRESS
 ```
 
 The program will attempt to normalize the city, and it will return a JSON object containing the following keys:
@@ -280,7 +294,7 @@ The program will attempt to normalize the city, and it will return a JSON object
 **Example:**
 
 ```
-.\dist\address.exe normalize_city "St.  louis" "458 lake rd saint louis mo"
+.\dist\address.exe -t normalize_city "St.  louis" "458 lake rd saint louis mo"
 ```
 
 <details><summary>Output</summary><p>
@@ -305,7 +319,7 @@ This runs the [`normalize_city`](#task-normalize_city) process on many cities in
 Use the following syntax:
 
 ```
-.\dist\address.exe normalize_city_file [file_path]
+.\dist\address.exe -t normalize_city_file FILE_PATH
 ```
 
 The file must contain a single JSON array. That array should consist of objects, each containing two keys: `"city"` and `"address"`. The city should be the raw city to normalize, and the address is an optional address for assisting the city normalization.
@@ -323,7 +337,7 @@ Normalize a single state passed via the command line, along with the help an add
 Use the following syntax:
 
 ```
-.\dist\address.exe normalize_state [state] [address]
+.\dist\address.exe -t normalize_state STATE ADDRESS
 ```
 
 This behaves pretty much identically to [`normalize_city`](#task-normalize_city), having the same set of keys in the JSON output. Of course, the `"normalized"` value will contain a state name, rather than a city name.
@@ -331,7 +345,7 @@ This behaves pretty much identically to [`normalize_city`](#task-normalize_city)
 **Example:**
 
 ```
-.\dist\address.exe normalize_state "cal" "12 hill st San Francisco california"
+.\dist\address.exe -t normalize_state "cal" "12 hill st San Francisco california"
 ```
 
 <details><summary>Output</summary><p>
@@ -356,7 +370,7 @@ Run the [`normalize_state`](#task-normalize_state) process on multiple states fr
 Use the following syntax:
 
 ```
-.\dist\address.exe normalize_state_file [file_path]
+.\dist\address.exe -t normalize_state_file FILE_PATH
 ```
 
 This behaves pretty much identically to [`normalize_city_file`](#task-normalize_city_file), having the same set of keys in the JSON output.

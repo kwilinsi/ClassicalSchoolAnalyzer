@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import constructs.correction.districtMatch.DistrictMatchCorrection;
+import constructs.correction.normalizedAddress.NormalizedAddress;
 import constructs.correction.schoolAttribute.SchoolAttributeCorrection;
 import constructs.correction.schoolCorrection.Action;
 import constructs.correction.schoolCorrection.ChangeAttributesAction;
@@ -25,11 +26,18 @@ import java.util.Map;
  */
 public enum CorrectionType {
     /**
-     * Corrections associated with modifying schools.
+     * Corrections associated with district matches.
      * <p>
-     * <b>Correction class:</b> {@link SchoolCorrection}
+     * <b>Correction class:</b> {@link DistrictMatchCorrection}
      */
-    SCHOOL_CORRECTION(SchoolCorrection.class),
+    DISTRICT_MATCH(DistrictMatchCorrection.class),
+
+    /**
+     * Corrections associated with the normalized address lookup table for the Python address parser.
+     * <p>
+     * <b>Correction class:</b> {@link NormalizedAddress}
+     */
+    NORMALIZED_ADDRESS(NormalizedAddress.class),
 
     /**
      * Corrections associated with school attributes.
@@ -39,11 +47,11 @@ public enum CorrectionType {
     SCHOOL_ATTRIBUTE(SchoolAttributeCorrection.class),
 
     /**
-     * Corrections associated with district matches.
+     * Corrections associated with modifying schools.
      * <p>
-     * <b>Correction class:</b> {@link DistrictMatchCorrection}
+     * <b>Correction class:</b> {@link SchoolCorrection}
      */
-    DISTRICT_MATCH(DistrictMatchCorrection.class);
+    SCHOOL_CORRECTION(SchoolCorrection.class);
 
     /**
      * This is the class that is instantiated when a Correction is created from this type via

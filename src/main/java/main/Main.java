@@ -35,11 +35,9 @@ public class Main {
         GUI.addWindow(background);
 
         // Load the database
-        logger.info("Loading the database...");
         Utils.runParallel(Database::load, "Failed to load the database", "database");
 
         // Load the Corrections table from the database
-        logger.info("Loading Corrections...");
         Utils.runParallel(CorrectionManager::load, "Failed to load Corrections", "corrections");
 
         // Add the main menu
@@ -57,6 +55,7 @@ public class Main {
      * This method never returns normally.
      */
     public static void shutdown() {
+        logger.info("Shutting down...");
         GUI.shutdown();
         Database.shutdown();
         System.exit(0);

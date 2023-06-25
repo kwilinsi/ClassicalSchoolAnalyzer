@@ -36,10 +36,7 @@ public class SchoolAttributeCorrectionWindow extends CorrectionAddWindow {
      * Initialize a new window formatted for creating a {@link SchoolAttributeCorrection}.
      */
     public SchoolAttributeCorrectionWindow() {
-        super(
-                CorrectionType.SCHOOL_ATTRIBUTE,
-                new TextBox(new TerminalSize(3, 2), TextBox.Style.MULTI_LINE)
-        );
+        super(CorrectionType.SCHOOL_ATTRIBUTE);
     }
 
     @Override
@@ -56,13 +53,11 @@ public class SchoolAttributeCorrectionWindow extends CorrectionAddWindow {
         newValue = new TextBox(new TerminalSize(maxAttributeLength + 3, 2));
         notes.setPreferredSize(new TerminalSize(maxAttributeLength + 3, 2));
 
-        return new Panel()
-                .setLayoutManager(new GridLayout(2)
-                        .setLeftMarginSize(0)
-                        .setRightMarginSize(0)
-                        .setVerticalSpacing(1)
-                        .setHorizontalSpacing(2)
-                )
+        return new Panel(new GridLayout(2)
+                .setLeftMarginSize(0)
+                .setRightMarginSize(0)
+                .setVerticalSpacing(1)
+                .setHorizontalSpacing(2))
                 .addComponent(CorrectionAddWindow.makeValueLabel("Attribute", true))
                 .addComponent(attribute)
                 .addComponent(CorrectionAddWindow.makeValueLabel("Initial Value", true))
@@ -91,12 +86,12 @@ public class SchoolAttributeCorrectionWindow extends CorrectionAddWindow {
         boolean missingBoth = missingAttribute && missingInitial;
 
         if (missingAttribute || missingInitial) {
-            showError("Incomplete Info", String.format(
+            showError("Incomplete Info",
                     "Missing the %s. %s required for a School Attribute Correction.",
                     missingBoth ? "attribute and initial value" :
                             missingAttribute ? "attribute" : "initial value",
                     missingBoth ? "They are" : "It is"
-            ));
+            );
             return false;
         }
 

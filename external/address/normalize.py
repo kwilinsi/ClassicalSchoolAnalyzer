@@ -1,5 +1,6 @@
-from typing import OrderedDict, Union
+from typing import Union
 from collections import OrderedDict
+import json
 import re
 
 import utils
@@ -11,12 +12,72 @@ import scourgify.cleaning as sc_clean
 
 ADDRESS_PREFIX_REGEX = r'^((mailing)?\s*address[:;\s]*)'
 
+LOOKUP_TABLE: list[dict[str, str]] = []
+
+
+def set_lookup_table(data: Union[None, list[dict[str, str]]]) -> None:
+    """
+    Set the lookup data. This is a list of dictionaries, each with the following keys:
+        - 'raw': The raw address to check against.
+        - 'address_line_1'
+        - 'address_line_2'
+        - 'city'
+        - 'state'
+        - 'postal_code'
+
+    Each dictionary provides the normalization for some address that would otherwise be unparseable
+    by this library, thereby allowing for manual overrides.
+
+    This will automatically trim the 'raw' value and make it lowercase, as comparisons to the raw
+    value are case-insensitive and ignore surrounding whitespace.
+
+    If the given data is malformed, this will catch it and throw an exception.
+
+    Args:
+        data: The lookup table entries, or None if there isn't any data.
+
+    Raises:
+        TypeError: If the data is neither None nor a list of dictionaries.
+        ValueError: If any dictionary in the list is None or does not contain
+        the required keys, or the 'raw' key is None
+
+    Returns:
+        None
+    """
+
+    global LOOKUP_TABLE
+
+    if not data:
+        return
+
+    # Check data types
+    if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
+        raise TypeError(
+            "The lookup table must be a file with a JSON array of objects.")
+
+    # Check for required keys
+    expected_keys = ('raw', 'address_line_1', 'address_line_2',
+                     'city', 'state', 'postal_code')
+    for item in data:
+        if item is None:
+            raise ValueError("Lookup table entry must not be null")
+        for key in expected_keys:
+            if key not in item:
+                raise ValueError(f"Lookup table entry must have key {key}")
+        if not item['raw']:
+            raise ValueError("The 'raw' key must not be null")
+
+        item['raw'] = item['raw'].strip().lower()
+        LOOKUP_TABLE.append(item)
+
 
 def _clean_input(input: Union[str, None]) -> Union[str, None]:
     """
-    Clean any input given to this program. This replaces the strings
-    "none" and "null" with None. All other strings are returned
-    stripped and otherwise unchanged.
+    Clean any input given to this program. This does the following:
+     
+    1. Replace the strings "none" and "null" with None.
+    2. Strip leading and trailing whitespace.
+    3. Remove null characters and control characters.
 
     Args:
         input: The input to clean.
@@ -25,12 +86,18 @@ def _clean_input(input: Union[str, None]) -> Union[str, None]:
         The cleaned input.
     """
 
+    if not input:
+        return None
+    
+    # Strip whitespace and remove null characters. The RegEx comes from ChatGPT
+    input = input.strip().replace('\x00', '')
+    input = re.sub(r'[^\x20-\x7E]', '', input)
+
     # Replace "null" and "none" with None
     if not input or input.lower() in ['null', 'none']:
         return None
-    
-    input = input.strip()
-    return input if input else None
+    else:
+        return input
 
 
 def _clean_address(input: Union[str, None]) -> Union[str, None]:
@@ -147,7 +214,15 @@ def address(input: Union[str, None]) -> OrderedDict[str, Union[str, None]]:
     # First, clean the input
     cleaned = _clean_address(input)
 
-    # If the input is null or empty, return an empty address record
+    # Check both the cleaned and raw address against the lookup table for a quick match
+    input_trimmed = None if not input else input.strip().lower()
+    cleaned_trimmed = None if not cleaned else cleaned.strip().lower()
+    for entry in LOOKUP_TABLE:
+        if cleaned_trimmed == entry['raw'] or input_trimmed == entry['raw']:
+            return utils.define_address(entry['address_line_1'], entry['address_line_2'],
+                                        entry['city'], entry['state'], entry['postal_code'])
+
+    # If the cleaned input is null or empty, return an empty address record
     if not cleaned:
         return utils.define_address(None, None, None, None, None)
 
@@ -200,7 +275,7 @@ def format(address: OrderedDict[str, Union[str, None]]) -> Union[str, None]:
 
     if not address or 'error' in address:
         return None
-    
+
     city_line = utils.join_parts(', ', [address['city'], address['state']])
     city_line = utils.join_parts(' ', [city_line, address['postal_code']])
 
@@ -244,7 +319,8 @@ def city(city: Union[str, None],
     parsed = address(addr)
     parsed_city = parsed['city']
     parsed_norm = format(parsed)
-    norm_city = sc_norm.normalize_city(sc_clean.clean_upper(city)) if city else None
+    norm_city = sc_norm.normalize_city(
+        sc_clean.clean_upper(city)) if city else None
 
     # If there's no normalized state, use the one from the address
     if not norm_city:

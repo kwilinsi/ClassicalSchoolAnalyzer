@@ -318,7 +318,7 @@ public class Utils {
 
                 arg = cleanLineBreaks(arg);
 
-                if (arg.matches("\\s"))
+                if (arg.contains(" "))
                     arg = "\"" + arg + "\"";
 
                 s.add(arg);
@@ -374,6 +374,30 @@ public class Utils {
                     filtered.get(filtered.size() - 1)
             );
         }
+    }
+
+    /**
+     * Join zero or more strings with the given delimiter, omitting any <code>null</code> or
+     * {@link String#isEmpty() empty} elements. This behaves just like
+     * {@link String#join(CharSequence, CharSequence...) String.join()} with better <code>null</code> handling.
+     * <p>
+     * Note that this still includes and joins {@link String#isBlank() blank} strings that aren't empty.
+     *
+     * @param delimiter The delimiter to place between elements. If this is <code>null</code>, no delimiter is used.
+     * @param elements  The elements to join. If this is a <code>null</code> array, an empty string is returned. If
+     *                  this contains any <code>null</code> or empty elements, those elements are omitted.
+     * @return The completed string. This will never be <code>null</code>, but it may be empty.
+     */
+    @NotNull
+    public static String joinNonEmpty(@Nullable CharSequence delimiter, @Nullable CharSequence... elements) {
+        if (elements == null) return "";
+
+        StringJoiner joiner = new StringJoiner(delimiter == null ? "" : delimiter);
+        for (CharSequence e : elements)
+            if (e != null && !e.isEmpty())
+                joiner.add(e);
+
+        return joiner.toString();
     }
 
     /**

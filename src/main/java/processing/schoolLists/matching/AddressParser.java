@@ -5,6 +5,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
+import constructs.correction.CorrectionManager;
+import constructs.correction.CorrectionType;
+import constructs.correction.normalizedAddress.NormalizedAddress;
 import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +18,7 @@ import utils.Utils;
 
 import java.io.*;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -47,7 +51,7 @@ public class AddressParser {
     }.getType();
 
     /**
-     * This is the standard {@link Gson} instance for all communication (both {@link #saveToFile(Object, String)
+     * This is the standard {@link Gson} instance for all communication (both {@link #saveToFileUnique(Object, String)
      * serialization} and deserialization) with the address parser script.
      * <p>
      * Notably, it will {@link GsonBuilder#serializeNulls() serialize nulls}, so that they're picked up by the parser.
@@ -55,40 +59,94 @@ public class AddressParser {
     private static final Gson GSON = new GsonBuilder().serializeNulls().setLenient().disableHtmlEscaping().create();
 
     /**
-     * Pass some arguments to the Python address parser at {@link Config#PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH},
-     * creating and returning a new {@link Process}.
+     * This records whether the list of {@link NormalizedAddress} Corrections from the {@link CorrectionManager}
+     * currently match the list of them saved in a {@link Config#PYTHON_ADDRESS_PARSER_NORMALIZATION_LIST_FILE_NAME
+     * file} for use by the Python address parser. When the problem starts, this is <code>false</code> by default,
+     * indicating that the file should be updated.
+     */
+    private static boolean IS_NORMALIZED_ADDRESSES_CACHE_VALID = false;
+
+    // Add a listener that will invalidate the cache whenever a new NormalizedAddress is created or the entire
+    // Corrections list is loaded
+    static {
+        CorrectionManager.registerListener(((type, correction) -> {
+            if (type == CorrectionType.NORMALIZED_ADDRESS)
+                invalidateNormalizedAddressCache();
+        }));
+    }
+
+    /**
+     * These are the valid tasks recognized by the Python address parser. They must be given to the parser via the
+     * <code>-t</code> (or <code>--task</code>) flag.
+     * <p>
+     * These are declared such that calling {@link #name()} produces the identifier for the task as expected by the
+     * Python script.
+     */
+    private enum Task {
+        normalize,
+        normalize_file,
+        compare,
+        compare_file,
+        normalize_city,
+        normalize_city_file,
+        normalize_state,
+        normalize_state_file
+    }
+
+    /**
+     * Call the Python address parser at {@link Config#PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH}, creating and returning
+     * a new {@link Process}.
+     * <p>
+     * This automatically {@link #prepareNormalizedAddresses() supplies} the {@link NormalizedAddress} cache to the
+     * parser via the <code>-l</code> (lookup) flag. If preparing that file fails in some way, that flag is omitted.
+     * <p>
+     * This calls the parser with the following command:
+     * <p>
+     * <code>./path/to/parser/address.exe -t TASK -l LOOKUP_PATH ARGS</code>
+     * <p>
+     * where <code>TASK</code> is the given <code>task</code> string and <code>ARGS</code> is the set of additional
+     * arguments.
      *
-     * @param args The arguments to pass to the process.
+     * @param task The task to run.
+     * @param args The additional arguments to pass to the process for the specified task.
      * @return The new process.
      * @throws IOException If an error occurs creating the process.
      */
     @NotNull
-    private static Process newProcess(@NotNull String... args) throws IOException {
-        String[] allArgs = new String[args.length + 1];
-        allArgs[0] = Config.PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH.get();
-        System.arraycopy(args, 0, allArgs, 1, args.length);
-        ProcessBuilder builder = new ProcessBuilder(allArgs);
-        logger.trace("Calling python address parser: '{}'", Utils.joinCommand(builder.command()));
+    private static Process newProcess(@NotNull Task task, @NotNull String... args) throws IOException {
+        String normalizationCache = prepareNormalizedAddresses();
+
+        ProcessBuilder builder = new ProcessBuilder(Config.PYTHON_ADDRESS_PARSER_EXECUTABLE_PATH.get());
+        List<String> command = builder.command();
+        command.add("-t"); // Task flag
+        command.add(task.name());
+        if (normalizationCache != null) {
+            command.add("-l"); // Lookup flag
+            command.add(normalizationCache);
+        }
+        command.addAll(Arrays.asList(args));
+
+        logger.trace("Calling python address parser: '{}'", command);
         return builder.start();
     }
 
     /**
-     * {@link #newProcess(String...) Create} a new bulk process with a specified command arguments that runs on an
-     * entire file. Run the process, and return the resulting output file path.
+     * {@link #newProcess(Task, String...) Create} a new bulk process with a specified command arguments that runs
+     * on an entire file. Run the process, and return the resulting output file path.
      * <p>
      * If the process encounters an error, log it to the console, and return <code>null</code>.
      *
-     * @param args The command arguments to run.
+     * @param task The task to run.
+     * @param args The additional arguments to pass to the process for the specified task.
      * @return The path of the output file, if it exists. If an error occurred, this is <code>null</code>.
      */
     @Nullable
-    private static String runBulkProcess(@NotNull String... args) {
+    private static String runBulkProcess(@NotNull Task task, @NotNull String... args) {
         try {
-            Process process = newProcess(args);
-            InputStreamReader reader = new InputStreamReader(process.getInputStream());
-
+            Process process = newProcess(task, args);
             Map<String, String> map = null;
-            try {
+
+            try (InputStreamReader reader = new InputStreamReader(process.getInputStream())) {
                 map = GSON.fromJson(reader, MAP_TYPE);
             } catch (JsonParseException e) {
                 logger.error("Failed to parse JSON response from address parser", e);
@@ -96,24 +154,23 @@ public class AddressParser {
 
             if (map == null) {
                 logger.warn("Unreachable state: map with python parser output is null.\n" +
-                                "Input: " + process.info().commandLine().orElse(String.join(" ", args)),
+                                "Input: " + process.info().commandLine().orElse(getLoggingInput(task, args)),
                         Utils.packageStackTrace(Thread.currentThread().getStackTrace())
                 );
-                return null;
-            }
-
-            reader.close();
-            if (map.containsKey("error")) {
+            } else if (map.containsKey("error")) {
                 //noinspection UnnecessaryUnicodeEscape
                 logger.error("{} \u2014 {}: {}\n - Input args: {}",
-                        map.get("error"), map.get("message"), map.get("stacktrace"), String.join(" ", args));
+                        map.get("error"), map.get("message"), map.get("stacktrace"), getLoggingInput(task, args)
+                );
+            } else {
+                return map.get("output_file");
             }
-            return map.get("output_file");
         } catch (IOException e) {
             logger.error("Failed to run the python address parser and read its output. " +
                     "Did you compile the executable?", e);
-            return null;
         }
+
+        return null;
     }
 
     /**
@@ -128,10 +185,9 @@ public class AddressParser {
     @Nullable
     public static Map<String, String> normalize(@Nullable String address) {
         logger.debug("Normalizing single address '{}'", address);
-
         Process process;
         try {
-            process = newProcess("normalize", address == null ? "null" : address);
+            process = newProcess(Task.normalize, address == null ? "null" : address);
         } catch (IOException e) {
             logger.error("Failed to run process", e);
             return null;
@@ -167,12 +223,12 @@ public class AddressParser {
     @NotNull
     public static List<Map<String, String>> normalize(@NotNull List<String> addresses) {
         logger.debug("Running bulk normalization on {} address{}", addresses.size(), addresses.size() == 1 ? "" : "es");
-        String path = saveToFile(addresses, "addresses");
+        String path = saveToFileUnique(addresses, "addresses");
 
         if (path == null)
             return List.of();
 
-        String outputPath = runBulkProcess("normalize_file", path);
+        String outputPath = runBulkProcess(Task.normalize_file, path);
 
         if (outputPath == null) {
             Utils.deleteFiles(path);
@@ -288,7 +344,7 @@ public class AddressParser {
         Process process;
         try {
             process = newProcess(
-                    "normalize_" + attribute.name(),
+                    attribute == Attribute.city ? Task.normalize_city : Task.normalize_state,
                     value == null ? "null" : value,
                     address == null ? "null" : address
             );
@@ -341,12 +397,14 @@ public class AddressParser {
             inputData.add(map);
         }
 
-        String path = saveToFile(inputData, attribute == Attribute.city ? "cities" : "states");
+        String path = saveToFileUnique(inputData, attribute == Attribute.city ? "cities" : "states");
 
         if (path == null)
             return List.of();
 
-        String outputPath = runBulkProcess("normalize_" + attribute.name() + "_file", path);
+        String outputPath = runBulkProcess(
+                attribute == Attribute.city ? Task.normalize_city_file : Task.normalize_state_file, path
+        );
 
         if (outputPath == null) {
             Utils.deleteFiles(path);
@@ -390,22 +448,17 @@ public class AddressParser {
         logger.debug("Running single address comparison on '{}' and '{}'", addr1, addr2);
 
         try {
-            Process process = newProcess(
-                    "compare", addr1 == null ? "null" : addr1, addr2 == null ? "null" : addr2
-            );
-            InputStreamReader reader = new InputStreamReader(process.getInputStream());
-            Map<String, String> map = GSON.fromJson(reader, MAP_TYPE);
-
-            reader.close();
-
-            if (map.containsKey("error")) {
-                logger.warn("Error while comparing addresses '{}' and '{}'", addr1, addr2);
-                logError(map.get("error"));
-                return null;
-            } else {
-                return map;
+            Process process = newProcess(Task.compare, addr1 == null ? "null" : addr1, addr2 == null ? "null" : addr2);
+            try (InputStreamReader reader = new InputStreamReader(process.getInputStream())) {
+                Map<String, String> map = GSON.fromJson(reader, MAP_TYPE);
+                if (map.containsKey("error")) {
+                    logger.warn("Error while comparing addresses '{}' and '{}'", addr1, addr2);
+                    logError(map.get("error"));
+                    return null;
+                } else {
+                    return map;
+                }
             }
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -433,12 +486,12 @@ public class AddressParser {
         logger.debug("Running bulk comparison of '{}' against {} address{}",
                 Utils.cleanLineBreaks(address), comparisons.size(), comparisons.size() == 1 ? "" : "es");
 
-        String path = saveToFile(comparisons, "comp_addresses");
+        String path = saveToFileUnique(comparisons, "comp_addresses");
 
         if (path == null)
             return List.of();
 
-        String outputPath = runBulkProcess("compare_file", address == null ? "null" : address, path);
+        String outputPath = runBulkProcess(Task.compare_file, address == null ? "null" : address, path);
 
         if (outputPath == null) {
             Utils.deleteFiles(path);
@@ -479,31 +532,57 @@ public class AddressParser {
     }
 
     /**
-     * Encode some data as JSON via {@link Gson} and save it to a file.
+     * Generated a properly formatted address string given the parsed elements.
      * <p>
-     * The file is saved in {@link Config#DATA_DIRECTORY} inside a directory called <code>"tmp"</code>. If that
-     * directory doesn't exist, it is created.
-     * <p>
-     * The file name is created by combining the provided <code>baseName</code> with and underscore 5 random numbers,
-     * along with the <code>.json</code> file extension.
+     * Typically, this is done automatically by the Python parser script during the normalization process. This
+     * method seeks to mimic the functionality of the Python formatter 1:1 when formatting is necessary within the
+     * Java program.
      *
-     * @param data     The data to save.
-     * @param baseName The base name of the file without the file extension.
+     * @param line1      The first line of the address.
+     * @param line2      The second line of the address.
+     * @param city       The city.
+     * @param state      The state.
+     * @param postalCode The postal code.
+     * @return The formatted address, or an empty string if every input is <code>null</code>.
+     */
+    @NotNull
+    public static String formatAddress(@Nullable String line1,
+                                       @Nullable String line2,
+                                       @Nullable String city,
+                                       @Nullable String state,
+                                       @Nullable String postalCode) {
+        city = Utils.joinNonEmpty(", ", city, state);
+        city = Utils.joinNonEmpty(" ", city, postalCode);
+        return Utils.joinNonEmpty("\n", line1, line2, city);
+    }
+
+    /**
+     * Get a {@link File} instance pointing to the complete path where a particular file should be
+     * {@link #saveToFile(Object, String) saved}.
+     *
+     * @param baseName The base name of the file without the file extension: <code>.json</code> is added automatically.
+     * @return The reference to the file. Note that the file and its parent directories may not exist yet.
+     */
+    @NotNull
+    private static File determineFile(@NotNull String baseName) {
+        return Path.of(Config.DATA_DIRECTORY.get(), "tmp", baseName + ".json").toFile();
+    }
+
+    /**
+     * Encode some data as JSON via {@link Gson} and save it to a given {@link File}.
+     *
+     * @param data The data to save.
+     * @param file The file pointing to the location to save it. Note that this file, as well as its parent
+     *             directories, need not exist. If they don't exist, they are created automatically.
      * @return The absolute path to the saved file.
      */
     @Nullable
-    private static String saveToFile(@Nullable Object data, @NotNull String baseName) {
-        File file = Path.of(
-                Config.DATA_DIRECTORY.get(),
-                "tmp",
-                String.format("%s_%05d.json", baseName, (int) (100000 * Math.random()))
-        ).toFile();
-
+    private static String saveToFile(@Nullable Object data, @NotNull File file) {
         try {
             if (file.getParentFile().mkdirs())
                 logger.info("Created " + file.getParentFile().getAbsolutePath() + " for address parsing tmp storage");
 
-            FileWriter writer = new FileWriter(file);
+            FileWriter writer = new FileWriter(file, StandardCharsets.UTF_8);
             GSON.toJson(data, writer);
             writer.close();
 
@@ -513,6 +592,38 @@ public class AddressParser {
         }
 
         return null;
+    }
+
+    /**
+     * Encode some data as JSON via {@link Gson} and save it to a file.
+     * <p>
+     * The file is saved in {@link Config#DATA_DIRECTORY} inside a directory called <code>"tmp"</code>. If that
+     * directory doesn't exist, it is created.
+     * <p>
+     * The saving process is done by {@link #saveToFile(Object, File)}.
+     *
+     * @param data     The data to save.
+     * @param baseName The base name of the file without the file extension: <code>.json</code> is added automatically.
+     * @return The absolute path to the saved file.
+     */
+    @Nullable
+    private static String saveToFile(@Nullable Object data, @NotNull String baseName) {
+        return saveToFile(data, determineFile(baseName));
+    }
+
+    /**
+     * Encode some data as JSON via {@link Gson} and save it to a file.
+     * <p>
+     * This calls {@link #saveToFile(Object, String) saveToFile()} with a unique file name. This name is generated by
+     * combining the provided <code>baseName</code> with an underscore and 5 random numbers.
+     *
+     * @param data     The data to save.
+     * @param baseName The base name of the file without the file extension.
+     * @return The absolute path to the saved file.
+     */
+    @Nullable
+    private static String saveToFileUnique(@Nullable Object data, @NotNull String baseName) {
+        return saveToFile(data, String.format("%s_%05d", baseName, (int) (100000 * Math.random())));
     }
 
     /**
@@ -538,5 +649,69 @@ public class AddressParser {
         }
 
         logger.debug("- Error message: " + String.join("\n", lines));
+    }
+
+    /**
+     * Get a string that represents a "good-enough" version of the task and argument parameters that were passed to
+     * the Python parser. This is intended solely for logging.
+     *
+     * @param task The task.
+     * @param args The arguments associated with the task.
+     * @return The text to log.
+     */
+    @NotNull
+    private static String getLoggingInput(@NotNull Task task, @NotNull List<String> args) {
+        return String.format("-t %s %s", task.name(), Utils.joinCommand(args));
+    }
+
+    /**
+     * This is a wrapper for {@link #getLoggingInput(Task, List)} that converts vararg string arguments to a
+     * {@link List}.
+     *
+     * @param task The task.
+     * @param args The arguments associated with the task.
+     * @return The text to log.
+     */
+    private static String getLoggingInput(@NotNull Task task, @NotNull String... args) {
+        return getLoggingInput(task, Arrays.asList(args));
+    }
+
+    /**
+     * Mark the cache of {@link NormalizedAddress} Corrections {@link #IS_NORMALIZED_ADDRESSES_CACHE_VALID invalid}
+     * (i.e. <code>false</code>). The next {@link #prepareNormalizedAddresses() prepartion} of that list will require
+     * resetting it: pulling from the database and updating the local file used by the Python address parser.
+     */
+    private static void invalidateNormalizedAddressCache() {
+        IS_NORMALIZED_ADDRESSES_CACHE_VALID = false;
+    }
+
+    /**
+     * Prepare the list of {@link NormalizedAddress} Corrections used by the Python address parser. If the list is
+     * currently {@link #IS_NORMALIZED_ADDRESSES_CACHE_VALID valid}, this has no effect. Otherwise, it does the
+     * following:
+     * <ol>
+     *     <li>{@link CorrectionManager#getNormalizedAddresses() Get} the list of normalized addresses from the
+     *     {@link CorrectionManager}.
+     *     <li>{@link #saveToFile(Object, String) Save} the list of normalized addresses to the appropriate
+     *     {@link Config#PYTHON_ADDRESS_PARSER_NORMALIZATION_LIST_FILE_NAME file} in the same directory as the other
+     *     files passed to the parser script.
+     *     <li>Mark the list valid.
+     * </ol>
+     *
+     * @return The complete path to the saved file or, if some error occurs, <code>null</code>.
+     */
+    @Nullable
+    private static synchronized String prepareNormalizedAddresses() {
+        File file = determineFile(Config.PYTHON_ADDRESS_PARSER_NORMALIZATION_LIST_FILE_NAME.get());
+        if (IS_NORMALIZED_ADDRESSES_CACHE_VALID) return file.getAbsolutePath();
+
+        String path = saveToFile(CorrectionManager.getNormalizedAddresses(), file);
+        if (path == null) {
+            logger.warn("Failed to update the normalized address cache file");
+            return null;
+        } else {
+            IS_NORMALIZED_ADDRESSES_CACHE_VALID = true;
+            return path;
+        }
     }
 }

@@ -130,6 +130,16 @@ public enum Config {
     ),
 
     /**
+     * The name of the file that stores a list pre-normalized addresses. This allows the user to provide normalized
+     * values for addresses that would otherwise be un-parseable.
+     * <p>
+     * Note that this should not include the <code>.json</code> file extension.
+     * <p>
+     * <b>Default:</b> <code>"normalized_address_cache"</code>
+     */
+    PYTHON_ADDRESS_PARSER_NORMALIZATION_LIST_FILE_NAME("normalized_address_cache", false),
+
+    /**
      * This is the maximum number of {@link constructs.school.Attribute Attributes} that will be shown for a school when
      * putting it in a {@link gui.windows.prompt.schoolMatch.SchoolMatchDisplay SchoolMatchDisplay} GUI window.
      * <p>

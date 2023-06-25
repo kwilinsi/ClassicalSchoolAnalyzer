@@ -31,6 +31,7 @@ public class Database {
     public static synchronized void load() {
         if (dataSource != null) return;
 
+        logger.info("Loading the database...");
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(
                 String.format("jdbc:mysql://%s:%d/%s?useUnicode=true",
@@ -63,6 +64,8 @@ public class Database {
             logger.error("Failed to initialize HikariCP. Was the 'classical' database created?", e);
             System.exit(1);
         }
+
+        logger.info("Finished loading database");
     }
 
     /**
@@ -94,6 +97,7 @@ public class Database {
      */
     public static void shutdown() {
         if (dataSource != null) {
+            logger.info("Shutting down database...");
             dataSource.close();
             dataSource = null;
         }

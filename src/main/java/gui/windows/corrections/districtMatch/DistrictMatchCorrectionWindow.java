@@ -59,10 +59,7 @@ public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
      * Initialize a new window formatted for creating a {@link SchoolAttributeCorrection}.
      */
     public DistrictMatchCorrectionWindow() {
-        super(
-                CorrectionType.DISTRICT_MATCH,
-                new TextBox(new TerminalSize(35, 2), TextBox.Style.MULTI_LINE)
-        );
+        super(CorrectionType.DISTRICT_MATCH);
     }
 
     /**
@@ -147,13 +144,12 @@ public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
 
         if (missingName || missingUrl) {
             if (!showWarning(
-                    String.format("Missing %s", missingBoth ? "Name and URL" : missingName ? "Name" : "URL"),
-                    String.format("The %s %s enabled, but no %s %s given.",
-                            missingBoth ? "new name and URL" : missingName ? "new name" : "new URL",
-                            missingBoth ? "are" : "is",
-                            missingBoth ? "values" : missingName ? "name" : "URL",
-                            missingBoth ? "were" : "was"
-                    )
+                    "Missing " + (missingBoth ? "Name and URL" : missingName ? "Name" : "URL"),
+                    "The %s %s enabled, but no %s %s given.",
+                    missingBoth ? "new name and URL" : missingName ? "new name" : "new URL",
+                    missingBoth ? "are" : "is",
+                    missingBoth ? "values" : missingName ? "name" : "URL",
+                    missingBoth ? "were" : "was"
             ))
                 return false;
         }

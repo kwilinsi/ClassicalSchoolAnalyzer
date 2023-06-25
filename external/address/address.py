@@ -1,11 +1,12 @@
-from typing import Any, OrderedDict, Union
+from typing import Any, Union
 
-import sys
-import os
-import json
-import traceback
-from pathlib import Path
+import argparse
 from collections import OrderedDict
+import json
+import os
+from pathlib import Path
+import sys
+import traceback
 
 import utils
 import normalize
@@ -18,31 +19,57 @@ def main():
     to the console.
     """
 
-    # Ensure arguments given
-    _validate_args(2, 'Missing task. See README.')
-    _validate_args(3, 'Missing arguments. See README.')
+    # Parse the command line arguments
+    args = _parse_args()
 
-    # Parse command line addresses
+    # Run the appropriate task, first validating the number of arguments
     try:
-        if sys.argv[1] == 'normalize':
-            run_normalize()
-        elif sys.argv[1] == 'normalize_file':
-            run_normalize_file()
-        elif sys.argv[1] == 'normalize_city':
-            run_normalize_city()
-        elif sys.argv[1] == 'normalize_city_file':
-            run_normalize_city_file()
-        elif sys.argv[1] == 'normalize_state':
-            run_normalize_state()
-        elif sys.argv[1] == 'normalize_state_file':
-            run_normalize_state_file()
-        elif sys.argv[1] == 'compare':
-            run_compare()
-        elif sys.argv[1] == 'compare_file':
-            run_compare_file()
-        else:
-            print(utils.format_error('Invalid task. See README.'))
-            sys.exit(1)
+        # Set the lookup data, if given
+        if args.lookup:
+            normalize.set_lookup_table(_parse_json(args.lookup))
+
+        # ----- Address normalization -----
+        if args.task == 'normalize':
+            _validate_args(args, 1, 'Missing address to normalize.')
+            run_normalize(args.args)
+        elif args.task == 'normalize_file':
+            _validate_args(args, 1,
+                           'Missing file with addresses to normalize.', True)
+            run_normalize_file(args.args[0])
+
+        # ----- City normalization -----
+        elif args.task == 'normalize_city':
+            _validate_args(args, 1, 'Missing city to normalize.')
+            _validate_args(args, 2,
+                           'Missing address to assist with city normalization.', True)
+            run_normalize_city(args.args[0], args.args[1])
+        elif args.task == 'normalize_city_file':
+            _validate_args(args, 1,
+                           'Missing file with cities to normalize.', True)
+            run_normalize_city_file(args.args[0])
+
+        # ----- State normalization -----
+        elif args.task == 'normalize_state':
+            _validate_args(args, 1, 'Missing state to normalize.')
+            _validate_args(args, 2,
+                           'Missing address to assist with state normalization.', True)
+            run_normalize_state(args.args[0], args.args[1])
+        elif args.task == 'normalize_state_file':
+            _validate_args(args, 1,
+                           'Missing file with states to normalize.', True)
+            run_normalize_state_file(args.args[0])
+
+        # ----- Address comparison -----
+        elif args.task == 'compare':
+            _validate_args(args, 2,
+                           'Exactly 2 addresses required for comparison.', True)
+            run_compare(args.args[0], args.args[1])
+        elif args.task == 'compare_file':
+            _validate_args(args, 1, 'Missing main address to compare.')
+            _validate_args(args, 2,
+                           'Missing file with addresses to compare.', True)
+            run_compare_file(args.args[0], args.args[1])
+
     except Exception as e:
         print(utils.format_error(
             'IMPORTANT! — Fatal unexpected error',
@@ -50,146 +77,45 @@ def main():
         ))
 
 
-def run_normalize():
+def _parse_args() -> argparse.Namespace:
     """
-    Parse and normalize individual addresses passed via command line.
-    """
+    Parse the command line arguments to this script using the standard configuration. If the user inputs
+    invalid arguments or uses the help (-h) flag, this will terminate the program.
 
-    parsed = []
-    for address in sys.argv[2:]:
-        parsed.append(_parse_normalize(address))
-
-    print(json.dumps(parsed))
-
-
-def run_normalize_file():
-    """
-    Normalize all the addresses in a file.
+    Returns:
+        The parsed arguments.
     """
 
-    input_path = sys.argv[2]
-    output_path = _get_output_path(input_path, 'normalized')
+    parser = argparse.ArgumentParser(prog='address.exe',
+                                     description='Parse addresses and address-related values (like city and state names) with ease.')
+    parser.add_argument('--task', '-t', required=True,
+                        choices=['normalize', 'normalize_file', 'normalize_city', 'normalize_city_file',
+                                 'compare_state', 'normalize_state_file', 'compare', 'compare_file'],
+                        help='Specify the task to perform')
+    parser.add_argument('--lookup', '-l', required=False,
+                        help='Specify a lookup JSON file with manually specified normalizations for addresses')
+    parser.add_argument('args', nargs='*',
+                        help='The arguments to pass to the task function')
 
-    input_data = _parse_json(input_path)
-
-    if input_data:
-        output_data = [_parse_normalize(address) for address in input_data]
-    else:
-        output_data = None
-
-    _save_json(output_path, output_data)
+    return parser.parse_args()
 
 
-def run_normalize_city():
+def _validate_args(args: argparse.Namespace, n: int, message: str, exact: bool = False) -> None:
     """
-    Normalize some city by comparing it with an address.
-    """
-
-    _validate_args(4, 'Missing the address. See README for documentation.')
-
-    print(json.dumps(normalize.city(sys.argv[2], sys.argv[3])))
-
-
-def run_normalize_city_file():
-    """
-    Normalize many city values by comparring them with addresses.
-    """
-
-    input_path = sys.argv[2]
-    output_path = _get_output_path(input_path, 'normalized')
-
-    input_data = _parse_json(input_path)
-
-    if input_data:
-        output_data = [normalize.city(
-            entry['value'], entry['address']) for entry in input_data]
-    else:
-        output_data = None
-
-    _save_json(output_path, output_data)
-
-
-def run_normalize_state():
-    """
-    Normalize some state by comparing it with an address.
-    """
-
-    _validate_args(4, 'Missing the address. See README for documentation.')
-
-    print(json.dumps(normalize.state(sys.argv[2], sys.argv[3])))
-
-
-def run_normalize_state_file():
-    """
-    Normalize many state values by comparring them with addresses.
-    """
-
-    input_path = sys.argv[2]
-    output_path = _get_output_path(input_path, 'normalized')
-
-    input_data = _parse_json(input_path)
-
-    if input_data:
-        output_data = [normalize.state(
-            entry['value'], entry['address']) for entry in input_data]
-    else:
-        output_data = None
-
-    _save_json(output_path, output_data)
-
-
-def run_compare():
-    """
-    Compare two addresses.
-    """
-
-    _validate_args(
-        4, 'Missing the second address. See README for documentation.')
-
-    print(json.dumps(compare.compare_address(sys.argv[2], sys.argv[3])))
-
-
-def run_compare_file():
-    """
-    Compare a given address to every address in a file.
-    """
-
-    _validate_args(4, 'Missing the file path. See README for documentation.')
-
-    addr1 = sys.argv[2]
-    if addr1 == 'null':
-        addr1 = None
-        
-    parsed1 = normalize.address(addr1)
-
-    input_path = sys.argv[3]
-    output_path = _get_output_path(input_path, 'compared')
-
-    input_data = _parse_json(input_path)
-
-    if input_data:
-        output_data = [compare.compare_address(addr1, address, parsed1)
-                       for address in input_data]
-    else:
-        output_data = None
-
-    _save_json(output_path, output_data)
-
-
-def _validate_args(n: int, message: str) -> None:
-    """
-    Ensure there are enough user-provided command line arguments. If there aren't, print
+    Ensure there are enough user-provided command line arguments for the task. If there aren't, print
     an error message and exit.
 
     Args:
+        args: The parsed arguments from argparse.
         n: The minimum allowed number of arguments.
         message: The error message to print if there aren't enough arguments.
+        exact: Whether the number of arguments needs to exactly equal n or merely be greater than or equal to.
 
     Returns:
         None
     """
 
-    if len(sys.argv) < n:
+    if len(args.args) < n or (exact and len(args.args) > n):
         print(utils.format_error(message))
         sys.exit(1)
 
@@ -246,7 +172,7 @@ def _parse_json(path: str) -> Any:
     """
 
     try:
-        with open(path, 'r') as input_file:
+        with open(path, 'r', encoding='utf-8') as input_file:
             try:
                 return json.load(input_file)
             except json.JSONDecodeError as e:
@@ -294,6 +220,159 @@ def _save_json(path: str, data: Any) -> None:
               str(e), traceback.format_exc()))
 
     sys.exit(1)
+
+
+def run_normalize(addresses: list[str]) -> None:
+    """
+    Parse and normalize individual addresses passed via command line.
+
+    Args:
+        addresses: A list of one or more addresses to normalize.
+
+    Returns:
+        None
+    """
+
+    print(json.dumps([_parse_normalize(a) for a in addresses]))
+
+
+def run_normalize_file(file: str) -> None:
+    """
+    Normalize all the addresses in a file.
+
+    Args:
+        file: The path to the file with the addresses to normalize.
+
+    Returns:
+        None
+    """
+
+    output_path = _get_output_path(file, 'normalized')
+    input_data = _parse_json(file)
+
+    if input_data:
+        output_data = [_parse_normalize(address) for address in input_data]
+    else:
+        output_data = None
+
+    _save_json(output_path, output_data)
+
+
+def run_normalize_city(city: str, address: str) -> None:
+    """
+    Normalize some city by comparing it with an address.
+
+    Args:
+        city: The city to normalize.
+        address: The address from the same source with possible information to assist in normalization.
+
+    Returns:
+        None
+    """
+
+    print(json.dumps(normalize.city(city, address)))
+
+
+def run_normalize_city_file(file: str) -> None:
+    """
+    Normalize many city values by comparring them with addresses.
+
+    Args:
+        file: The path to the file with the cities to normalize.
+
+    Returns:
+        None
+    """
+
+    output_path = _get_output_path(file, 'normalized')
+    input_data = _parse_json(file)
+
+    if input_data:
+        output_data = [normalize.city(entry['value'], entry['address'])
+                       for entry in input_data]
+    else:
+        output_data = None
+
+    _save_json(output_path, output_data)
+
+
+def run_normalize_state(state: str, address: str) -> None:
+    """
+    Normalize some state by comparing it with an address.
+
+    Args:
+        state: The state to normalize.
+        address: The address from the same source with possible information to assist in normalization.
+
+    Returns:
+        None
+    """
+
+    print(json.dumps(normalize.state(state, address)))
+
+
+def run_normalize_state_file(file: str) -> None:
+    """
+    Normalize many state values by comparring them with addresses.
+
+    Args:
+        file: The path to the file with the states to normalize.
+
+    Returns:
+        None
+    """
+
+    output_path = _get_output_path(file, 'normalized')
+    input_data = _parse_json(file)
+
+    if input_data:
+        output_data = [normalize.state(entry['value'], entry['address'])
+                       for entry in input_data]
+    else:
+        output_data = None
+
+    _save_json(output_path, output_data)
+
+
+def run_compare(address1: str, address2: str) -> None:
+    """
+    Compare two addresses.
+
+    Args:
+        address1: The first address.
+        address2: The second address.
+
+    Returns:
+        None
+    """
+
+    print(json.dumps(compare.compare_address(address1, address2)))
+
+
+def run_compare_file(address: str, file: str) -> None:
+    """
+    Compare a given address to every address in a file.
+
+    Args:
+        address: The address to compare to the other addresses in the file.
+        file: The path to the file with the addresses to compare.
+
+    Returns:
+        None
+    """
+
+    address = 'null' if not address else address
+    parsed1 = normalize.address(address)
+    output_path = _get_output_path(file, 'compared')
+    input_data = _parse_json(file)
+
+    if input_data:
+        output_data = [compare.compare_address(address, address, parsed1)
+                       for address in input_data]
+    else:
+        output_data = None
+
+    _save_json(output_path, output_data)
 
 
 if __name__ == '__main__':

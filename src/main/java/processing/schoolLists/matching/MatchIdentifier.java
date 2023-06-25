@@ -128,8 +128,9 @@ public class MatchIdentifier {
                         Comparator.comparingInt(l -> l.get(0).getResolvableAttributes())).reversed())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
 
-        logger.info("- Incoming school {} found {} school matches from {} districts",
-                incomingSchool, matches.size(), districtMatches.size()
+        logger.info("- Incoming school {} matched {} {} from {} {}",
+                incomingSchool, matches.size(), matches.size() == 1 ? "school" : "schools",
+                districtMatches.size(), districtMatches.size() == 1 ? "district" : "districts"
         );
 
         // If any schools in those districts haven't been fully processed, process their attributes now

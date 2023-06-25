@@ -320,7 +320,7 @@ public class SchoolListProgressWindow extends MyBaseWindow {
     }
 
     /**
-     * Increase the {@link ProgressBar#getMax() maximum} of the {@link #subProgressBar}, thus making it farther from
+     * Increase the {@link ProgressBar#getMax() maximum} of the {@link #subProgressBar}, thus making it further from
      * completion. This may be necessary with the emergence of more data to process.
      *
      * @param delta The amount to increase the maximum. This may be negative, as well, to decrease it.
@@ -328,7 +328,11 @@ public class SchoolListProgressWindow extends MyBaseWindow {
      * @see #incrementSubProgress()
      */
     public SchoolListProgressWindow increaseSubProgressMax(int delta) {
-        Main.GUI.run(() -> subProgressBar.setMax(subProgressBar.getMax() + delta));
+        Main.GUI.run(() -> {
+            subProgressBar.setMax(subProgressBar.getMax() + delta);
+            updateProgressBarWidth();
+            setProgressLabel();
+        });
         return this;
     }
 
