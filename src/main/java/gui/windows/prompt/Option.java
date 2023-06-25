@@ -1,4 +1,4 @@
-package gui.windows.prompt.selection;
+package gui.windows.prompt;
 
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import main.Main;

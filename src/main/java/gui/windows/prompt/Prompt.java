@@ -2,8 +2,6 @@ package gui.windows.prompt;
 
 import com.googlecode.lanterna.gui2.*;
 import gui.windows.MyBaseWindow;
-import gui.windows.prompt.selection.Option;
-import gui.windows.prompt.selection.SelectionPrompt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

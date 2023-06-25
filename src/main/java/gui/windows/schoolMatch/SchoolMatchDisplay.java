@@ -1,4 +1,4 @@
-package gui.windows.prompt.schoolMatch;
+package gui.windows.schoolMatch;
 
 import com.googlecode.lanterna.SGR;
 import com.googlecode.lanterna.TerminalSize;
@@ -17,8 +17,8 @@ import gui.buttons.Link;
 import gui.buttons.PageArrow;
 import gui.buttons.Show;
 import gui.utils.GUIUtils;
-import gui.windows.prompt.selection.Option;
-import gui.windows.prompt.selection.SelectionPrompt;
+import gui.windows.prompt.Option;
+import gui.windows.prompt.SelectionPrompt;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

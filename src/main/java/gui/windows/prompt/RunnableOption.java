@@ -1,4 +1,4 @@
-package gui.windows.prompt.selection;
+package gui.windows.prompt;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

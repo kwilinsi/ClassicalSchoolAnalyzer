@@ -1,6 +1,6 @@
 package processing.schoolLists.extractors.helpers;
 
-import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
+import gui.windows.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.Nullable;
 import processing.schoolLists.extractors.Extractor;
 

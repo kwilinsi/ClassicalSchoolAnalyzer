@@ -2,6 +2,7 @@ package utils;
 
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.dialogs.TextInputDialogBuilder;
+import gui.windows.schoolMatch.SchoolMatchDisplay;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -141,7 +142,7 @@ public enum Config {
 
     /**
      * This is the maximum number of {@link constructs.school.Attribute Attributes} that will be shown for a school when
-     * putting it in a {@link gui.windows.prompt.schoolMatch.SchoolMatchDisplay SchoolMatchDisplay} GUI window.
+     * putting it in a {@link SchoolMatchDisplay SchoolMatchDisplay} GUI window.
      * <p>
      * Note that this is a soft maximum. If it's necessary to show more attributes, because there are some that
      * necessitate user input, those will still be shown.

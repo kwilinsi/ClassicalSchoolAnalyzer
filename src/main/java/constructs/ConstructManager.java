@@ -11,7 +11,7 @@ import constructs.school.CachedSchool;
 import constructs.school.School;
 import database.Database;
 import database.Table;
-import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
+import gui.windows.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;

@@ -2,9 +2,9 @@ package processing.schoolLists.extractors;
 
 import constructs.organization.OrganizationManager;
 import constructs.school.CreatedSchool;
-import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
-import gui.windows.prompt.selection.Option;
-import gui.windows.prompt.selection.SelectionPrompt;
+import gui.windows.schoolMatch.SchoolListProgressWindow;
+import gui.windows.prompt.Option;
+import gui.windows.prompt.SelectionPrompt;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

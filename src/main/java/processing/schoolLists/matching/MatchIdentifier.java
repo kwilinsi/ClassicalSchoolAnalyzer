@@ -10,7 +10,7 @@ import constructs.school.Attribute;
 import constructs.school.CachedSchool;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
-import gui.windows.prompt.schoolMatch.SchoolMatchDisplay;
+import gui.windows.schoolMatch.SchoolMatchDisplay;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

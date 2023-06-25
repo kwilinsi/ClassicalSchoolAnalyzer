@@ -1,4 +1,4 @@
-package gui.windows.prompt.schoolMatch;
+package gui.windows.schoolMatch;
 
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;

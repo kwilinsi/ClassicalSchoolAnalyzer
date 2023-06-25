@@ -1,4 +1,4 @@
-package gui.windows.prompt.schoolMatch;
+package gui.windows.schoolMatch;
 
 import constructs.school.Attribute;
 import constructs.school.School;

@@ -70,7 +70,7 @@ public class JsoupHandler {
                                                              @NotNull DownloadConfig config) throws IOException {
         // If caching is enabled, look for a cache
         if (config.useCache) {
-            logger.debug("Searching for Cache of {}.", url);
+            logger.trace("Searching for cache of " + url);
             String path = null;
             try (java.sql.Connection connection = Database.getConnection()) {
                 // Check Cache table for record with matching Link
@@ -93,7 +93,7 @@ public class JsoupHandler {
         }
 
         // If caching is disabled or didn't work, download with JSoup
-        logger.info("Downloading Link with Jsoup: {}.", url);
+        logger.info("Downloading link with Jsoup:" + url);
 
         Connection connection = Jsoup.connect(url);
         connection.ignoreContentType(config.ignoreContentType);

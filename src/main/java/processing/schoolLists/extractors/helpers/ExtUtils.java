@@ -3,7 +3,7 @@ package processing.schoolLists.extractors.helpers;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import constructs.school.School;
-import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
+import gui.windows.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;

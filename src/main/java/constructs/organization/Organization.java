@@ -3,7 +3,7 @@ package constructs.organization;
 import constructs.Construct;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
-import gui.windows.prompt.schoolMatch.SchoolListProgressWindow;
+import gui.windows.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.Nullable;
 import processing.schoolLists.extractors.Extractor;
 import org.jetbrains.annotations.NotNull;

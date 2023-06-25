@@ -2,10 +2,10 @@ package database;
 
 import constructs.ConstructManager;
 import constructs.organization.OrganizationManager;
-import gui.windows.prompt.selection.MultiSelectionPrompt;
-import gui.windows.prompt.selection.Option;
-import gui.windows.prompt.selection.RunnableOption;
-import gui.windows.prompt.selection.SelectionPrompt;
+import gui.windows.prompt.MultiSelectionPrompt;
+import gui.windows.prompt.Option;
+import gui.windows.prompt.RunnableOption;
+import gui.windows.prompt.SelectionPrompt;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
