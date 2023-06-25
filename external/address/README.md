@@ -12,13 +12,13 @@ This directory contains a Python script for parsing addresses. It is built aroun
     - [Test the Executable](#test-the-executable)
   - [Parser Documentation](#parser-documentation)
     - [__Task: `normalize`__](#task-normalize)
-    - [__Task: `normalize_file`__](#task-normalize_file)
+    - [__Task: `normalize_file`__](#task-normalizefile)
     - [__Task: `compare`__](#task-compare)
-    - [__Task: `compare_file`__](#task-compare_file)
-    - [__Task: `normalize_city`__](#task-normalize_city)
-    - [__Task: `normalize_city_file`__](#task-normalize_city_file)
-    - [__Task: `normalize_state`__](#task-normalize_state)
-    - [__Task: `normalize_state_file`__](#task-normalize_state_file)
+    - [__Task: `compare_file`__](#task-comparefile)
+    - [__Task: `normalize_city`__](#task-normalizecity)
+    - [__Task: `normalize_city_file`__](#task-normalizecityfile)
+    - [__Task: `normalize_state`__](#task-normalizestate)
+    - [__Task: `normalize_state_file`__](#task-normalizestatefile)
 
 ## Setup
 
@@ -314,7 +314,7 @@ The program will attempt to normalize the city, and it will return a JSON object
 
 ### __Task: `normalize_city_file`__
 
-This runs the [`normalize_city`](#task-normalize_city) process on many cities in a file.
+This runs the [`normalize_city`](#task-normalizecity) process on many cities in a file.
 
 Use the following syntax:
 
@@ -326,7 +326,7 @@ The file must contain a single JSON array. That array should consist of objects,
 
 The output is a JSON object with key `"output_file"` pointing to the path of the output data. (If a fatal error occurred, the output will be the error message instead.) The output file is located in the same directory as the input, having the same file name but with the suffix `"_normalized"`.
 
-The file will contain a JSON array of objects. Each object will contain the keys described under [`normalize_city`](#task-normalize_city).
+The file will contain a JSON array of objects. Each object will contain the keys described under [`normalize_city`](#task-normalizecity).
 
 ---
 
@@ -340,7 +340,7 @@ Use the following syntax:
 .\dist\address.exe -t normalize_state STATE ADDRESS
 ```
 
-This behaves pretty much identically to [`normalize_city`](#task-normalize_city), having the same set of keys in the JSON output. Of course, the `"normalized"` value will contain a state name, rather than a city name.
+This behaves pretty much identically to [`normalize_city`](#task-normalizecity), having the same set of keys in the JSON output. Of course, the `"normalized"` value will contain a state name, rather than a city name.
 
 **Example:**
 
@@ -365,7 +365,7 @@ This behaves pretty much identically to [`normalize_city`](#task-normalize_city)
 
 ### __Task: `normalize_state_file`__
 
-Run the [`normalize_state`](#task-normalize_state) process on multiple states from a file.
+Run the [`normalize_state`](#task-normalizestate) process on multiple states from a file.
 
 Use the following syntax:
 
@@ -373,4 +373,5 @@ Use the following syntax:
 .\dist\address.exe -t normalize_state_file FILE_PATH
 ```
 
-This behaves pretty much identically to [`normalize_city_file`](#task-normalize_city_file), having the same set of keys in the JSON output.
+This behaves pretty much identically to [`normalize_city_file`](#task-normalizecityfile), having the same set of keys in the JSON 
+output.
