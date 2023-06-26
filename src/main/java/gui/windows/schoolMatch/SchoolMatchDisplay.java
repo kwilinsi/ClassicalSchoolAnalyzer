@@ -479,27 +479,8 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         switch (value) {
             case DISTRICT_MATCH -> {
                 // Give the user the opportunity to change the district's name or website
-                SchoolComparison schoolComparison = schoolComparisons.get(currentDisplayedSchool);
-                DistrictUpdateDialog dialog = DistrictUpdateDialog.of(
-                        district, schoolComparison.getIncomingSchool(), schoolComparison.getExistingSchool()
-                );
-                MessageDialogButton selection = dialog.show();
-
-                switch (selection) {
-                    case Abort -> {
-                        logger.debug("Aborted " + value + " selection");
-                        return;
-                    }
-                    case Cancel -> districtMatchData = DistrictMatch.of(district);
-                    case OK -> {
-                        district.setName(dialog.getSelectedName());
-                        district.setWebsiteURL(dialog.getSelectedUrl());
-                        districtMatchData = DistrictMatch.of(district);
-                    }
-                    default -> throw new IllegalArgumentException(
-                            "Unreachable: unexpected selection " + selection + " from district update dialog."
-                    );
-                }
+                if (!showDistrictDialog(value))
+                    return;
 
                 super.closeAndSet(value);
             }
@@ -513,23 +494,73 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                     if (preferences.get(i) == Preference.NONE)
                         unresolved.add(displayedAttributes.get(i));
 
-                if (unresolved.size() == 0) {
-                    super.closeAndSet(value);
+                if (unresolved.size() > 0) {
+                    Main.GUI.dialog("Error: Unresolved Attributes",
+                            "The following attributes have Preference \"NONE\": %s\n\n" +
+                                    "You must resolve those attributes before selecting a match with this school.",
+                            Utils.listAttributes(unresolved)
+                    );
                     return;
                 }
 
-                Main.GUI.dialog(
-                        "Error: Unresolved Attributes",
-                        """
-                                The following attributes have Preference "NONE": %s
+                // Give the user an opportunity to update the district
+                if (MessageDialogButton.Yes == EnhancedMessageDialog.show(
+                        new Panel(new GridLayout(2))
+                                .addComponent(GUIUtils.wrappedLabel("Would you like to update the district " +
+                                                "values? They are currently:\n "),
+                                        GridLayout.createHorizontallyFilledLayoutData(2))
+                                .addComponent(GUIUtils.attributeLabel("Name", true))
+                                .addComponent(createAttributeValueComp(false, district.getName()))
+                                .addComponent(GUIUtils.attributeLabel("Website URL", true))
+                                .addComponent(createAttributeValueComp(true, district.getWebsiteURL())),
+                        MessageDialogButton.No, MessageDialogButton.Yes
+                )) {
+                    if (!showDistrictDialog(value))
+                        return;
+                }
 
-                                You must resolve those attributes before selecting a match with this school."""
-                                .formatted(Utils.listAttributes(unresolved))
-                );
+                super.closeAndSet(value);
+
             }
 
             default -> super.closeAndSet(value);
         }
+    }
+
+    /**
+     * Show a {@link DistrictUpdateDialog} that gives the user the opportunity to update the district values.
+     *
+     * @param level The match level chosen by the user, used for logging purposes.
+     * @return <code>True</code> if and only if the user dismissed the dialog normally, either by making changes or
+     * declining to do so; <code>false</code> if the user chose to {@link MessageDialogButton#Abort Abort} their
+     * initial <code>level</code> selection.
+     */
+    private boolean showDistrictDialog(@NotNull Level level) {
+        SchoolComparison schoolComparison = schoolComparisons.get(currentDisplayedSchool);
+        DistrictUpdateDialog dialog = DistrictUpdateDialog.of(
+                district, schoolComparison.getIncomingSchool(), schoolComparison.getExistingSchool()
+        );
+        MessageDialogButton selection = dialog.show();
+
+        return switch (selection) {
+            case Abort -> {
+                logger.debug("Aborted {} selection", level);
+                yield false;
+            }
+            case Cancel -> {
+                districtMatchData = DistrictMatch.of(district);
+                yield true;
+            }
+            case OK -> {
+                district.setName(dialog.getSelectedName());
+                district.setWebsiteURL(dialog.getSelectedUrl());
+                districtMatchData = DistrictMatch.of(district);
+                yield true;
+            }
+            default -> throw new IllegalArgumentException(
+                    "Unreachable: unexpected selection " + selection + " from district update dialog."
+            );
+        };
     }
 
     /**
@@ -717,7 +748,22 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
      */
     @NotNull
     private static Component createAttributeValueComp(@NotNull Attribute attribute, @Nullable Object value) {
-        if (attribute.type == URL.class)
+        return createAttributeValueComp(attribute.type == URL.class, value);
+    }
+
+    /**
+     * Create a {@link Component} displaying a value for a particular attribute. Typically, this is just a plain
+     * {@link Label}. However, for URLs, this is a special {@link Link Link} button.
+     * <p>
+     * For a plain label, the value is first passed through {@link GUIUtils#abbreviate(Object) GUIUtils.abbreviate()}.
+     *
+     * @param isLink Whether the value corresponds to a link.
+     * @param value  The value to put in the component.
+     * @return The new component.
+     * @see #createAttributeValueCompSchool(School, Attribute)
+     */
+    private static Component createAttributeValueComp(boolean isLink, @Nullable Object value) {
+        if (isLink)
             return Link.of((String) value);
         else
             return new Label(GUIUtils.abbreviate(value));

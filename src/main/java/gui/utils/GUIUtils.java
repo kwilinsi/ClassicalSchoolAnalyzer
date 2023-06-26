@@ -237,6 +237,17 @@ public class GUIUtils {
     }
 
     /**
+     * Create a {@link Label} from the given text, first passing the text through {@link #wrapLabelText(String)
+     * wrapLabelText()}.
+     *
+     * @param text The label text.
+     * @return The new label.
+     */
+    public static Label wrappedLabel(@Nullable String text) {
+        return new Label(wrapLabelText(text));
+    }
+
+    /**
      * Take some attribute value input and {@link StringUtils#abbreviate(String, int) abbreviate} it if it's over the
      * {@link Config#MAX_ATTRIBUTE_DISPLAY_LENGTH MAX_ATTRIBUTE_DISPLAY_LENGTH}. If the max length is set to
      * <code>-1</code>, the string is not abbreviated.

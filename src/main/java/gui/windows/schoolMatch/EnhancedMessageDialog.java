@@ -12,7 +12,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-class EnhancedMessageDialog extends DialogWindow {
+/**
+ * This is a special dialog window that allows using a custom panel in the popup while still relying on basic
+ * {@link MessageDialogButton MessageDialogButtons} for user choices.
+ */
+public class EnhancedMessageDialog extends DialogWindow {
 
     @Nullable
     private MessageDialogButton result = null;
@@ -102,5 +106,19 @@ class EnhancedMessageDialog extends DialogWindow {
                                            @NotNull TextColor.ANSI background,
                                            @NotNull MessageDialogButton... buttons) throws IllegalArgumentException {
         return show("", contents, background, buttons);
+    }
+
+    /**
+     * Create and {@link #show() show} a new dialog with an empty title and default {@link TextColor.ANSI#WHITE WHITE}
+     * background color.
+     *
+     * @param contents The main contents panel.
+     * @param buttons  One or more buttons to put at the bottom of the dialog.
+     * @return The selected button.
+     * @throws IllegalArgumentException If the list of buttons is empty.
+     */
+    public static MessageDialogButton show(@NotNull Panel contents,
+                                           @NotNull MessageDialogButton... buttons) throws IllegalArgumentException {
+        return show(contents, TextColor.ANSI.WHITE, buttons);
     }
 }

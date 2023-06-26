@@ -10,6 +10,7 @@ import com.googlecode.lanterna.terminal.Terminal;
 import gui.utils.GUIUtils;
 import gui.windows.prompt.Prompt;
 import gui.windows.prompt.SelectionPrompt;
+import gui.windows.schoolMatch.EnhancedMessageDialog;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;

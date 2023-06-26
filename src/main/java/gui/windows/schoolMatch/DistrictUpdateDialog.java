@@ -14,6 +14,7 @@ import gui.buttons.RadioButton;
 import gui.utils.GUIUtils;
 import gui.windows.MyBaseWindow;
 import main.Main;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -233,8 +234,25 @@ public class DistrictUpdateDialog extends MyBaseWindow {
             urlButtons[i] = new RadioButton(() -> onButtonSelected(false, finalI, true));
         }
 
-        nameButtons[0].setSelected(true);
-        urlButtons[0].setSelected(true);
+        // If the district value for something is non-null, use it; otherwise, prefer the existing or incoming schools
+        // if they are non-null
+        if (StringUtils.isNotBlank(nameOptions[0]))
+            nameButtons[0].setSelected(true);
+        if (StringUtils.isNotBlank(nameOptions[2]))
+            nameButtons[2].setSelected(true);
+        else if (StringUtils.isNotBlank(nameOptions[1]))
+            nameButtons[1].setSelected(true);
+        else
+            nameButtons[0].setSelected(true);
+
+        if (StringUtils.isNotBlank(urlOptions[0]))
+            urlButtons[0].setSelected(true);
+        if (StringUtils.isNotBlank(urlOptions[2]))
+            urlButtons[2].setSelected(true);
+        else if (StringUtils.isNotBlank(urlOptions[1]))
+            urlButtons[1].setSelected(true);
+        else
+            urlButtons[0].setSelected(true);
 
         // If the user types in the custom box, select that box
         nameCustomBox.setTextChangeListener((text, user) -> onButtonSelected(true, 3, false));
