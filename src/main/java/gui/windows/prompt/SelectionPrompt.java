@@ -80,7 +80,7 @@ public class SelectionPrompt<T> extends Prompt<T> {
             return super.handleInput(key);
 
         // Actually select the option the user chose and add a slight pause for effect
-        actions.setSelectedIndex(digit - 1);
+        actions.setSelectedIndex(digit - 1).takeFocus();
         Main.GUI.updateNow();
         try {
             Thread.sleep(50);

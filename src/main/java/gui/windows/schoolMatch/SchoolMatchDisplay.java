@@ -504,21 +504,27 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                 }
 
                 // Give the user an opportunity to update the district
-                if (MessageDialogButton.Yes == EnhancedMessageDialog.show(
-                        new Panel(new GridLayout(2))
+                MessageDialogButton selection = EnhancedMessageDialog.show(
+                        new Panel(new LinearLayout(Direction.VERTICAL).setSpacing(1))
                                 .addComponent(GUIUtils.wrappedLabel("Would you like to update the district " +
-                                                "values? They are currently:\n "),
-                                        GridLayout.createHorizontallyFilledLayoutData(2))
-                                .addComponent(GUIUtils.attributeLabel("Name", true))
-                                .addComponent(createAttributeValueComp(false, district.getName()))
-                                .addComponent(GUIUtils.attributeLabel("Website URL", true))
-                                .addComponent(createAttributeValueComp(true, district.getWebsiteURL())),
-                        MessageDialogButton.No, MessageDialogButton.Yes
-                )) {
-                    if (!showDistrictDialog(value))
-                        return;
-                }
+                                        "values?\nThey are currently:"))
+                                .addComponent(new Panel(new GridLayout(2))
+                                        .addComponent(GUIUtils.attributeLabel("Name", true))
+                                        .addComponent(createAttributeValueComp(false, district.getName()))
+                                        .addComponent(GUIUtils.attributeLabel("Website URL", true))
+                                        .addComponent(createAttributeValueComp(true, district.getWebsiteURL()))
+                                ),
+                        MessageDialogButton.Abort, MessageDialogButton.No, MessageDialogButton.Yes
+                );
 
+                if (selection == MessageDialogButton.Abort)
+                    // If Abort, exit the closing process
+                    return;
+                else if (selection == MessageDialogButton.Yes && showDistrictDialog(value))
+                    // If Yes, show the district prompt (and exit if Abort is chosen there)
+                    return;
+
+                // If No, proceed as normal
                 super.closeAndSet(value);
 
             }
