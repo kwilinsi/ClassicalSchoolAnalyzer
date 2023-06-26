@@ -2,6 +2,7 @@ package utils;
 
 import database.Database;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
@@ -28,7 +29,6 @@ public class JsoupHandler {
      * @param url       The Link to download.
      * @param config    The configuration to use for how the download behaves.
      * @param cacheFile The path to the destination file for saving the document.
-     *
      * @return The downloaded document.
      * @throws IOException If there is an error downloading or saving the website.
      */
@@ -40,7 +40,7 @@ public class JsoupHandler {
 
         // Save the document to the cache file, only if a cache wasn't used
         if (download.b)
-            save(cacheFile, download.a);
+            save(cacheFile, download.a, url);
 
         return download.a;
     }
@@ -59,10 +59,9 @@ public class JsoupHandler {
      *
      * @param url    The Link to download.
      * @param config Configuration to control the download behavior.
-     *
      * @return The website as a Jsoup Document, paired with a boolean indicating whether the website was actually
-     *         downloaded. It will be <code>true</code> if the website was downloaded from a server with Jsoup, and
-     *         <code>false</code> if it was loaded from the cache.
+     * downloaded. It will be <code>true</code> if the website was downloaded from a server with Jsoup, and
+     * <code>false</code> if it was loaded from the cache.
      * @throws IOException If there is an error downloading the website.
      */
     @NotNull
@@ -87,13 +86,15 @@ public class JsoupHandler {
             } catch (SQLException e) {
                 logger.warn("Failed to search Cache database for: " + url + ". Downloading with Jsoup instead.", e);
             } catch (IOException e) {
-                logger.warn("Failed to parse a cached document: " + url + " at " + path +
-                            ". Re-downloading with Jsoup instead.", e);
+                logger.warn(String.format(
+                        "Failed to parse a cached document: %s at %s. Re-downloading with Jsoup instead.",
+                        url, path), e
+                );
             }
         }
 
         // If caching is disabled or didn't work, download with JSoup
-        logger.info("Downloading link with Jsoup:" + url);
+        logger.info("Downloading link with Jsoup: " + url);
 
         Connection connection = Jsoup.connect(url);
         connection.ignoreContentType(config.ignoreContentType);
@@ -112,9 +113,7 @@ public class JsoupHandler {
         } catch (NullPointerException e) {
             logger.warn("Failed to get the timeout value. Reverting to default 30,000.", e);
         } catch (NumberFormatException e) {
-            logger.warn(
-                    "The timeout property must be a valid integer in milliseconds. Reverting to default 30,000.",
-                    e);
+            logger.warn("Timeout property must be a valid integer in milliseconds. Reverting to default 30,000.", e);
         } catch (IllegalArgumentException e) {
             logger.warn("The timeout must be non-negative. Reverting to default 30,000.", e);
         }
@@ -139,7 +138,6 @@ public class JsoupHandler {
      *
      * @param url    The Link to download.
      * @param config Configuration to control the download behavior.
-     *
      * @return The website as a Jsoup Document.
      * @throws IOException If there is an error downloading the website.
      */
@@ -154,7 +152,6 @@ public class JsoupHandler {
      *
      * @param file The file to parse.
      * @param url  The Link corresponding to that file (used for resolving relative links).
-     *
      * @return The parsed document.
      * @throws IOException If there is an error while parsing the file or the file doesn't exist.
      */
@@ -170,10 +167,11 @@ public class JsoupHandler {
      *
      * @param path     The path to the desired output file.
      * @param document The document to save.
-     *
+     * @param url      The URL to associated with the cached file in the database. If this is <code>null</code>, the
+     *                 <code>document</code> {@link Document#baseUri() baseUri} is used instead.
      * @throws IOException If an error occurs while saving the file.
      */
-    public static void save(Path path, Document document) throws IOException {
+    public static void save(@NotNull Path path, @NotNull Document document, @Nullable String url) throws IOException {
         File file = path.toFile();
 
         // Create the file (and parent directories) if it doesn't exist
@@ -202,7 +200,7 @@ public class JsoupHandler {
         try (java.sql.Connection connection = Database.getConnection()) {
             PreparedStatement statement = connection.prepareStatement(
                     "INSERT INTO Cache (url, file_path) VALUES (?, ?) ON DUPLICATE KEY UPDATE file_path = ?");
-            statement.setString(1, document.baseUri());
+            statement.setString(1, url == null ? document.baseUri() : url);
             statement.setString(2, file.getAbsolutePath());
             statement.setString(3, file.getAbsolutePath());
             statement.execute();

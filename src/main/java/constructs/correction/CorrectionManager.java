@@ -228,10 +228,8 @@ public class CorrectionManager {
         );
 
         CorrectionType selection = Main.GUI.showPrompt(prompt);
-        if (selection == null) {
-            guiManager();
+        if (selection == null)
             return;
-        }
 
         CorrectionAddWindow window = switch (selection) {
             case SCHOOL_CORRECTION -> new SchoolCorrectionWindow();

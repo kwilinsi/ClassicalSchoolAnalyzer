@@ -91,7 +91,8 @@ public class ACCSSchoolParser extends Helper<CreatedSchool> {
             if (download.b)
                 JsoupHandler.save(
                         OrganizationManager.ACCS.getFilePath("school_pages").resolve(school.generateHtmlFileName()),
-                        document
+                        document,
+                        null
                 );
         } catch (IOException e) {
             throw new IOException("Failed to download ACCS page " + accs_page_url + ".", e);

@@ -238,7 +238,7 @@ public class DistrictUpdateDialog extends MyBaseWindow {
         // if they are non-null
         if (StringUtils.isNotBlank(nameOptions[0]))
             nameButtons[0].setSelected(true);
-        if (StringUtils.isNotBlank(nameOptions[2]))
+        else if (StringUtils.isNotBlank(nameOptions[2]))
             nameButtons[2].setSelected(true);
         else if (StringUtils.isNotBlank(nameOptions[1]))
             nameButtons[1].setSelected(true);
@@ -247,7 +247,7 @@ public class DistrictUpdateDialog extends MyBaseWindow {
 
         if (StringUtils.isNotBlank(urlOptions[0]))
             urlButtons[0].setSelected(true);
-        if (StringUtils.isNotBlank(urlOptions[2]))
+        else if (StringUtils.isNotBlank(urlOptions[2]))
             urlButtons[2].setSelected(true);
         else if (StringUtils.isNotBlank(urlOptions[1]))
             urlButtons[1].setSelected(true);
