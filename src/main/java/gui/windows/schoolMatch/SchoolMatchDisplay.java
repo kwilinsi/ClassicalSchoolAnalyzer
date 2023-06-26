@@ -1,7 +1,6 @@
 package gui.windows.schoolMatch;
 
 import com.googlecode.lanterna.SGR;
-import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.bundle.LanternaThemes;
 import com.googlecode.lanterna.gui2.*;
@@ -150,7 +149,8 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                                @NotNull List<SchoolComparison> schoolComparisons) throws IllegalArgumentException {
         super(
                 null,
-                new Panel(new GridLayout(1).setVerticalSpacing(1).setBottomMarginSize(1)),
+                new Panel(new GridLayout(1)
+                        .setLeftMarginSize(0).setRightMarginSize(0).setVerticalSpacing(1).setBottomMarginSize(1)),
                 List.of(
                         Option.of("Not a match.", MatchData.Level.NO_MATCH),
                         Option.of("This is a match.", MatchData.Level.SCHOOL_MATCH),
@@ -325,8 +325,6 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
 
             PreferenceComboBox box = PreferenceComboBox.of(
                     null,
-                    TextColor.ANSI.WHITE,
-                    TextColor.ANSI.WHITE_BRIGHT,
                     null,
                     (preference, otherOption) -> {
                         SchoolInfo info = schoolInfos.get(currentDisplayedSchool);
@@ -345,8 +343,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
             guiAttributePreferences.add(box);
 
             incomingPanel
-                    .addComponent(new Panel()
-                            .setLayoutManager(new GridLayout(1).setRightMarginSize(0))
+                    .addComponent(new Panel(new GridLayout(1).setRightMarginSize(0))
                             .addComponent(GUIUtils.attributeLabel(attribute)))
                     .addComponent(createAttributeValueCompSchool(incomingSchool, attribute))
                     .addComponent(box)
@@ -369,52 +366,42 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
         // Add existing school carousel
         // --------------------------------------------------
 
-        Panel existingCarousel = new Panel(new BorderLayout());
-
-        Panel attributePanel = new Panel()
-                .setLayoutManager(new GridLayout(3))
+        Panel attributePanel = new Panel(new GridLayout(3))
                 .addComponent(new EmptySpace())
                 .addComponent(GUIUtils.attributeLabel("id", true))
                 .addComponent(guiExistingId);
 
         // Add each attribute's match level, name, and value
         for (Attribute a : displayedAttributes) {
-            Label nameLbl = GUIUtils.attributeAbbreviationLabel(AttributeComparison.Level.NONE);
-            guiExistingAttributeLevels.add(nameLbl);
+            Label levelLbl = GUIUtils.attributeAbbreviationLabel(AttributeComparison.Level.NONE);
+            guiExistingAttributeLevels.add(levelLbl);
 
             Component valComp = createAttributeValueComp(a, null);
             guiExistingAttributeValues.add(valComp);
 
-            attributePanel.addComponent(nameLbl)
+            attributePanel.addComponent(levelLbl)
                     .addComponent(GUIUtils.attributeLabel(a))
                     .addComponent(valComp);
         }
 
-        GUIUtils.addEmptyComponents(attributePanel, 4);
-        attributePanel.addComponent(Show.of("Show All", this::fullExistingSchoolPopup));
+        attributePanel.addComponent(new EmptySpace(), GridLayout.createHorizontallyFilledLayoutData(3))
+                .addComponent(new EmptySpace())
+                .addComponent(Show.of("Show All", this::fullExistingSchoolPopup));
 
-        Panel existingCenterPanel = new Panel()
-                .setLayoutManager(new GridLayout(1))
+        Panel existingCenterPanel = new Panel(new GridLayout(1))
                 .addComponent(sectionLabel("Existing school:"))
                 .addComponent(attributePanel);
 
-        existingCarousel.addComponent(existingCenterPanel, BorderLayout.Location.CENTER);
+        Panel existingCarousel = new Panel(new BorderLayout())
+                .addComponent(existingCenterPanel, BorderLayout.Location.CENTER);
 
         // Add arrows to make it a true carousel if there are more than one existing schools
         if (numSchools > 1) {
             existingCarousel
-                    .addComponent(
-                            PageArrow.of(
-                                    true, existingCenterPanel, () -> switchSchoolView(false)
-                            ),
-                            BorderLayout.Location.LEFT
-                    )
-                    .addComponent(
-                            PageArrow.of(
-                                    false, existingCenterPanel, () -> switchSchoolView(true)
-                            ),
-                            BorderLayout.Location.RIGHT
-                    );
+                    .addComponent(PageArrow.of(true, existingCenterPanel, () -> switchSchoolView(false)),
+                            BorderLayout.Location.LEFT)
+                    .addComponent(PageArrow.of(false, existingCenterPanel, () -> switchSchoolView(true)),
+                            BorderLayout.Location.RIGHT);
         }
 
         // --------------------------------------------------
@@ -427,11 +414,6 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                 .addComponent(incomingPanel)
                 .addComponent(existingSchoolHeader)
                 .addComponent(existingCarousel);
-
-        int width = getPreferredSize().getColumns();
-        existingCarousel.setPreferredSize(
-                new TerminalSize(width, existingCarousel.getPreferredSize().getRows() + 1)
-        );
     }
 
     /**
@@ -452,7 +434,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
             if (component instanceof Link l)
                 l.setUrl(info.attributeValues().get(i));
             else if (component instanceof Label l)
-                l.setText(info.attributeValues().get(i));
+                l.setText(GUIUtils.abbreviate(info.attributeValues().get(i)));
             else
                 throw new IllegalStateException("Unreachable state: Invalid GUI component value object");
 

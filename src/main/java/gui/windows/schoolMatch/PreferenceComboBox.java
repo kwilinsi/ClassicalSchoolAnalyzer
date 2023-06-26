@@ -86,11 +86,11 @@ class PreferenceComboBox extends ComboBox<Preference> {
     /**
      * Get a {@link PreferenceComboBox} initialized to select the given preference.
      *
+     * @param preference     The preference to select by default. If this is <code>null</code>,
+     *                       {@link Preference#NONE NONE} is used.
      * @param standardColor  The typical background color of the combo box.
      * @param highlightColor The background color when the selected preference is {@link Preference#NONE NONE},
      *                       indicating that user action is required.
-     * @param preference     The preference to select by default. If this is <code>null</code>,
-     *                       {@link Preference#NONE NONE} is used.
      * @param otherOption    The {@link #otherOption} if the preference is currently set to {@link Preference#OTHER
      *                       OTHER}.
      * @param onUpdate       The {@link #onUpdate} code to {@link #runUpdateCode() run} whenever the user changes the
@@ -111,6 +111,27 @@ class PreferenceComboBox extends ComboBox<Preference> {
                 otherOption,
                 onUpdate
         );
+    }
+
+    /**
+     * Get a new {@link PreferenceComboBox} with default values:
+     * <ul>
+     *     <li>Standard color: {@link TextColor.ANSI#WHITE WHITE}.
+     *     <li>Highlight color: {@link TextColor.ANSI#WHITE_BRIGHT WHITE_BRIGHT}.
+     * </ul>
+     *
+     * @param preference     The preference to select by default. If this is <code>null</code>,
+     *                       {@link Preference#NONE NONE} is used.
+     * @param otherOption    The {@link #otherOption} if the preference is currently set to {@link Preference#OTHER
+     *                       OTHER}.
+     * @param onUpdate       The {@link #onUpdate} code to {@link #runUpdateCode() run} whenever the user changes the
+     *                       preference or other option data.
+     * @return The newly created preference combo box.
+     */
+    public static PreferenceComboBox of(@Nullable Preference preference,
+                                        @Nullable Object otherOption,
+                                        @Nullable BiConsumer<Preference, Object> onUpdate) {
+        return of(preference, TextColor.ANSI.WHITE, TextColor.ANSI.WHITE_BRIGHT, otherOption, onUpdate);
     }
 
     @Nullable
