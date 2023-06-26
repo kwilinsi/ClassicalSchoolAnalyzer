@@ -361,14 +361,13 @@ def run_compare_file(address: str, file: str) -> None:
         None
     """
 
-    address = 'null' if not address else address
     parsed1 = normalize.address(address)
     output_path = _get_output_path(file, 'compared')
     input_data = _parse_json(file)
 
     if input_data:
-        output_data = [compare.compare_address(address, address, parsed1)
-                       for address in input_data]
+        output_data = [compare.compare_address(address, addr2, parsed1)
+                       for addr2 in input_data]
     else:
         output_data = None
 
