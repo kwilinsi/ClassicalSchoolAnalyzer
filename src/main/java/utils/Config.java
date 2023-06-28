@@ -18,7 +18,6 @@ import java.util.Locale;
 import java.util.Properties;
 
 public enum Config {
-
     // Jsoup configuration
     /**
      * Whether to use the {@link #USERAGENT} when making {@link Jsoup} requests.

@@ -14,6 +14,7 @@ public class ChangeAttributesAction implements Action {
     /**
      * The map of attributes and their new values.
      */
+    @NotNull
     private final Map<@NotNull Attribute, @Nullable Object> newValues;
 
     /**
@@ -21,7 +22,7 @@ public class ChangeAttributesAction implements Action {
      *
      * @param newValues The {@link #newValues}.
      */
-    public ChangeAttributesAction(Map<@NotNull Attribute, @Nullable Object> newValues) {
+    public ChangeAttributesAction(@NotNull Map<@NotNull Attribute, @Nullable Object> newValues) {
         this.newValues = newValues;
     }
 

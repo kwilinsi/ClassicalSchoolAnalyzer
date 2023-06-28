@@ -16,6 +16,11 @@ import java.util.regex.Pattern;
 public class URLUtils {
     private static final Logger logger = LoggerFactory.getLogger(URLUtils.class);
 
+    /**
+     * This pattern helps remove multiple <code>http://</code> and <code>https://</code> prefix from malformed URLs.
+     *
+     * @see #createURL(String)
+     */
     private static final Pattern MULTIPLE_PROTOCOLS_PATTERN = Pattern.compile("^(https?://)(?=https?://)");
 
     /**

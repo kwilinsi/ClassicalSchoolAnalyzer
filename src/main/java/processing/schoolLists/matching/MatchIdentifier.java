@@ -2,6 +2,7 @@ package processing.schoolLists.matching;
 
 import constructs.correction.CorrectionManager;
 import constructs.correction.districtMatch.DistrictMatchCorrection;
+import constructs.correction.schoolMatch.SchoolMatchCorrection;
 import constructs.district.CachedDistrict;
 import constructs.district.District;
 import constructs.organization.Organization;
@@ -44,6 +45,7 @@ public class MatchIdentifier {
      * Broadly speaking, this function (using its helper functions in this class) performs the following steps:
      * <ol>
      *     <li>Search the database (using the <code>schoolCache</code>) for any schools that might match this one.
+     *     <li>Check the {@link SchoolMatchCorrection SchoolMatchCorrections} against each probable match.
      *     <li>While searching, if any high-probability matches are found, where every attribute comparison between
      *     the schools is automatically {@link AttributeComparison#isResolvable() resolvable}, immediately exit,
      *     identifying that school as a match. If no matches are found at all, exit.
@@ -94,13 +96,31 @@ public class MatchIdentifier {
                 .toList();
         bulkCompare(otherAttributes, incomingSchool, matches);
 
+        // Check the school match Corrections against every existing–incoming school pair. If any Corrections apply,
+        // use them immediately
+        List<SchoolMatchCorrection> schoolMatchCorrections = CorrectionManager.getSchoolMatches();
+        for (SchoolComparison comparison : matches) {
+            for (SchoolMatchCorrection correction : schoolMatchCorrections) {
+                if (correction.matches(comparison)) {
+                    // The district may be necessary; set it in case it is
+                    associateAndSetDistrict(comparison, districtCache);
+
+                    // Apply the match data. If it doesn't finish resolving everything, log a warning
+                    MatchData newMatchData = correction.determineMatchData(comparison);
+                    if (newMatchData instanceof SchoolComparison s && !s.areAllResolvable())
+                        logger.warn("Applied school match correction, but it didn't resolve {}",
+                                Utils.listAttributes(s.getNonResolvableAttributes()));
+
+                    // Otherwise return the new match data
+                    return newMatchData;
+                }
+            }
+        }
+
         // If any matches don't require user input at all, use them
         for (SchoolComparison match : matches) {
             if (match.areAllResolvable()) {
-                CachedDistrict district = associatedDistrict(match.getExistingSchool(), districtCache);
-                if (district == null)
-                    throw new IllegalStateException("Unable to find district for " + match.getExistingSchool());
-                match.setDistrict(district);
+                associateAndSetDistrict(match, districtCache);
                 return match.logMatchInfo("MATCHED").setLevel(MatchData.Level.SCHOOL_MATCH);
             }
         }
@@ -184,10 +204,15 @@ public class MatchIdentifier {
     }
 
     /**
-     * Find the {@link CachedDistrict} associated with a particular {@link School} from a list of districts. This
-     * uses only the school's {@link School#getDistrictId() district id} to identify the match. The
-     * {@link CachedSchool#getDistrict() district} associated with {@link CachedSchool CachedSchools} is not checked,
-     * as if that's present, the district is already associated anyway.
+     * Find the {@link CachedDistrict} associated with a particular {@link School} from a list of cached districts.
+     * This is done in two ways:
+     * <ol>
+     *     <li>If the school is a {@link CachedSchool} and it has a {@link CachedSchool#getDistrict() district} that
+     *     isn't <code>null</code>, <i>and</i> that district is the same object as one of the cached districts, that's
+     *     the match. Note that the district <i>must</i> be present in the cached list for this to count.
+     *     <li>Comparing the school's {@link School#getDistrictId() district id} with the {@link District#getId() id}
+     *     of each district. If they're the same (and not <code>-1</code>) they match.
+     * </ol>
      * <p>
      * If the school does not have any district set, or its district is not in the given list, <code>null</code> is
      * returned.
@@ -197,8 +222,18 @@ public class MatchIdentifier {
      * @return The district associated with the school, or <code>null</code> if none could be found.
      */
     @Nullable
-    private static CachedDistrict associatedDistrict(@NotNull School school,
-                                                     @NotNull List<@NotNull CachedDistrict> cachedDistricts) {
+    private static CachedDistrict associateDistrict(@NotNull School school,
+                                                    @NotNull List<@NotNull CachedDistrict> cachedDistricts) {
+        // For a CachedSchool, check its district object
+        if (school instanceof CachedSchool cs) {
+            CachedDistrict district = cs.getDistrict();
+            if (district != null)
+                for (CachedDistrict cachedDistrict : cachedDistricts)
+                    if (district == cachedDistrict)
+                        return district;
+        }
+
+        // If that doesn't work, check the district id
         int id = school.getDistrictId();
         if (id != -1) {
             for (CachedDistrict district : cachedDistricts)
@@ -206,7 +241,34 @@ public class MatchIdentifier {
                     return district;
         }
 
+        // If there are still no matches, return null
         return null;
+    }
+
+    /**
+     * Wrapper for {@link #associateDistrict(School, List) associateDistrict()} that
+     * {@link SchoolComparison#setDistrict(CachedDistrict) sets} the district if it's identified and throws an error if
+     * it's not found.
+     * <p>
+     * If the comparison already {@link SchoolComparison#getDistrict() has} an associated district, nothing happens.
+     *
+     * @param comparison      The comparison. The associated district for the
+     *                        {@link SchoolComparison#getExistingSchool() existing} school is determined.
+     * @param cachedDistricts The list of cached districts.
+     * @throws IllegalStateException If no matching district is found.
+     */
+    private static void associateAndSetDistrict(@NotNull SchoolComparison comparison,
+                                                @NotNull List<@NotNull CachedDistrict> cachedDistricts)
+            throws IllegalStateException {
+        if (comparison.getDistrict() != null)
+            return;
+
+        CachedDistrict district = associateDistrict(comparison.getExistingSchool(), cachedDistricts);
+
+        if (district == null)
+            throw new IllegalStateException("Unable to find district for " + comparison.getExistingSchool());
+
+        comparison.setDistrict(district);
     }
 
     /**

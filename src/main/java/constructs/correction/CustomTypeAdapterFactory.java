@@ -25,7 +25,7 @@ public class CustomTypeAdapterFactory implements TypeAdapterFactory {
         Class<? super T> rawType = typeToken.getRawType();
 
         // Check if the type being deserialized is an interface
-        if (rawType.isInterface() && typeAdapters.containsKey(rawType)) {
+        if (typeAdapters.containsKey(rawType)) {
             final Class<?> implementationClass = typeAdapters.get(rawType);
 
             // Create a type adapter for the implementation class

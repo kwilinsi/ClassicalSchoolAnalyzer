@@ -69,7 +69,7 @@ public class DistrictMatchCorrection extends Correction {
      * @param useNewName Whether to {@link #useNewName}.
      * @param newUrl     The {@link #newUrl}.
      * @param useNewUrl  Whether to {@link #useNewUrl}.
-     * @param notes      The {@link #notes}.
+     * @param notes      The {@link #setNotes(String) notes}.
      */
     public DistrictMatchCorrection(@NotNull List<Rule> rules,
                                    @Nullable String newName,

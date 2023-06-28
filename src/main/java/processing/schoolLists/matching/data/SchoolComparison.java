@@ -207,6 +207,32 @@ public class SchoolComparison extends MatchData {
     }
 
     /**
+     * {@link AttributeComparison#newPreference(AttributeComparison.Preference, Object) Change} the
+     * {@link AttributeComparison.Preference Preference} for some {@link Attribute} in the {@link #attributes
+     * attribute} comparisons map.
+     * <p>
+     * If the map doesn't contain an entry for the specified attribute, a new attribute comparison is created with
+     * {@link AttributeComparison.Level Level} {@link AttributeComparison.Level#NONE NONE}, the given
+     * <code>preference</code>, and {@link AttributeComparison#nonNullValues() nonNullValues} set to <code>false</code>.
+     *
+     * @param attribute  The attribute to change.
+     * @param preference The new preference.
+     * @param otherValue The optional {@link AttributeComparison#otherOption() otherOption}, required if the
+     *                   preference is {@link AttributeComparison.Preference#OTHER OTHER}.
+     */
+    public void changePreference(@NotNull Attribute attribute,
+                                 @NotNull AttributeComparison.Preference preference,
+                                 @Nullable Object otherValue) {
+        AttributeComparison comp = getAttributeComparison(attribute);
+        if (comp == null)
+            putAttributeComparison(attribute, AttributeComparison.of(
+                    attribute, AttributeComparison.Level.NONE, preference, otherValue, false
+            ));
+        else
+            putAttributeComparison(attribute, comp.newPreference(preference, otherValue));
+    }
+
+    /**
      * Return whether the schools match for the given {@link Attribute} at
      * {@link AttributeComparison.Level#matchesAt(AttributeComparison.Level) at least} the given
      * {@link AttributeComparison.Level Level}.

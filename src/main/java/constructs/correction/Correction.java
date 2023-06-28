@@ -33,7 +33,8 @@ import java.util.Map;
  * <p>
  * Corrections are especially useful during the testing process, as this process often involves frequently clearing
  * and recreating the rest of the SQL database, such as when testing the school list aggregation process. Many
- * schools that trigger manual action can be dealt with using Corrections, thereby avoiding wasted time.
+ * schools that trigger manual action can be dealt with using Corrections, thereby avoiding repeated tasks that waste
+ * time.
  * <hr>
  * <p>
  * Corrections are stored in the SQL database. They consist of a {@link CorrectionType CorrectionType} parameter that
@@ -53,7 +54,7 @@ public abstract class Correction implements Construct {
      * The {@link CorrectionType CorrectionType} of Correction.
      */
     @NotNull
-    protected transient final CorrectionType type;
+    private transient CorrectionType type;
 
     /**
      * These are user-friendly notes associated with the Correction. These are for use in the SQL database to record
@@ -64,7 +65,7 @@ public abstract class Correction implements Construct {
      * This is <code>transient</code> as it is stored separately from the serialized Corretion data in the database.
      */
     @Nullable
-    protected transient String notes;
+    private transient String notes;
 
     /**
      * This is a set of 0 or more {@link TypeAdapter TypeAdapters} that may be used to configure the
@@ -72,7 +73,7 @@ public abstract class Correction implements Construct {
      */
     @NotNull
     @Unmodifiable
-    protected transient Map<Class<?>, Class<?>> deserialization_data;
+    private final transient Map<Class<?>, Class<?>> deserialization_data;
 
     /**
      * This is the {@link Gson} instance used for encoding Corrections when
@@ -133,11 +134,10 @@ public abstract class Correction implements Construct {
         this(-1, type, notes, new HashMap<>());
     }
 
-    /**
-     * Set the notes.
-     *
-     * @param notes The {@link #notes}.
-     */
+    public void setType(@NotNull CorrectionType type) {
+        this.type = type;
+    }
+
     public void setNotes(@Nullable String notes) {
         this.notes = notes;
     }

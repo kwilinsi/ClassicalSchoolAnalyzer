@@ -65,13 +65,13 @@ public class NormalizedAddress extends Correction {
     /**
      * Create a new normalized address Correction with the required address parameters.
      *
-     * @param raw          The {@link #raw} address.
+     * @param raw            The {@link #raw} address.
      * @param address_line_1 The {@link #address_line_1}.
      * @param address_line_2 The {@link #address_line_2}.
-     * @param city         The {@link #city}.
-     * @param state        The {@link #state}.
-     * @param postal_code   The {@link #postal_code}.
-     * @param notes        The {@link #notes}.
+     * @param city           The {@link #city}.
+     * @param state          The {@link #state}.
+     * @param postal_code    The {@link #postal_code}.
+     * @param notes          The {@link #setNotes(String) notes}.
      */
     public NormalizedAddress(@NotNull String raw,
                              @Nullable String address_line_1,
@@ -91,10 +91,12 @@ public class NormalizedAddress extends Correction {
 
     /**
      * Check whether the given object is equal to this normalized address. Two {@link NormalizedAddress} instances
-     * are equal if and only if they have the same {@link #raw} address, {@link #address_line_1}, {@link #address_line_2},
+     * are equal if and only if they have the same {@link #raw} address, {@link #address_line_1},
+     * {@link #address_line_2},
      * {@link #city}, {@link #state}, and {@link #postal_code}.
      * <p>
-     * This does not take into consideration the  {@link #id}, {@link #notes}, or {@link #deserialization_data}.
+     * This does not take into consideration the {@link #id}, {@link #setNotes(String) notes}, or
+     * deserialization data.
      *
      * @param obj The object to compare to this one.
      * @return <code>True</code> if and only if it is equal to this object.

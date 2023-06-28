@@ -1,13 +1,15 @@
 package gui.windows.corrections.districtMatch;
 
+import com.googlecode.lanterna.SGR;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.*;
 import constructs.correction.CorrectionType;
 import constructs.correction.districtMatch.DistrictMatchCorrection;
 import constructs.correction.districtMatch.Rule;
+import constructs.correction.districtMatch.RuleType;
 import constructs.correction.schoolAttribute.SchoolAttributeCorrection;
 import constructs.district.District;
-import gui.buttons.SymbolButton;
+import gui.components.FieldSet;
 import gui.windows.corrections.CorrectionAddWindow;
 import org.jetbrains.annotations.NotNull;
 import utils.Utils;
@@ -20,13 +22,10 @@ import java.util.List;
  * DistrictMatchCorrections}. It contains an interface for specifying an arbitrary number of rules.
  */
 public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
-
     /**
-     * The list of data for Correction {@link Rule Rules}.
-     *
-     * @see RuleData
+     * The list of fields specifying Correction {@link Rule Rules}.
      */
-    private List<RuleData> rules;
+    private List<@NotNull FieldSet> rulesFields;
 
     /**
      * The panel that lists all the rule fields.
@@ -70,7 +69,7 @@ public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
     @NotNull
     @Override
     protected Panel makePanel() {
-        rules = new ArrayList<>();
+        rulesFields = new ArrayList<>();
         panel = new Panel(new LinearLayout(Direction.VERTICAL));
         newNameCheckBox = new CheckBox("Overwrite District Name");
         newNameField = new TextBox(new TerminalSize(35, 1));
@@ -92,12 +91,7 @@ public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
                 .setLayoutData(LinearLayout.createLayoutData(
                         LinearLayout.Alignment.Fill, LinearLayout.GrowPolicy.CanGrow
                 ))
-                .addComponent(SymbolButton.of('+', this::addRuleField),
-                        GridLayout.createLayoutData(
-                                GridLayout.Alignment.CENTER, GridLayout.Alignment.CENTER,
-                                true, false, 2, 1
-                        )
-                )
+                .addComponent(CorrectionAddWindow.createAddButton(this::addRuleField, 2))
                 .addComponent(new EmptySpace(), GridLayout.createHorizontallyFilledLayoutData(2))
                 .addComponent(newNameCheckBox, GridLayout.createHorizontallyFilledLayoutData(2))
                 .addComponent(CorrectionAddWindow.makeValueLabel("New name", false))
@@ -114,18 +108,11 @@ public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
         );
     }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * This is done by {@link RuleData#isValid() validating} each of the rule.
-     *
-     * @return <code>True</code> if and only if the validation passes.
-     */
     @Override
     protected boolean validateInput() {
         // Find any invalid rules and list them
-        List<String> invalid = rules.stream()
-                .filter(r -> !r.isValid())
+        List<String> invalid = rulesFields.stream()
+                .filter(r -> r.isEmpty(0) || r.isEmpty(1))
                 .map(r -> String.valueOf(r.getIndex() + 1))
                 .toList();
 
@@ -158,63 +145,92 @@ public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
     }
 
     /**
-     * Add another panel with a new set of {@link RuleData} to the main {@link #panel} and {@link #rules} list.
+     * Add a new {@link FieldSet} panel for adding a rule to the main {@link #panel} and {@link #rulesFields} list.
      */
     protected void addRuleField() {
-        RuleData data = new RuleData(this, rules.size());
-        panel.addComponent(rules.size(), data.makePanel().withBorder(Borders.singleLine()));
-        rules.add(data);
+        FieldSet fieldSet = new FieldSet(rulesFields.size(), this::movePanelUp, this::deletePanel)
+                .add(new ComboBox<>(RuleType.values()))
+                .add(new TextBox(new TerminalSize(20, 2))
+                        .setLayoutData(GridLayout.createHorizontallyFilledLayoutData()))
+                .add(new Label("").addStyle(SGR.UNDERLINE))
+                .setUpEnabled(rulesFields.size() > 0);
+
+        Panel fieldPanel = new Panel(new GridLayout(2)
+                .setLeftMarginSize(0).setRightMarginSize(0).setHorizontalSpacing(2))
+                .addComponent(CorrectionAddWindow.makeValueLabel("Rule CorrectionType", true))
+                .addComponent(fieldSet.get(0))
+                .addComponent(CorrectionAddWindow.makeValueLabel("Value", true))
+                .addComponent(fieldSet.get(1));
+
+        Panel rootPanel = new Panel(new GridLayout(2).setRightMarginSize(0))
+                .addComponent(fieldSet.get(2))
+                .addComponent(new Panel(new LinearLayout(Direction.HORIZONTAL))
+                        .setLayoutData(GridLayout.createLayoutData(
+                                GridLayout.Alignment.END, GridLayout.Alignment.CENTER))
+                        .addComponent(fieldSet.getUpButton())
+                        .addComponent(fieldSet.getDeleteButton())
+                )
+                .addComponent(fieldPanel,
+                        GridLayout.createLayoutData(GridLayout.Alignment.FILL, GridLayout.Alignment.CENTER,
+                                true, false, 2, 1)
+                );
+
+        this.panel.addComponent(rulesFields.size(), rootPanel.withBorder(Borders.singleLine()));
+        rulesFields.add(fieldSet);
     }
 
     /**
-     * Move the panel for the given {@link RuleData RuleData} instance (specified by its index) up one in the display.
-     * This has no effect for index 0.
+     * Move the panel with the given {@link FieldSet} instance (specified by its index) up one in the display. This
+     * has no effect for index 0.
      *
-     * @param index The index of the data panel to move up.
+     * @param index The index of the panel to move up.
      * @throws IndexOutOfBoundsException If the index is out of bounds.
      */
     protected void movePanelUp(int index) throws IndexOutOfBoundsException {
         if (index == 0) return;
-        if (index < 0 || index >= rules.size())
-            throw new IndexOutOfBoundsException("Invalid index " + index + " for " + rules.size() + " rule(s)");
+        if (index < 0 || index >= rulesFields.size())
+            throw new IndexOutOfBoundsException("Invalid index " + index + " for " + rulesFields.size() + " rule(s)");
 
         Component rulePanel = this.panel.getChildrenList().get(index);
         panel.removeComponent(rulePanel);
         panel.addComponent(index - 1, rulePanel);
 
-        RuleData rule = rules.remove(index);
-        rules.add(index - 1, rule);
+        FieldSet field = rulesFields.remove(index);
+        rulesFields.add(index - 1, field);
 
         // Update the indices of this panel and the one it swapped with
-        rule.setIndex(index - 1);
-        rules.get(index).setIndex(index);
+        field.setIndex(index - 1).setUpEnabled(index - 1 > 0);
+        rulesFields.get(index).setIndex(index);
 
-        rule.takeFocus(true);
+        field.takeFocus(true);
     }
 
     /**
-     * Delete the panel for the given {@link RuleData} instance (specified by its index).
+     * Delete the panel with the given {@link FieldSet} instance (specified by its index).
      *
      * @param index The index of the panel to delete.
      * @throws IndexOutOfBoundsException If the index is out of bounds.
      */
     protected void deletePanel(int index) throws IndexOutOfBoundsException {
-        if (index < 0 || index >= rules.size())
-            throw new IndexOutOfBoundsException("Invalid index " + index + " for " + rules.size() + " rule(s)");
+        if (index < 0 || index >= rulesFields.size())
+            throw new IndexOutOfBoundsException("Invalid index " + index + " for " + rulesFields.size() + " rule(s)");
 
         panel.removeComponent(this.panel.getChildrenList().get(index));
-        rules.remove(index);
+        rulesFields.remove(index);
 
         // Update indices of other panels
-        for (int i = index; i < rules.size(); i++)
-            rules.get(i).setIndex(i);
+        for (int i = index; i < rulesFields.size(); i++) {
+            rulesFields.get(i).setIndex(i);
+            if (i == 0)
+                rulesFields.get(i).setUpEnabled(false);
+        }
 
         // If there are no rules left, add a new one
-        if (rules.size() == 0)
+        if (rulesFields.size() == 0)
             addRuleField();
 
         // Focus on the next available panel
-        rules.get(Math.min(index, rules.size() - 1)).takeFocus(false);
+        rulesFields.get(Math.min(index, rulesFields.size() - 1)).takeFocus(false);
     }
 
     /**
@@ -226,7 +242,9 @@ public class DistrictMatchCorrectionWindow extends CorrectionAddWindow {
     @Override
     public DistrictMatchCorrection makeCorrection() {
         return new DistrictMatchCorrection(
-                rules.stream().map(RuleData::toRule).toList(),
+                rulesFields.stream().map(r -> new Rule(
+                        (RuleType) r.getSelectionNonNull(0), Utils.nullIfBlank(r.getText(1)))
+                ).toList(),
                 newNameCheckBox.isChecked() ? newNameField.getText() : null,
                 newNameCheckBox.isChecked(),
                 newUrlCheckBox.isChecked() ? newUrlField.getText() : null,

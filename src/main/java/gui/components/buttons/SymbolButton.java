@@ -1,4 +1,4 @@
-package gui.buttons;
+package gui.components.buttons;
 
 import com.googlecode.lanterna.SGR;
 import com.googlecode.lanterna.TerminalSize;
@@ -42,7 +42,12 @@ public class SymbolButton extends Button {
             else {
                 graphics.putString(0, 0, "[");
                 graphics.putString(2, 0, "]");
-                graphics.setForegroundColor(TextColor.ANSI.BLUE).enableModifiers(SGR.BOLD);
+
+                if (button.isEnabled())
+                    graphics.setForegroundColor(TextColor.ANSI.BLUE).enableModifiers(SGR.BOLD);
+                else
+                    graphics.setForegroundColor(TextColor.ANSI.RED).disableModifiers(SGR.BOLD);
+
                 graphics.putString(1, 0, button.getLabel());
             }
         }

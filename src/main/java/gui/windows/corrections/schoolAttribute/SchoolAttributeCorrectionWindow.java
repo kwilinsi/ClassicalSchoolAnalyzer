@@ -8,6 +8,7 @@ import constructs.correction.schoolAttribute.SchoolAttributeCorrection;
 import constructs.school.Attribute;
 import gui.windows.corrections.CorrectionAddWindow;
 import org.jetbrains.annotations.NotNull;
+import utils.Utils;
 
 import java.util.Arrays;
 
@@ -122,7 +123,7 @@ public class SchoolAttributeCorrectionWindow extends CorrectionAddWindow {
         return new SchoolAttributeCorrection(
                 attribute.getSelectedItem(),
                 initialValue.getText(),
-                newValue.getText().isBlank() ? null : newValue.getText(),
+                Utils.nullIfBlank(newValue.getText()),
                 getNotes()
         );
     }

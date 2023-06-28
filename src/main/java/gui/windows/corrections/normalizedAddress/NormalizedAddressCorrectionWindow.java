@@ -207,12 +207,12 @@ public class NormalizedAddressCorrectionWindow extends CorrectionAddWindow {
     public @NotNull Correction makeCorrection() {
         return new NormalizedAddress(
                 raw.getText(),
-                addressLine1.getText().isEmpty() ? null : addressLine1.getText(),
-                addressLine2.getText().isEmpty() ? null : addressLine2.getText(),
-                city.getText().isEmpty() ? null : city.getText(),
-                state.getText().isEmpty() ? null : state.getText(),
-                postalCode.getText().isEmpty() ? null : postalCode.getText(),
-                notes.getText().isEmpty() ? null : notes.getText()
+                Utils.nullIfBlank(addressLine1.getText()),
+                Utils.nullIfBlank(addressLine2.getText()),
+                Utils.nullIfBlank(city.getText()),
+                Utils.nullIfBlank(state.getText()),
+                Utils.nullIfBlank(postalCode.getText()),
+                getNotes()
         );
     }
 }

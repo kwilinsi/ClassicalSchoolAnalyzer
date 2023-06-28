@@ -10,10 +10,12 @@ import constructs.correction.CorrectionType;
 import constructs.correction.Correction;
 import constructs.correction.CorrectionManager;
 import gui.GUI;
+import gui.components.buttons.SymbolButton;
 import gui.windows.MyBaseWindow;
 import main.Main;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import utils.Utils;
 
 import java.util.List;
 
@@ -57,7 +59,9 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
         setComponent(new Panel()
                 .setLayoutManager(new GridLayout(1)
                         .setVerticalSpacing(1))
-                .addComponent(new Label(type.name() + " Correction Creator").addStyle(SGR.BOLD),
+                .addComponent(new Label(
+                        Utils.titleCase(type.name().replace('_', ' ') + " Correction Creator"))
+                                .addStyle(SGR.UNDERLINE),
                         GridLayout.createLayoutData(GridLayout.Alignment.CENTER, GridLayout.Alignment.CENTER,
                                 true, false))
                 .addComponent(makePanel())
@@ -263,5 +267,24 @@ public abstract class CorrectionAddWindow extends MyBaseWindow {
                         2,
                         2
                 ));
+    }
+
+    /**
+     * Create an add button (a {@link SymbolButton} with a plus <code>'+'</code> symbol) that calls the given
+     * <code>runnable</code>. It has {@link GridLayout} data specifying that it should be horizontally centered,
+     * taking up the given number of horizontal <code>cells</code>.
+     *
+     * @param runnable The runnable to execute when the button is selected.
+     * @param cells    The horizontal span of the layout data.
+     * @return The new button.
+     */
+    @NotNull
+    public static SymbolButton createAddButton(@NotNull Runnable runnable, int cells) {
+        SymbolButton button = SymbolButton.of('+', runnable);
+        button.setLayoutData(GridLayout.createLayoutData(
+                GridLayout.Alignment.CENTER, GridLayout.Alignment.CENTER,
+                true, false, cells, 1
+        ));
+        return button;
     }
 }

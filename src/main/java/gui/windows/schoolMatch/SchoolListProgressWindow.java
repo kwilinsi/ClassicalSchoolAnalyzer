@@ -368,7 +368,7 @@ public class SchoolListProgressWindow extends MyBaseWindow {
 
         Main.GUI.dialog(
                 "Fatal Error",
-                "A fatal error occurred, and the process must now halt.\n\n%s%s",
+                "A fatal error occurred, and the process must now halt.%s",
                 List.of(message, error == null ? "" : "\n\n" + error.getLocalizedMessage())
         );
 

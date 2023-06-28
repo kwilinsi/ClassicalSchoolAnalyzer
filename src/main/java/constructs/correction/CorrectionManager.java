@@ -6,12 +6,14 @@ import constructs.correction.districtMatch.DistrictMatchCorrection;
 import constructs.correction.normalizedAddress.NormalizedAddress;
 import constructs.correction.schoolAttribute.SchoolAttributeCorrection;
 import constructs.correction.schoolCorrection.SchoolCorrection;
+import constructs.correction.schoolMatch.SchoolMatchCorrection;
 import database.Database;
 import gui.windows.corrections.CorrectionAddWindow;
 import gui.windows.corrections.districtMatch.DistrictMatchCorrectionWindow;
 import gui.windows.corrections.normalizedAddress.NormalizedAddressCorrectionWindow;
 import gui.windows.corrections.schoolAttribute.SchoolAttributeCorrectionWindow;
 import gui.windows.corrections.schoolCorrection.SchoolCorrectionWindow;
+import gui.windows.corrections.schoolMatch.SchoolMatchCorrectionWindow;
 import gui.windows.prompt.Option;
 import gui.windows.prompt.RunnableOption;
 import gui.windows.prompt.SelectionPrompt;
@@ -220,10 +222,11 @@ public class CorrectionManager {
         SelectionPrompt<CorrectionType> prompt = SelectionPrompt.of(
                 "Add Correction",
                 "Select the type of correction to add:",
-                Option.of("School Correction", CorrectionType.SCHOOL_CORRECTION),
-                Option.of("School Attribute", CorrectionType.SCHOOL_ATTRIBUTE),
-                Option.of("Normalized Address", CorrectionType.NORMALIZED_ADDRESS),
                 Option.of("District Match", CorrectionType.DISTRICT_MATCH),
+                Option.of("Normalized Address", CorrectionType.NORMALIZED_ADDRESS),
+                Option.of("School Attribute", CorrectionType.SCHOOL_ATTRIBUTE),
+                Option.of("School Correction", CorrectionType.SCHOOL_CORRECTION),
+                Option.of("School Match", CorrectionType.SCHOOL_MATCH),
                 Option.of("Back", null)
         );
 
@@ -232,10 +235,11 @@ public class CorrectionManager {
             return;
 
         CorrectionAddWindow window = switch (selection) {
-            case SCHOOL_CORRECTION -> new SchoolCorrectionWindow();
-            case SCHOOL_ATTRIBUTE -> new SchoolAttributeCorrectionWindow();
             case DISTRICT_MATCH -> new DistrictMatchCorrectionWindow();
             case NORMALIZED_ADDRESS -> new NormalizedAddressCorrectionWindow();
+            case SCHOOL_ATTRIBUTE -> new SchoolAttributeCorrectionWindow();
+            case SCHOOL_CORRECTION -> new SchoolCorrectionWindow();
+            case SCHOOL_MATCH -> new SchoolMatchCorrectionWindow();
         };
 
         logger.debug("Creating new {} Correction with {}", selection.name(), window.getClass());
@@ -273,33 +277,6 @@ public class CorrectionManager {
     }
 
     /**
-     * {@link #get(CorrectionType) Get} all {@link SchoolCorrection SchoolCorrections} (those with
-     * {@link CorrectionType CorrectionType}
-     * {@link CorrectionType#SCHOOL_CORRECTION SCHOOL_CORRECTION}).
-     *
-     * @return The cached list of Corrections.
-     */
-    @NotNull
-    public static List<SchoolCorrection> getSchoolCorrections() {
-        return get(CorrectionType.SCHOOL_CORRECTION).stream()
-                .map(c -> (SchoolCorrection) c)
-                .toList();
-    }
-
-    /**
-     * {@link #get(CorrectionType) Get} all {@link SchoolAttributeCorrection SchoolAttributeCorrections} (those with
-     * {@link CorrectionType CorrectionType} {@link CorrectionType#SCHOOL_ATTRIBUTE SCHOOL_ATTRIBUTE}).
-     *
-     * @return The cached list of Corrections.
-     */
-    @NotNull
-    public static List<SchoolAttributeCorrection> getSchoolAttributes() {
-        return get(CorrectionType.SCHOOL_ATTRIBUTE).stream()
-                .map(c -> (SchoolAttributeCorrection) c)
-                .toList();
-    }
-
-    /**
      * {@link #get(CorrectionType) Get} all {@link DistrictMatchCorrection DistrictMatchCorrections} (those with
      * {@link CorrectionType CorrectionType} {@link CorrectionType#DISTRICT_MATCH DISTRICT_MATCH}).
      *
@@ -321,6 +298,47 @@ public class CorrectionManager {
     public static List<NormalizedAddress> getNormalizedAddresses() {
         return get(CorrectionType.NORMALIZED_ADDRESS).stream()
                 .map(c -> (NormalizedAddress) c)
+                .toList();
+    }
+
+    /**
+     * {@link #get(CorrectionType) Get} all {@link SchoolAttributeCorrection SchoolAttributeCorrections} (those with
+     * {@link CorrectionType CorrectionType} {@link CorrectionType#SCHOOL_ATTRIBUTE SCHOOL_ATTRIBUTE}).
+     *
+     * @return The cached list of Corrections.
+     */
+    @NotNull
+    public static List<SchoolAttributeCorrection> getSchoolAttributes() {
+        return get(CorrectionType.SCHOOL_ATTRIBUTE).stream()
+                .map(c -> (SchoolAttributeCorrection) c)
+                .toList();
+    }
+
+    /**
+     * {@link #get(CorrectionType) Get} all {@link SchoolCorrection SchoolCorrections} (those with
+     * {@link CorrectionType CorrectionType}
+     * {@link CorrectionType#SCHOOL_CORRECTION SCHOOL_CORRECTION}).
+     *
+     * @return The cached list of Corrections.
+     */
+    @NotNull
+    public static List<SchoolCorrection> getSchoolCorrections() {
+        return get(CorrectionType.SCHOOL_CORRECTION).stream()
+                .map(c -> (SchoolCorrection) c)
+                .toList();
+    }
+
+    /**
+     * {@link #get(CorrectionType) Get} all {@link SchoolMatchCorrection SchoolMatchCorrections} (those with
+     * {@link CorrectionType CorrectionType}
+     * {@link CorrectionType#SCHOOL_MATCH SCHOOL_MATCH}).
+     *
+     * @return The cached list of Corrections.
+     */
+    @NotNull
+    public static List<SchoolMatchCorrection> getSchoolMatches() {
+        return get(CorrectionType.SCHOOL_MATCH).stream()
+                .map(c -> (SchoolMatchCorrection) c)
                 .toList();
     }
 }

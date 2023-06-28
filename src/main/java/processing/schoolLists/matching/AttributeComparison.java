@@ -147,25 +147,31 @@ public record AttributeComparison(@NotNull Attribute attribute,
      */
     public enum Preference {
         /**
-         * Prefer the value from the incoming school.
-         */
-        INCOMING,
-
-        /**
          * Prefer the value from the existing school.
          */
         EXISTING,
 
         /**
-         * No automatically determined preference for which school to use. This must <i>only</i> be used when user
-         * input is required to make a decision. For {@link Level#EXACT identical} values, use {@link #EXISTING}.
+         * Prefer the value from the incoming school.
          */
-        NONE,
+        INCOMING,
 
         /**
          * Prefer some third option not given by
          */
-        OTHER
+        OTHER,
+
+        /**
+         * No automatically determined preference for which school to use. This must <i>only</i> be used when user
+         * input is required to make a decision. For {@link Level#EXACT identical} values, use {@link #EXISTING}.
+         */
+        NONE;
+
+        /**
+         * All of the {@link Preference Preferences} that indicate some preference one way or another (i.e. all except
+         * {@link #NONE}). These are in their {@link #ordinal() natural} order.
+         */
+        public static final Preference[] ALL_EXCEPT_NONE = {EXISTING, INCOMING, OTHER};
     }
 
     /**

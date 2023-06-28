@@ -1,4 +1,4 @@
-package gui.buttons;
+package gui.components.buttons;
 
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.graphics.Theme;

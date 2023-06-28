@@ -37,12 +37,14 @@ public class SchoolAttributeCorrection extends Correction {
      * @param attribute    The {@link #attribute}.
      * @param initialValue The {@link #initialValue}.
      * @param newValue     The {@link #newValue}.
-     * @param notes        The {@link #notes}.
+     * @param notes        The {@link #setNotes(String) notes}.
+     * @throws IllegalArgumentException If the notes are more than 300 characters long, the maximum length allowed by
+     *                                  the SQL database.
      */
     public SchoolAttributeCorrection(@NotNull Attribute attribute,
                                      @NotNull Object initialValue,
                                      @Nullable Object newValue,
-                                     @Nullable String notes) {
+                                     @Nullable String notes) throws IllegalArgumentException {
         super(CorrectionType.SCHOOL_ATTRIBUTE, notes);
         this.attribute = attribute;
         this.initialValue = initialValue;

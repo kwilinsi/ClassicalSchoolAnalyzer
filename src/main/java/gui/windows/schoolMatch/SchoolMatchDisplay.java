@@ -12,9 +12,9 @@ import constructs.organization.Organization;
 import constructs.school.Attribute;
 import constructs.school.CreatedSchool;
 import constructs.school.School;
-import gui.buttons.Link;
-import gui.buttons.PageArrow;
-import gui.buttons.Show;
+import gui.components.buttons.Link;
+import gui.components.buttons.PageArrow;
+import gui.components.buttons.Show;
 import gui.utils.GUIUtils;
 import gui.windows.prompt.Option;
 import gui.windows.prompt.SelectionPrompt;
@@ -331,12 +331,8 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                         info.attributePreferences().set(index, preference);
                         info.attributePreferenceOthers().set(index, otherOption);
 
-                        SchoolComparison comparison = schoolComparisons.get(currentDisplayedSchool);
-                        AttributeComparison attrComp = comparison.getAttributeComparison(attribute);
-                        if (attrComp != null)
-                            comparison.putAttributeComparison(
-                                    attribute, attrComp.newPreference(preference, otherOption)
-                            );
+                        schoolComparisons.get(currentDisplayedSchool)
+                                .changePreference(attribute, preference, otherOption);
                     }
             );
 
@@ -691,7 +687,7 @@ public class SchoolMatchDisplay extends SelectionPrompt<Level> {
                 info.attributePreferences().set(attrIndex, selectedPref);
 
             if (selectedPref != comp.preference())
-                comparison.putAttributeComparison(attribute, comp.newPreference(selectedPref, pref.getOtherOption()));
+                comparison.changePreference(attribute, selectedPref, pref.getOtherOption());
         }
     }
 

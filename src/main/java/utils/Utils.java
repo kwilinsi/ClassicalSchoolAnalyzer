@@ -434,4 +434,17 @@ public class Utils {
         }, threadName == null ? String.format("thread-%5d", (int) (Math.random() * 100000)) : threadName);
         thread.start();
     }
+
+    /**
+     * Take some string. If it's <code>null</code> or {@link String#isBlank() blank}, this returns <code>null</code>;
+     * otherwise, it returns the same input string. In a sense, this is the opposite of
+     * {@link org.apache.commons.lang3.StringUtils#isBlank(CharSequence) StringUtils.isBlank()}.
+     *
+     * @param input The input text.
+     * @return The converted text.
+     */
+    @Nullable
+    public static String nullIfBlank(@Nullable String input) {
+        return input == null || input.isBlank() ? null : input;
+    }
 }

@@ -3,31 +3,31 @@ package gui.windows.corrections.schoolCorrection;
 import com.googlecode.lanterna.SGR;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.*;
+import constructs.correction.AttributeMatch;
 import constructs.correction.Correction;
 import constructs.correction.CorrectionType;
 import constructs.correction.schoolCorrection.SchoolCorrection;
 import constructs.correction.schoolCorrection.ActionType;
 import constructs.school.Attribute;
-import gui.buttons.SymbolButton;
+import gui.components.FieldSet;
 import gui.utils.GUIUtils;
 import gui.windows.corrections.CorrectionAddWindow;
 import org.jetbrains.annotations.NotNull;
+import processing.schoolLists.matching.AttributeComparison;
+import utils.Utils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SchoolCorrectionWindow extends CorrectionAddWindow {
     /**
-     * The list of {@link TriggerField TriggerField} in the {@link #triggersPanel}.
+     * The list of {@link FieldSet FieldSets} in the {@link #matchRulesPanel}.
      */
-    private List<@NotNull TriggerField> triggerFields;
+    private List<@NotNull FieldSet> matchRuleFields;
 
     /**
-     * The panel that lists the {@link TriggerField TriggerField}.
+     * The panel that lists the {@link FieldSet FieldSets}.
      */
-    private Panel triggersPanel;
+    private Panel matchRulesPanel;
 
     /**
      * The panel that contains the {@link #actionSelector currently} displayed {@link #actionPanels actionPanel}.
@@ -57,7 +57,7 @@ public class SchoolCorrectionWindow extends CorrectionAddWindow {
 
     @Override
     protected @NotNull Panel makePanel() {
-        triggerFields = new ArrayList<>();
+        matchRuleFields = new ArrayList<>();
         actionPanels = new HashMap<>();
         actionSelector = new ComboBox<>(ActionType.values());
 
@@ -68,17 +68,17 @@ public class SchoolCorrectionWindow extends CorrectionAddWindow {
         for (ActionPanel panel : actionPanels.values())
             panel.setLayoutData(GridLayout.createHorizontallyFilledLayoutData());
 
-        // Create the triggers panel
-        triggersPanel = new Panel()
-                .setLayoutManager(new GridLayout(4).setLeftMarginSize(0).setRightMarginSize(0))
-                .addComponent(new Label("Triggers").addStyle(SGR.UNDERLINE),
+        // Create the match rules panel
+        matchRulesPanel = new Panel(new GridLayout(4).setLeftMarginSize(0).setRightMarginSize(0))
+                .addComponent(new Label("Match Rules").addStyle(SGR.UNDERLINE),
                         GridLayout.createHorizontallyFilledLayoutData(4))
                 .addComponent(new Label("Attribute").addStyle(SGR.BOLD))
                 .addComponent(new Label("Value").addStyle(SGR.BOLD))
                 .addComponent(new Label("Level").addStyle(SGR.BOLD))
                 .addComponent(new EmptySpace())
-                .addComponent(SymbolButton.of('+', this::addTrigger));
-        addTrigger();
+                .addComponent(new EmptySpace(), GridLayout.createHorizontallyFilledLayoutData(4))
+                .addComponent(CorrectionAddWindow.createAddButton(this::addMatchRule, 4));
+        addMatchRule();
 
         // Create the actions panel
         actionSelector.setSelectedItem(ActionType.OMIT);
@@ -103,91 +103,75 @@ public class SchoolCorrectionWindow extends CorrectionAddWindow {
         // Assemble the panels
         return new Panel()
                 .setLayoutManager(new GridLayout(1).setLeftMarginSize(0).setRightMarginSize(0))
-                .addComponent(triggersPanel.withBorder(Borders.singleLine()))
+                .addComponent(matchRulesPanel.withBorder(Borders.singleLine()))
                 .addComponent(actionPanelContainer.withBorder(Borders.singleLine()))
                 .addComponent(new EmptySpace())
                 .addComponent(notesPanel);
     }
 
     /**
-     * Determine whether any of the {@link #triggerFields triggers} are using the given {@link Attribute}, except for
-     * the trigger at the given index. This is used to check for duplicate triggers.
-     *
-     * @param attribute The attribute to check.
-     * @param index     The index of the trigger to skip checking.
-     * @return <code>True</code> if and only if there is at least one trigger (not at the given index) using the
-     * given attribute.
+     * Add a new row to the {@link #matchRulesPanel match rules} panel.
      */
-    boolean hasTriggerOnAttribute(@NotNull Attribute attribute, int index) {
-        for (int i = 0; i < triggerFields.size(); i++)
-            if (i != index && triggerFields.get(i).attribute().getSelectedItem() == attribute)
-                return true;
-        return false;
+    public void addMatchRule() {
+        matchRuleFields.add(new FieldSet(matchRuleFields.size(), null, this::delete)
+                .add(new ComboBox<>(Arrays.asList(Attribute.values())), null)
+                .add(new TextBox(new TerminalSize(30, 1), TextBox.Style.MULTI_LINE)
+                        .setHorizontalFocusSwitching(true))
+                .add(new ComboBox<>(AttributeComparison.Level.ALL_EXCEPT_NONE))
+                .blockDuplicates(0, this::getMatchRuleFields, (text) -> showError(
+                        "Duplicate Attribute: " + text,
+                        "You can't have two match rules with the same attribute."
+                ))
+                .addTo(matchRulesPanel, matchRulesPanel.getChildCount() - 2)
+        );
     }
 
     /**
-     * Add a new row to the {@link #triggersPanel triggers} panel.
-     */
-    private void addTrigger() {
-        TriggerField fields = new TriggerField(this, triggerFields.size());
-        triggerFields.add(fields);
-
-        int index = triggersPanel.getChildCount() - 1;
-        triggersPanel
-                .addComponent(index, fields.attribute())
-                .addComponent(index + 1, fields.value())
-                .addComponent(index + 2, fields.level())
-                .addComponent(index + 3, fields.deleteButton());
-    }
-
-    /**
-     * Delete a set of {@link TriggerField TriggerField} from the {@link #triggersPanel triggers} panel.
+     * Delete a {@link FieldSet} from the {@link #matchRulesPanel match rules} panel.
      *
-     * @param index The row index of the fields.
+     * @param index The row index of the field.
      */
-    void deleteTrigger(int index) {
+    public void delete(int index) {
+        matchRuleFields.remove(index).removeFrom(matchRulesPanel);
+
         // Update indices of later rows
-        for (int i = index + 1; i < triggerFields.size(); i++)
-            triggerFields.get(i).setIndex(i - 1);
-
-        triggersPanel.removeComponent(triggerFields.get(index).deleteButton());
-        triggersPanel.removeComponent(triggerFields.get(index).level());
-        triggersPanel.removeComponent(triggerFields.get(index).value());
-        triggersPanel.removeComponent(triggerFields.get(index).attribute());
-        triggerFields.remove(index);
+        for (int i = index; i < matchRuleFields.size(); i++)
+            matchRuleFields.get(i).setIndex(i);
 
         // If there are no rows, add one
-        if (triggerFields.size() == 0)
-            addTrigger();
+        if (matchRuleFields.size() == 0)
+            addMatchRule();
 
         // Set focus
-        triggerFields.get(Math.min(triggerFields.size() - 1, index)).deleteButton().takeFocus();
+        matchRuleFields.get(Math.min(matchRuleFields.size() - 1, index)).takeFocus(false);
+    }
+
+    @NotNull
+    private List<@NotNull FieldSet> getMatchRuleFields() {
+        return matchRuleFields;
     }
 
     @Override
-    protected boolean validateInput() {
-        // Validate the triggers
-        for (TriggerField trigger : triggerFields) {
-            if (trigger.attribute().getSelectedIndex() == -1) {
-                showError("Missing Trigger Attribute", "You must select an attribute for all triggers.");
+    public boolean validateInput() {
+        // Validate the match rules
+        for (FieldSet field : matchRuleFields) {
+            if (field.isEmpty(0)) {
+                showError("Missing Match Rule Attribute", "You must select an attribute for all rules.");
                 return false;
-            } else if (trigger.level().getSelectedIndex() == -1) {
-                showError("Missing Trigger Level",
-                        "The trigger for '%s' is missing a level.",
-                        trigger.attribute().getSelectedItem()
+            } else if (field.isEmpty(2)) {
+                showError("Missing Match Rule Level",
+                        "The rule for '%s' is missing a match level.",
+                        field.getSelection(0)
                 );
                 return false;
             }
         }
 
-        for (TriggerField trigger : triggerFields)
-            if (trigger.value().getText().isBlank()) {
-                if (!showWarning("Empty Value",
-                        "The trigger for '%s' has an empty value.",
-                        trigger.attribute().getSelectedItem()
-                ))
-                    return false;
-            }
+        for (FieldSet field : matchRuleFields)
+            if (field.isEmpty(1) && !showWarning("Empty Value",
+                    "The rule for '%s' has a blank value.",
+                    field.getSelection(0)
+            )) return false;
 
         // Validate the action
         if (!actionPanels.get(actionSelector.getSelectedItem()).validateInput())
@@ -205,7 +189,11 @@ public class SchoolCorrectionWindow extends CorrectionAddWindow {
     @NotNull
     public Correction makeCorrection() {
         return new SchoolCorrection(
-                triggerFields.stream().map(TriggerField::makeTrigger).toList(),
+                matchRuleFields.stream().map(f -> new AttributeMatch(
+                        (Attribute) f.getSelectionNonNull(0),
+                        Utils.nullIfBlank(f.getText(1)),
+                        (AttributeComparison.Level) f.getSelectionNonNull(2)
+                )).toList(),
                 actionPanels.get(actionSelector.getSelectedItem()).makeAction(),
                 getNotes()
         );

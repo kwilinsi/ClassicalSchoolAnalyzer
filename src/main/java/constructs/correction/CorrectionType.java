@@ -11,6 +11,10 @@ import constructs.correction.schoolCorrection.Action;
 import constructs.correction.schoolCorrection.ChangeAttributesAction;
 import constructs.correction.schoolCorrection.OmitAction;
 import constructs.correction.schoolCorrection.SchoolCorrection;
+import constructs.correction.schoolMatch.CorrectionMatchData;
+import constructs.correction.schoolMatch.DistrictMatchCorrectionData;
+import constructs.correction.schoolMatch.SchoolMatchCorrection;
+import constructs.correction.schoolMatch.SchoolMatchCorrectionData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
@@ -51,7 +55,15 @@ public enum CorrectionType {
      * <p>
      * <b>Correction class:</b> {@link SchoolCorrection}
      */
-    SCHOOL_CORRECTION(SchoolCorrection.class);
+    SCHOOL_CORRECTION(SchoolCorrection.class),
+
+    /**
+     * Corrections associated with determining the {@link processing.schoolLists.matching.data.MatchData.Level Level}
+     * at which two schools match.
+     * <p>
+     * <b>Correction class:</b> {@link SchoolMatchCorrection}
+     */
+    SCHOOL_MATCH(SchoolMatchCorrection.class);
 
     /**
      * This is the class that is instantiated when a Correction is created from this type via
@@ -86,6 +98,7 @@ public enum CorrectionType {
                 .create()
                 .fromJson(data, correctionClass);
 
+        correction.setType(this);
         correction.setNotes(notes);
         return correction;
     }
@@ -104,6 +117,9 @@ public enum CorrectionType {
             case "Action" -> Action.class;
             case "OmitAction" -> OmitAction.class;
             case "ChangeAttributesAction" -> ChangeAttributesAction.class;
+            case "CorrectionMatchData" -> CorrectionMatchData.class;
+            case "DistrictMatchCorrectionData" -> DistrictMatchCorrectionData.class;
+            case "SchoolMatchCorrectionData" -> SchoolMatchCorrectionData.class;
             default -> throw new IllegalArgumentException("Unknown class name: " + name);
         };
     }
@@ -123,6 +139,12 @@ public enum CorrectionType {
             return "OmitAction";
         else if (cls == ChangeAttributesAction.class)
             return "ChangeAttributesAction";
+        else if (cls == CorrectionMatchData.class)
+            return "CorrectionMatchData";
+        else if (cls == DistrictMatchCorrectionData.class)
+            return "DistrictMatchCorrectionData";
+        else if (cls == SchoolMatchCorrectionData.class)
+            return "SchoolMatchCorrectionData";
         else
             throw new IllegalArgumentException("Unknown class: " + cls);
     }
