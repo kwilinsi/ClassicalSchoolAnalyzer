@@ -97,18 +97,22 @@ public record AttributeComparison(@NotNull Attribute attribute,
         }
 
         /**
-         * This is identical to {@link #valueOf(String)}, except that the name is case-insensitive, and in the event
-         * there is no match, it defaults to {@link #NONE}.
+         * This is identical to {@link #valueOf(String)}, except that the name is case-insensitive. If the input is
+         * <code>null</code>, this returns {@link #NONE}.
+         * <p>In the event the input is not recognized it is {@link #logger logged} as a warning, and this returns
+         * {@link #NONE}.
          *
          * @param name The name of the desired level (case in-sensitive).
-         * @return The corresponding level.
+         * @return The corresponding level, or <code>NONE</code> if the <code>name</code> was <code>null</code> or
+         * otherwise not recognized.
          */
         @NotNull
-        public static Level valueOfSafe(String name) {
+        public static Level valueOfSafe(@Nullable String name) {
             for (Level level : values())
                 if (level.name().equalsIgnoreCase(name))
                     return level;
 
+            logger.warn("Unrecognized attribute comparison Level " + name);
             return NONE;
         }
 
@@ -755,7 +759,7 @@ public record AttributeComparison(@NotNull Attribute attribute,
             addresses.add(school.getStr(attribute));
 
         // Compare the addresses with the python parser
-        List<Map<String, String>> results = AddressParser.compare(incomingAddress, addresses);
+        List<Map<String, String>> results = AddressParser.compare(incomingAddress, addresses, true);
 
         // Process the results for each cached school. Make sure to always return an AttributeComparison for
         // EVERY existing school, even if the parser failed completely and returned an empty list

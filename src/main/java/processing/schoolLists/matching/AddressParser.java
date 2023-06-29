@@ -11,6 +11,7 @@ import constructs.correction.normalizedAddress.NormalizedAddress;
 import constructs.school.Attribute;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.Config;
@@ -65,6 +66,48 @@ public class AddressParser {
      * indicating that the file should be updated.
      */
     private static boolean IS_NORMALIZED_ADDRESSES_CACHE_VALID = false;
+
+    /**
+     * This is what the Python address parser returns when you {@link Task#normalize} normalize a
+     * {@link Attribute#isEffectivelyNull(Object) null} address. It's stored here as a shortcut to skip calling the
+     * parser in such a case.
+     */
+    @NotNull
+    @Unmodifiable
+    private static final Map<@NotNull String, @Nullable String> NULL_NORMALIZATION = new HashMap<>();
+
+    /**
+     * This is what the Python address parser returns when you {@link Task#compare} two
+     * {@link Attribute#isEffectivelyNull(Object) null} addresses. It's stored here as a shortcut to skip calling the
+     * parser in such a case. The <code>"match"</code> level is <code>"EXACT"</code>.
+     */
+    @NotNull
+    @Unmodifiable
+    private static final Map<@NotNull String, @Nullable String> NULL_COMPARISON_EXACT = new HashMap<>();
+
+    /**
+     * Same as {@link #NULL_COMPARISON_EXACT}, except the match is <code>"INDICATOR"</code>.
+     */
+    @NotNull
+    @Unmodifiable
+    private static final Map<@NotNull String, @Nullable String> NULL_COMPARISON_INDICATOR = new HashMap<>();
+
+    // Initialize the NULL_NORMALIZATION, NULL_COMPARISON_EXACT, and NULL_COMPARISON_INDICATOR maps
+    static {
+        NULL_NORMALIZATION.put("address_line_1", null);
+        NULL_NORMALIZATION.put("address_line_2", null);
+        NULL_NORMALIZATION.put("city", null);
+        NULL_NORMALIZATION.put("state", null);
+        NULL_NORMALIZATION.put("postal_code", null);
+        NULL_NORMALIZATION.put("normalized", null);
+
+        NULL_COMPARISON_EXACT.putAll(NULL_NORMALIZATION);
+        NULL_COMPARISON_EXACT.put("match", "EXACT");
+        NULL_COMPARISON_EXACT.put("info", null);
+
+        NULL_COMPARISON_INDICATOR.putAll(NULL_COMPARISON_EXACT);
+        NULL_COMPARISON_INDICATOR.put("match", "INDICATOR");
+    }
 
     // Add a listener that will invalidate the cache whenever a new NormalizedAddress is created or the entire
     // Corrections list is loaded
@@ -174,20 +217,25 @@ public class AddressParser {
     }
 
     /**
-     * Normalize a single address.
+     * Parse and normalize a single address.
      * <p>
-     * For more information, and to use the more efficient bulk normalization process, see {@link #normalize(List)}.
+     * For more information, and to use the more efficient bulk normalization process, see {@link #parseAddress(List)}.
      *
      * @param address The address to normalize.
      * @return A map containing the parsed and normalized address information. The normalized address is retrievable
      * via the <code>"normalized"</code> key.
      */
     @Nullable
-    public static Map<String, String> normalize(@Nullable String address) {
+    public static Map<String, String> parseAddress(@Nullable String address) {
         logger.debug("Normalizing single address '{}'", address);
+
+        // If the address is null, skip calling the python parser
+        if (Attribute.address.isEffectivelyNull(address))
+            return NULL_NORMALIZATION;
+
         Process process;
         try {
-            process = newProcess(Task.normalize, address == null ? "null" : address);
+            process = newProcess(Task.normalize, address);
         } catch (IOException e) {
             logger.error("Failed to run process", e);
             return null;
@@ -221,15 +269,19 @@ public class AddressParser {
      * occurs, this is an empty, immutable list.
      */
     @NotNull
-    public static List<Map<String, String>> normalize(@NotNull List<String> addresses) {
+    public static List<Map<String, String>> parseAddress(@NotNull List<String> addresses) {
         logger.debug("Running bulk normalization on {} address{}", addresses.size(), addresses.size() == 1 ? "" : "es");
-        String path = saveToFileUnique(addresses, "addresses");
 
+        // If they're all null, skip this. If only some are null, go ahead and use the python parser, as that won't
+        // drastically increase computational time (it's the startup time that's slow)
+        if (addresses.stream().allMatch(Attribute.address::isEffectivelyNull))
+            return new ArrayList<>(Collections.nCopies(addresses.size(), NULL_NORMALIZATION));
+
+        String path = saveToFileUnique(addresses, "addresses");
         if (path == null)
             return List.of();
 
         String outputPath = runBulkProcess(Task.normalize_file, path);
-
         if (outputPath == null) {
             Utils.deleteFiles(path);
             return List.of();
@@ -270,10 +322,7 @@ public class AddressParser {
      */
     @Nullable
     public static String normalizeAddress(@Nullable String address) {
-        // Not strictly necessary, but significantly faster for the relatively likely null input
-        if (address == null) return null;
-
-        Map<String, String> normalized = normalize(address);
+        Map<String, String> normalized = parseAddress(address);
         if (normalized == null)
             return null;
         else
@@ -293,34 +342,34 @@ public class AddressParser {
      */
     @NotNull
     public static List<String> normalizeAddress(@NotNull List<String> addresses) {
-        List<Map<String, String>> normalized = normalize(addresses);
-        if (normalized.size() == 0) return List.of();
+        List<Map<String, String>> parsed = parseAddress(addresses);
+        if (parsed.size() == 0) return List.of();
 
-        List<String> output = new ArrayList<>();
+        List<String> normalized = new ArrayList<>();
         int successCount = 0;
 
-        for (int i = 0; i < normalized.size(); i++) {
-            Map<String, String> map = normalized.get(i);
+        for (int i = 0; i < parsed.size(); i++) {
+            Map<String, String> map = parsed.get(i);
             if (map == null) {
                 logger.warn("Unexpected null normalization map for address '{}'", addresses.get(i));
-                output.add(null);
+                normalized.add(null);
             } else {
-                String norm = map.get("normalized");
                 if (map.containsKey("error")) {
                     logger.warn("Error normalizing address '{}'", addresses.get(i));
                     logError(map.get("error"));
                 }
 
-                output.add(norm);
+                String norm = map.get("normalized");
+                normalized.add(norm);
                 if (norm != null)
                     successCount++;
             }
         }
 
         logger.debug("Successfully normalized {}/{} addresses from {} inputs",
-                successCount, addresses.size(), output.size());
+                successCount, addresses.size(), normalized.size());
 
-        return output;
+        return normalized;
     }
 
     /**
@@ -340,6 +389,9 @@ public class AddressParser {
                                             @Nullable String address) {
         logger.debug("Normalizing single {} '{}' with address {}", attribute.name(), value, address);
 
+        // If the value and address are both null, skip calling the Python parser to save time
+        if (attribute.isEffectivelyNull(value) && Attribute.address.isEffectivelyNull(address))
+            return null;
 
         Process process;
         try {
@@ -389,6 +441,11 @@ public class AddressParser {
                     addresses.size(), values.size(), attribute.name()
             ));
 
+        // If every value and address is null, skip calling the Python parser to save time
+        if (addresses.stream().allMatch(Attribute.address::isEffectivelyNull) &&
+                values.stream().allMatch(attribute::isEffectivelyNull))
+            return new ArrayList<>(Collections.nCopies(values.size(), null));
+
         List<Map<String, String>> inputData = new ArrayList<>();
         for (int i = 0; i < addresses.size(); i++) {
             Map<String, String> map = new HashMap<>();
@@ -435,7 +492,7 @@ public class AddressParser {
      * Compare two addresses. This returns a single {@link HashMap} with the result. In the event that the parser
      * script throws an error, it is {@link #logger logged}, and <code>null</code> is returned instead.
      * <p>
-     * For more information on the map, see {@link #compare(String, List)}.
+     * For more information on the map, see {@link #compare(String, List, boolean)}.
      *
      * @param addr1 The first address to compare. If <code>null</code>, this is replaced with the
      *              string <code>"null"</code>.
@@ -446,6 +503,10 @@ public class AddressParser {
     @Nullable
     public static Map<String, String> compare(@Nullable String addr1, @Nullable String addr2) {
         logger.debug("Running single address comparison on '{}' and '{}'", addr1, addr2);
+
+        // If both addresses are null, skip the comparison
+        if (Attribute.address.isEffectivelyNull(addr1) && Attribute.address.isEffectivelyNull(addr2))
+            return Objects.equals(addr1, addr2) ? NULL_COMPARISON_EXACT : NULL_COMPARISON_INDICATOR;
 
         try {
             Process process = newProcess(Task.compare, addr1 == null ? "null" : addr1, addr2 == null ? "null" : addr2);
@@ -465,34 +526,89 @@ public class AddressParser {
     }
 
     /**
+     * <h2>Process</h2>
      * Compare one given address to a list of addresses. This returns a list of {@link HashMap HashMaps}, one for
-     * each comparison address. The maps will contain the following keys:
+     * each comparison address. The maps may contain the following keys (keys marked <code>(*)</code> may not be
+     * included; see below):
      * <ul>
-     *     <li><code>"match"</code> - Either <code>"EXACT"</code>, <code>"INDICATOR"</code>, or <code>"NONE"</code>
-     *     <li><code>"preference"</code> - A string with the preferred normalized form of the address
-     *     <li><code>"info"</code> - Optional additional information primarily for debugging
+     *     <li><code>"match"</code> - Either <code>"EXACT"</code>, <code>"INDICATOR"</code>, or <code>"NONE"</code>.
+     *     <li><code>"info"</code> - Optional additional information primarily for debugging.
+     *     <li><code>"normalized"</code> - The normalized preferred form of the address. This is <code>null</code>
+     *     when the <code>match</code> is <code>"NONE"</code>.
+     *     <li><code>(*) "address_line_1"</code> - The parsed preference address.
+     *     <li><code>(*) "address_line_2"</code> - <i>id.</i>
+     *     <li><code>(*) "city"</code> - <i>id.</i>
+     *     <li><code>(*) "state"</code> - <i>id.</i>
+     *     <li><code>(*) "postal code"</code> - <i>id.</i>
      * </ul>
-     * If a particular address encounters an error while parsing, its hashmap will be <code>null</code>, thus not
-     * containing any keys. The error message is {@link #logger logged}.
+     * If a particular address encounters an error while parsing, the <code>"info"</code> key will map to an error
+     * message that is {@link #logger logged}.
      *
-     * @param address     The address to compare to everything else. If this is <code>null</code>, it's replaced with
-     *                    an empty string.
-     * @param comparisons The list of addresses to compare to the main one.
+     * <h2>Shortcutting for Nulls</h2>
+     * This can also optionally skip making a call to the Python parser script if the primary <code>address</code> is
+     * {@link Attribute#isEffectivelyNull(Object) null}. In that case, if <code>allowShortcuttingNulls</code> is
+     * <code>true</code>, it's assumed that <b>all</b> <code>comparison</code> addresses have <b>already been
+     * {@link #normalizeAddress(String) normalized}</b>, and the comparison occurs as follows:
+     * <ul>
+     *     <li>For <code>null</code> comparisons, the match level is set to <code>"EXACT"</code> or
+     *     <code>"INDICATOR"</code>, depending on whether the strings are {@link Objects#equals(Object, Object) equal}.
+     *     <li>For non-<code>null</code> comparison, it's assumed that the address is valid, and thus preference goes
+     *     to the comparison address with a match level of <code>"NONE"</code>
+     * </ul>
+     * <p>
+     * Note that if this shortcut is performed, this method does not guarantee that all possible keys will be
+     * included in each map. Some keys may not be included or, if included, may not be accurate. The results are only
+     * guaranteed to contain <code>"match</code>, <code>"normalized"</code>, and <code>"info"</code> keys, and the
+     * <code>"info"</code> key will always map to <code>null</code>.
+     *
+     * @param address                The address to compare to everything else. If this is <code>null</code>, it's
+     *                               replaced with
+     *                               an empty string.
+     * @param comparisons            The list of addresses to compare to the main one. If this is empty, an
+     *                               immutable, empty list is returned.
+     * @param allowShortcuttingNulls Whether to skip the Python parser if that is possible. Marking this
+     *                               <code>true</code> indicates that the <code>comparisons</code> are <b>all</b>
+     *                               normalized already.
      * @return A list of {@link HashMap HashMaps} indicating the results of each comparison. Or, if the comparison
      * process fails altogether, this will be an empty, immutable list.
      */
     @NotNull
-    public static List<Map<String, String>> compare(@Nullable String address, @NotNull List<String> comparisons) {
+    @Unmodifiable
+    public static List<Map<String, String>> compare(@Nullable String address,
+                                                    @NotNull List<String> comparisons,
+                                                    boolean allowShortcuttingNulls) {
         logger.debug("Running bulk comparison of '{}' against {} address{}",
                 Utils.cleanLineBreaks(address), comparisons.size(), comparisons.size() == 1 ? "" : "es");
 
-        String path = saveToFileUnique(comparisons, "comp_addresses");
+        // If the list of comparisons is empty, exit immediately
+        if (comparisons.size() == 0)
+            return List.of();
 
+        // If the address is null and shortcutting is enabled, skip calling the Python parser to save time
+        if (allowShortcuttingNulls && Attribute.address.isEffectivelyNull(address)) {
+            List<Map<String, String>> output = new ArrayList<>();
+            for (String comparison : comparisons) {
+                if (Attribute.address.isEffectivelyNull(comparison))
+                    output.add(Objects.equals(address, comparison) ? NULL_COMPARISON_EXACT : NULL_COMPARISON_INDICATOR);
+                else {
+                    Map<String, String> map = new HashMap<>();
+                    map.put("match", "NONE");
+                    map.put("normalized", comparison);
+                    map.put("info", null);
+                    output.add(map);
+                }
+            }
+
+            return output;
+        }
+
+        // Continue with calling the Python parser
+
+        String path = saveToFileUnique(comparisons, "comp_addresses");
         if (path == null)
             return List.of();
 
         String outputPath = runBulkProcess(Task.compare_file, address == null ? "null" : address, path);
-
         if (outputPath == null) {
             Utils.deleteFiles(path);
             return List.of();
