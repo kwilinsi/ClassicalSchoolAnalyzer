@@ -134,14 +134,6 @@ public abstract class Correction implements Construct {
         this(-1, type, notes, new HashMap<>());
     }
 
-    public void setType(@NotNull CorrectionType type) {
-        this.type = type;
-    }
-
-    public void setNotes(@Nullable String notes) {
-        this.notes = notes;
-    }
-
     @Override
     public int getId() {
         return id;
@@ -150,6 +142,14 @@ public abstract class Correction implements Construct {
     @Override
     public void setId(int id) {
         this.id = id;
+    }
+
+    public void setType(@NotNull CorrectionType type) {
+        this.type = type;
+    }
+
+    public void setNotes(@Nullable String notes) {
+        this.notes = notes;
     }
 
     @Override

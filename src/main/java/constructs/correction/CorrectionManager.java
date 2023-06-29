@@ -113,8 +113,6 @@ public class CorrectionManager {
             while (result.next()) {
                 String typeStr = result.getString(2);
                 String dataStr = result.getString(3);
-                String deserializationData = result.getString(4);
-                String notesStr = result.getString(5);
                 CorrectionType type;
 
                 try {
@@ -125,7 +123,12 @@ public class CorrectionManager {
                 }
 
                 try {
-                    Correction correction = type.make(dataStr, deserializationData, notesStr);
+                    Correction correction = type.make(
+                            result.getInt(1),
+                            dataStr,
+                            result.getString(4),
+                            result.getString(5)
+                    );
                     CORRECTIONS.get(type).add(correction);
                     callListeners(type, correction);
                 } catch (Exception e) {

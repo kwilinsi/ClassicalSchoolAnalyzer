@@ -67,7 +67,7 @@ public enum CorrectionType {
 
     /**
      * This is the class that is instantiated when a Correction is created from this type via
-     * {@link #make(String, String, String)}.
+     * {@link #make(int, String, String, String)}.
      */
     private final Class<? extends Correction> correctionClass;
 
@@ -83,14 +83,16 @@ public enum CorrectionType {
     /**
      * Create a new {@link Correction} of the appropriate {@link #correctionClass class} using the given JSON data.
      *
+     * @param id                  The Correction {@link Correction#setId(int) id}
      * @param data                The JSON data with which to make the Correction.
      * @param deserializationData The deserialization data.
-     * @param notes               The notes.
+     * @param notes               The {@link Correction#setNotes(String) notes}.
      * @return The new Correction.
      * @throws JsonSyntaxException If there is an error parsing the JSON data.
      */
     @NotNull
-    public Correction make(@NotNull String data,
+    public Correction make(int id,
+                           @NotNull String data,
                            @Nullable String deserializationData,
                            @Nullable String notes) throws JsonSyntaxException {
         Correction correction = new GsonBuilder()
@@ -98,6 +100,7 @@ public enum CorrectionType {
                 .create()
                 .fromJson(data, correctionClass);
 
+        correction.setId(id);
         correction.setType(this);
         correction.setNotes(notes);
         return correction;
