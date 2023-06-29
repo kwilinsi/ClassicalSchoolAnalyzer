@@ -94,6 +94,9 @@ public class CachedSchool extends School implements CachedConstruct {
                 else put(a, ((Float) o).doubleValue());
             } else
                 put(a, resultSet.getObject(a.name()));
+
+        // All the updates were just placed in newAttributes; move them to the attributes list
+        saveChanges();
     }
 
     @Nullable
