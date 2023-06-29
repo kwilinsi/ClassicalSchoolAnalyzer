@@ -23,9 +23,14 @@ def compare_address(addr1: Union[str, None],
         same and a preference for the best formatted address.
     """
 
+    # Parse the address if it isn't parsed. If it was already parsed, create a copy, as
+    # the parsed data will be modified later
     if not parsed1:
         parsed1 = normalize.address(addr1)
+    else:
+        parsed1 = parsed1.copy()
 
+    # If the addresses are identical already, exit now
     if addr1 == addr2:
         return _package_comp_result('EXACT', parsed1, normalize.format(parsed1))
 

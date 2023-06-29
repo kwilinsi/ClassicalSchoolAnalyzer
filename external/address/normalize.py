@@ -75,9 +75,11 @@ def _clean_input(input: Union[str, None]) -> Union[str, None]:
     """
     Clean any input given to this program. This does the following:
      
-    1. Replace the strings "none" and "null" with None.
-    2. Strip leading and trailing whitespace.
-    3. Remove null characters and control characters.
+    1. If the string is empty or None, exit with None immediately.
+    2. Replace linebreaks with a comma and space: ", ".
+    3. Strip leading and trailing whitespace.
+    4. Remove null characters and control characters.
+    5. Replace the strings "none" and "null" with None.
 
     Args:
         input: The input to clean.
@@ -88,6 +90,13 @@ def _clean_input(input: Union[str, None]) -> Union[str, None]:
 
     if not input:
         return None
+
+    # Replace any line breaks with commas. This seems to fix some parsing errors that result
+    # from parsing, normalizing, and parsing an address again. For example, the address
+    # '1234 SOMEWHERE ROAD, NORTH CHARLESTON SC' and '1234 SOMEWHERE ROAD\nNORTH CHARLESTON SC'
+    # are parsed differently without this step. (The latter makes NORTH part of the road,
+    # rather than part of the city, as it should).
+    input = re.sub(r'\r?\n', ', ', input)
     
     # Strip whitespace and remove null characters. The RegEx comes from ChatGPT
     input = input.strip().replace('\x00', '')
@@ -122,13 +131,6 @@ def _clean_address(input: Union[str, None]) -> Union[str, None]:
     match = re.match(ADDRESS_PREFIX_REGEX, input, re.IGNORECASE)
     if match:
         input = input[match.end():].strip()
-
-    # Replace any line breaks with commas. This seems to fix some parsing errors that result
-    # from parsing, normalizing, and parsing an address again. For example, the address
-    # '1234 SOMEWHERE ROAD, NORTH CHARLESTON SC' and '1234 SOMEWHERE ROAD\nNORTH CHARLESTON SC'
-    # are parsed differently without this step. (The latter makes NORTH part of the road,
-    # rather than part of the city, as it should).
-    input = input.replace("\n", ", ")
 
     return input
 
