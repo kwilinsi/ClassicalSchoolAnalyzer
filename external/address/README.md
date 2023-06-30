@@ -12,13 +12,13 @@ This directory contains a Python script for parsing addresses. It is built aroun
     - [Test the Executable](#test-the-executable)
   - [Parser Documentation](#parser-documentation)
     - [__Task: `normalize`__](#task-normalize)
-    - [__Task: `normalize_file`__](#task-normalizefile)
+    - [__Task: `normalize_file`__](#task-normalize_file)
     - [__Task: `compare`__](#task-compare)
-    - [__Task: `compare_file`__](#task-comparefile)
-    - [__Task: `normalize_city`__](#task-normalizecity)
-    - [__Task: `normalize_city_file`__](#task-normalizecityfile)
-    - [__Task: `normalize_state`__](#task-normalizestate)
-    - [__Task: `normalize_state_file`__](#task-normalizestatefile)
+    - [__Task: `compare_file`__](#task-compare_file)
+    - [__Task: `normalize_city`__](#task-normalize_city)
+    - [__Task: `normalize_city_file`__](#task-normalize_city_file)
+    - [__Task: `normalize_state`__](#task-normalize_state)
+    - [__Task: `normalize_state_file`__](#task-normalize_state_file)
 
 ## Setup
 
@@ -91,15 +91,17 @@ The supported flags are as follows:
 
   Each task requires its own set of parameters (the `args ...`). The parameters associated with each task are described in the appropriate section below.
 
-- `-l`, `--lookup` — This is an optional parameter pointing to a file with lookup data. That data can allow the normalization of manually-specified addresses that would otherwise fail the normalization process.
+- `-l`, `--lookup` — This is an optional parameter pointing to a file with lookup data. That data can allow the normalization of manually-specified addresses that would otherwise fail the parsing and normalization process.
 
   The specified file must be `json` data. It must be an array containing non-`null` objects, each with the following keys:
-    - `raw` — The raw address that, when matched, will be replaced with the corresponding parsed data. This is case in-sensitive and will be trimmed for comparisons. Null and control characters are removed from the strings compared to this one, so don't include those.
+    - `raw` — The raw address that, when matched, will be replaced with the corresponding parsed data. This is case in-sensitive and will be trimmed for comparisons. `Null` and control characters are removed from the strings compared to this one, so don't include those.
     - `address_line_1` — The first line of the replacement parsed address.
     - `address_line_` — The second line of the address.
     - `city` — The city.
     - `state` — The state.
     - `postal_code` — The postal code.
+
+  It may also contain a `normalized` key mapping to a normalized address record. If this isn't given, or it maps to an empty or `null` value, then the normalized value is generated automatically from the other address components.
 
 - `args ...` — These are other arguments associated with the `task`. They are described below.
 

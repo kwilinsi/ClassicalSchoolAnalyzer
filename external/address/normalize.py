@@ -24,6 +24,7 @@ def set_lookup_table(data: Union[None, list[dict[str, str]]]) -> None:
         - 'city'
         - 'state'
         - 'postal_code'
+        - 'normalized'
 
     Each dictionary provides the normalization for some address that would otherwise be unparseable
     by this library, thereby allowing for manual overrides.
@@ -32,6 +33,11 @@ def set_lookup_table(data: Union[None, list[dict[str, str]]]) -> None:
     value are case-insensitive and ignore surrounding whitespace.
 
     If the given data is malformed, this will catch it and throw an exception.
+
+    The 'normalized' value is optional in the input; if it's not provided, it will be generated.
+    If it is provided, but the value is None or empty, it's re-generated and overwritten.
+
+    Input entries must not contain the key 'error'.
 
     Args:
         data: The lookup table entries, or None if there isn't any data.
@@ -68,13 +74,17 @@ def set_lookup_table(data: Union[None, list[dict[str, str]]]) -> None:
             raise ValueError("The 'raw' key must not be null")
 
         item['raw'] = item['raw'].strip().lower()
+
+        if 'normalized' not in item or not item['normalized']:
+            item['normalized'] = format(item)
+
         LOOKUP_TABLE.append(item)
 
 
 def _clean_input(input: Union[str, None]) -> Union[str, None]:
     """
     Clean any input given to this program. This does the following:
-     
+
     1. If the string is empty or None, exit with None immediately.
     2. Replace linebreaks with a comma and space: ", ".
     3. Strip leading and trailing whitespace.
@@ -97,7 +107,7 @@ def _clean_input(input: Union[str, None]) -> Union[str, None]:
     # are parsed differently without this step. (The latter makes NORTH part of the road,
     # rather than part of the city, as it should).
     input = re.sub(r'\r?\n', ', ', input)
-    
+
     # Strip whitespace and remove null characters. The RegEx comes from ChatGPT
     input = input.strip().replace('\x00', '')
     input = re.sub(r'[^\x20-\x7E]', '', input)
@@ -133,6 +143,38 @@ def _clean_address(input: Union[str, None]) -> Union[str, None]:
         input = input[match.end():].strip()
 
     return input
+
+
+def _check_lookup_table(raw_input: Union[str, None], cleaned_input: Union[str, None]) -> Union[OrderedDict[str, Union[str, None]], None]:
+    """
+    Check whether the given address can be found in the LOOKUP_TABLE, either in the raw or
+    normalized entries. If it can, return the parsed entry. Otherwise, return None.
+
+    This checks both the raw and cleaned input for matches. Both strings are trimmed
+    and are case-insensitive during matches.
+
+    Args:
+        raw_input: The raw address string passed to the parsing function.
+        cleaned_input: The raw address after being passed through _clean_address().
+
+    Returns:
+        Either the parsed address value, if given, or None, if the address is not in
+        the lookup table.
+    """
+
+    raw_input = None if not raw_input else raw_input.strip().lower()
+    cleaned_input = None if not cleaned_input else cleaned_input.strip().lower()
+    for entry in LOOKUP_TABLE:
+        if raw_input == entry['raw'] or cleaned_input == entry['raw'] or \
+                raw_input == entry['normalized'] or cleaned_input == entry['normalized']:
+            return utils.define_address(entry['address_line_1'],
+                                        entry['address_line_2'],
+                                        entry['city'],
+                                        entry['state'],
+                                        entry['postal_code'],
+                                        normalized = entry['normalized'])
+    
+    return None
 
 
 def _parse_usaddress(address: Union[str, None]) -> OrderedDict[str, Union[str, None]]:
@@ -203,6 +245,8 @@ def address(input: Union[str, None]) -> OrderedDict[str, Union[str, None]]:
     state:          (Nullable) The state
     postal_code:    (Nullable) The postal code
 
+    It may also contain the 'normalized' key if the address was found in the LOOKUP_TABLE.
+
     It may also contain the key 'error', which will contain an error message. If this key
     is present, then the other keys will all be None.
 
@@ -216,13 +260,10 @@ def address(input: Union[str, None]) -> OrderedDict[str, Union[str, None]]:
     # First, clean the input
     cleaned = _clean_address(input)
 
-    # Check both the cleaned and raw address against the lookup table for a quick match
-    input_trimmed = None if not input else input.strip().lower()
-    cleaned_trimmed = None if not cleaned else cleaned.strip().lower()
-    for entry in LOOKUP_TABLE:
-        if cleaned_trimmed == entry['raw'] or input_trimmed == entry['raw']:
-            return utils.define_address(entry['address_line_1'], entry['address_line_2'],
-                                        entry['city'], entry['state'], entry['postal_code'])
+    # Check whether this is in the lookup table of pre-parsed and normalized addresses
+    lookup = _check_lookup_table(input, cleaned)
+    if lookup:
+        return lookup
 
     # If the cleaned input is null or empty, return an empty address record
     if not cleaned:
@@ -266,6 +307,9 @@ def format(address: OrderedDict[str, Union[str, None]]) -> Union[str, None]:
     ADDRESS_LINE_2
     CITY, STATE POSTAL_CODE
 
+    If the address already contains a 'normalized' key (and the value isn't
+    None or empty), that value is used by default.
+
     If the given address is None or contains the key 'error', this returns None.
 
     Args:
@@ -275,7 +319,13 @@ def format(address: OrderedDict[str, Union[str, None]]) -> Union[str, None]:
         The normalized address in a single string.
     """
 
-    if not address or 'error' in address:
+    if not address:
+        return None
+    
+    if 'normalized' in address and address['normalized']:
+        return address['normalized']
+    
+    if 'error' in address:
         return None
 
     city_line = utils.join_parts(', ', [address['city'], address['state']])

@@ -48,9 +48,19 @@ def define_address(address_line_1: Union[str, None],
                    city: Union[str, None],
                    state: Union[str, None],
                    postal_code: Union[str, None],
-                   error: Union[str, None] = None) -> OrderedDict[str, Union[str, None]]:
+                   error: Union[str, None] = None,
+                   normalized: Union[str, None] = None) -> OrderedDict[str, Union[str, None]]:
     """
     Manually define a scourgify-style address dictionary.
+
+    Args:
+        address_line_1: The first line of the address.
+        address_line_2: The second line of the address.
+        city: The city.
+        state: The state.
+        postal_code: The postal (zip) code.
+        error: An optional error message.
+        normalized: The optional normalized address, as given by format().
     """
 
     d = OrderedDict([
@@ -63,6 +73,9 @@ def define_address(address_line_1: Union[str, None],
 
     if error:
         d['error'] = error
+
+    if normalized:
+        d['normalized'] = normalized
 
     return d
 
