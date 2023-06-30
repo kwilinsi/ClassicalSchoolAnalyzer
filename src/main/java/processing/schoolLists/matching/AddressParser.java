@@ -227,7 +227,7 @@ public class AddressParser {
      */
     @Nullable
     public static Map<String, String> parseAddress(@Nullable String address) {
-        logger.debug("Normalizing single address '{}'", address);
+        logger.trace("Normalizing single address '{}'", address);
 
         // If the address is null, skip calling the python parser
         if (Attribute.address.isEffectivelyNull(address))
@@ -270,7 +270,7 @@ public class AddressParser {
      */
     @NotNull
     public static List<Map<String, String>> parseAddress(@NotNull List<String> addresses) {
-        logger.debug("Running bulk normalization on {} address{}", addresses.size(), addresses.size() == 1 ? "" : "es");
+        logger.trace("Running bulk normalization on {} address{}", addresses.size(), addresses.size() == 1 ? "" : "es");
 
         // If they're all null, skip this. If only some are null, go ahead and use the python parser, as that won't
         // drastically increase computational time (it's the startup time that's slow)
@@ -502,7 +502,7 @@ public class AddressParser {
      */
     @Nullable
     public static Map<String, String> compare(@Nullable String addr1, @Nullable String addr2) {
-        logger.debug("Running single address comparison on '{}' and '{}'", addr1, addr2);
+        logger.trace("Running single address comparison on '{}' and '{}'", addr1, addr2);
 
         // If both addresses are null, skip the comparison
         if (Attribute.address.isEffectivelyNull(addr1) && Attribute.address.isEffectivelyNull(addr2))
@@ -577,7 +577,7 @@ public class AddressParser {
     public static List<Map<String, String>> compare(@Nullable String address,
                                                     @NotNull List<String> comparisons,
                                                     boolean allowShortcuttingNulls) {
-        logger.debug("Running bulk comparison of '{}' against {} address{}",
+        logger.trace("Running bulk comparison of '{}' against {} address{}",
                 Utils.cleanLineBreaks(address), comparisons.size(), comparisons.size() == 1 ? "" : "es");
 
         // If the list of comparisons is empty, exit immediately

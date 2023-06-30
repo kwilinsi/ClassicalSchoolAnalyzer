@@ -213,14 +213,14 @@ public class Utils {
                 File file = new File(filePath);
                 if (file.exists()) {
                     if (file.delete())
-                        logger.debug("Deleted file '{}'", filePath);
+                        logger.trace("Deleted file '{}'", filePath);
                     else
-                        logger.debug("Failed to delete '{}'", filePath);
+                        logger.trace("Failed to delete '{}'", filePath);
                 } else {
                     logger.debug("Cannot delete '{}' as it doesn't exist", filePath);
                 }
             } catch (SecurityException e) {
-                logger.debug("Failed to delete '{}' due to SecurityException: {}", filePath, e.getMessage());
+                logger.warn("Failed to delete '{}' due to SecurityException: {}", filePath, e.getMessage());
             }
         }
     }
