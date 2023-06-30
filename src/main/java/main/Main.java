@@ -3,7 +3,7 @@ package main;
 import constructs.correction.CorrectionManager;
 import database.Database;
 import gui.GUI;
-import gui.windows.Background;
+import gui.windows.log.Background;
 import gui.windows.MainMenu;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -132,30 +132,6 @@ public class Utils {
     }
 
     /**
-     * I couldn't figure out how to do this in one line with {@link String#format(String, Object...)}, so I've written a
-     * custom method to do it.
-     * <p>
-     * This takes some input string and forces it to be exactly <code>length</code> characters long. If the input is too
-     * short, it is padded with spaces on the right (left-aligned).
-     * <p>
-     * If the string is too long, excess characters are taken off the end. If the <code>ellipsis</code> parameter is
-     * <code>true</code>, an extra character is removed and replaced with an ellipsis, to indicate to the user that the
-     * string was truncated.
-     *
-     * @param input    The input string to format.
-     * @param length   The length of the desired output.
-     * @param ellipsis Whether to add an ellipsis to the end of the string if it is too long.
-     * @return The formatted string.
-     */
-    @NotNull
-    public static String padTrimString(@NotNull String input, int length, boolean ellipsis) {
-        if (input.length() > length)
-            return input.substring(0, length - (ellipsis ? 1 : 0)) + (ellipsis ? "…" : "");
-        else
-            return String.format("%-" + length + "s", input);
-    }
-
-    /**
      * Generate the portion of a SQL {@link java.sql.PreparedStatement PreparedStatement} that contains the list of
      * arguments. That is, when you're creating a statement like "<code>INSERT INTO Table (col1, col2) VALUES (?,
      * ?);</code>", this function will generate the list of column names and the question marks for the values.
