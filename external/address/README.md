@@ -12,13 +12,13 @@ This directory contains a Python script for parsing addresses. It is built aroun
     - [Test the Executable](#test-the-executable)
   - [Parser Documentation](#parser-documentation)
     - [__Task: `normalize`__](#task-normalize)
-    - [__Task: `normalize_file`__](#task-normalize_file)
+    - [__Task: `normalize_file`__](#task-normalizefile)
     - [__Task: `compare`__](#task-compare)
-    - [__Task: `compare_file`__](#task-compare_file)
-    - [__Task: `normalize_city`__](#task-normalize_city)
-    - [__Task: `normalize_city_file`__](#task-normalize_city_file)
-    - [__Task: `normalize_state`__](#task-normalize_state)
-    - [__Task: `normalize_state_file`__](#task-normalize_state_file)
+    - [__Task: `compare_file`__](#task-comparefile)
+    - [__Task: `normalize_city`__](#task-normalizecity)
+    - [__Task: `normalize_city_file`__](#task-normalizecityfile)
+    - [__Task: `normalize_state`__](#task-normalizestate)
+    - [__Task: `normalize_state_file`__](#task-normalizestatefile)
 
 ## Setup
 
