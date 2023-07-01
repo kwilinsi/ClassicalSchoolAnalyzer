@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.Utils;
 
 import java.util.List;
 
@@ -366,10 +367,11 @@ public class SchoolListProgressWindow extends MyBaseWindow {
 
         if (getComponent() == null) return;
 
+        message = Utils.joinNonEmpty("\n", message, error == null ? null : error.getLocalizedMessage());
         Main.GUI.dialog(
                 "Fatal Error",
                 "A fatal error occurred, and the process must now halt.%s",
-                List.of(message, error == null ? "" : "\n\n" + error.getLocalizedMessage())
+                message.isBlank() ? "" : "\n\n" + message
         );
 
         close();

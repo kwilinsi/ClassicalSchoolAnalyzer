@@ -69,6 +69,10 @@ public class DistrictOrganization implements Construct {
         this.id = id;
     }
 
+    public int getOrganizationId() {
+        return organization_id;
+    }
+
     public int getDistrictId() {
         return district_id;
     }

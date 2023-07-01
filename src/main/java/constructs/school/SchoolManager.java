@@ -7,10 +7,12 @@ import constructs.district.CachedDistrict;
 import constructs.district.DistrictManager;
 import constructs.districtOrganization.CachedDistrictOrganization;
 import constructs.organization.Organization;
+import constructs.organization.OrganizationManager;
 import gui.windows.schoolMatch.SchoolListProgressWindow;
 import gui.windows.schoolMatch.SchoolListProgressWindow.Phase;
 import database.Database;
 import main.Main;
+import org.jetbrains.annotations.NotNull;
 import processing.schoolLists.matching.AttributeComparison;
 import processing.schoolLists.matching.MatchIdentifier;
 import processing.schoolLists.matching.data.DistrictMatch;
@@ -20,6 +22,7 @@ import processing.schoolLists.matching.data.SchoolComparison;
 import java.io.IOException;
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * This utility class contains methods designed to produce the main list of schools.
@@ -44,7 +47,11 @@ public class SchoolManager {
 
         List<CachedSchool> schoolsCache;
         List<CachedDistrict> districtCache;
-        Set<CachedDistrictOrganization> districtOrganizationCache;
+        // This is a map of organization ids to lists of district-organization relations
+        Map<Integer, @NotNull List<@NotNull CachedDistrictOrganization>> districtOrganizationCache =
+                OrganizationManager.ORGANIZATIONS.stream()
+                        .map(Organization::getId)
+                        .collect(Collectors.toMap(id -> id, id -> new ArrayList<>()));
 
         progress.setGeneralTask("Loading database connection...")
                 .setSubTask("Waiting...")
@@ -70,7 +77,8 @@ public class SchoolManager {
             List<CachedDistrictOrganization> cdo = ConstructManager.loadCacheNullable(
                     connection, CachedDistrictOrganization.class, progress);
             if (cdo == null) return;
-            districtOrganizationCache = new HashSet<>(cdo);
+            for (CachedDistrictOrganization c : cdo)
+                districtOrganizationCache.get(c.getOrganizationId()).add(c);
 
             progress.completeSubProgress();
         } catch (SQLException e) {
@@ -151,7 +159,9 @@ public class SchoolManager {
                 case NO_MATCH -> {
                     // Make a new district, and add this school to it
                     CachedDistrict district = DistrictManager.makeDistrict(school);
-                    districtOrganizationCache.add(new CachedDistrictOrganization(school.getOrganization(), district));
+                    addDistrictOrganization(districtOrganizationCache, new CachedDistrictOrganization(
+                            school.getOrganization(), district
+                    ));
                     districtCache.add(district);
 
                     CachedSchool cachedSchool = new CachedSchool(school);
@@ -162,7 +172,9 @@ public class SchoolManager {
                 case DISTRICT_MATCH -> {
                     // Add this new school to the district
                     CachedDistrict district = ((DistrictMatch) matchData).getDistrict();
-                    districtOrganizationCache.add(new CachedDistrictOrganization(school.getOrganization(), district));
+                    addDistrictOrganization(districtOrganizationCache, new CachedDistrictOrganization(
+                            school.getOrganization(), district
+                    ));
 
                     CachedSchool cachedSchool = new CachedSchool(school);
                     cachedSchool.setDistrict(district);
@@ -172,7 +184,7 @@ public class SchoolManager {
                 case SCHOOL_MATCH -> {
                     // Add a district organization relation, and set the new school's district
                     SchoolComparison comparison = Objects.requireNonNull((SchoolComparison) matchData);
-                    districtOrganizationCache.add(new CachedDistrictOrganization(
+                    addDistrictOrganization(districtOrganizationCache, new CachedDistrictOrganization(
                             school.getOrganization(), Objects.requireNonNull(comparison.getDistrict())
                     ));
                     comparison.updateExistingSchoolAttributes();
@@ -195,12 +207,34 @@ public class SchoolManager {
             // Save districts and schools
             ConstructManager.saveToDatabase(connection, districtCache, progress);
             ConstructManager.saveToDatabase(connection, schoolsCache, progress);
-            ConstructManager.saveToDatabase(connection, districtOrganizationCache, progress);
+            ConstructManager.saveToDatabase(
+                    connection,
+                    districtOrganizationCache.values().stream().flatMap(Collection::stream).toList(),
+                    progress
+            );
         } catch (SQLException e) {
             progress.errorOut("Failed to save the results to the database.", e);
             return;
         }
 
         progress.finishAndWait(schools.size());
+    }
+
+    /**
+     * Add a new {@link CachedDistrictOrganization} relation to the map of existing relations, assuming it's not
+     * already in the map. If it's already present, nothing happens.
+     *
+     * @param relationMap The map of existing relations.
+     * @param relation    The relation to add.
+     */
+    private static void addDistrictOrganization(
+            @NotNull Map<@NotNull Integer, List<@NotNull CachedDistrictOrganization>> relationMap,
+            @NotNull CachedDistrictOrganization relation) {
+        List<@NotNull CachedDistrictOrganization> list = relationMap.get(relation.getOrganizationId());
+        for (CachedDistrictOrganization r : list)
+            if (relation.equals(r))
+                return;
+
+        list.add(relation);
     }
 }

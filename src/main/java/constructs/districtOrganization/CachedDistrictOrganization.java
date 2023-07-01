@@ -144,12 +144,17 @@ public class CachedDistrictOrganization extends DistrictOrganization implements 
             // Compare district ids. If they're equal and not -1, they match
             int thisId = this.getDistrictId();
             int thatId = d.getDistrictId();
-            if (thisId != -1 && thisId == thatId)
-                return true;
-
-            // One last chance: if the given object is also cached, compare the district objects themselves
-            if (obj instanceof CachedDistrictOrganization cd)
-                return this.district != null && this.district == cd.district;
+            if (thisId == thatId) {
+                if (thisId != -1) {
+                    return true;
+                } else if (obj instanceof CachedDistrictOrganization cd) {
+                    // One last chance: if the given object is also cached, compare the district objects themselves
+                    return this.district == cd.district;
+                }
+            } else if (thisId == -1 || thatId == -1) {
+                // If one specifies a district but not the other, they aren't the same
+                return false;
+            }
         }
 
         return false;
