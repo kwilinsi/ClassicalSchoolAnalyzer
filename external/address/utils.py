@@ -61,6 +61,9 @@ def define_address(address_line_1: Union[str, None],
         postal_code: The postal (zip) code.
         error: An optional error message.
         normalized: The optional normalized address, as given by format().
+
+    Returns:
+        A new OrderedDict address record with the given components.
     """
 
     d = OrderedDict([
