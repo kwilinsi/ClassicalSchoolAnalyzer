@@ -77,6 +77,8 @@ public class SchoolMatchCorrectionData extends DistrictMatchCorrectionData {
             comparison.changePreference(attribute, preference.a, preference.b);
         }
 
+        comparison.setLevel(MatchData.Level.SCHOOL_MATCH);
+
         return comparison;
     }
 }
