@@ -62,7 +62,7 @@ public class GUI {
      *
      * @param runnable The task to run.
      */
-    public void run(@NotNull Runnable runnable) {
+    public synchronized void run(@NotNull Runnable runnable) {
         thread.invokeLater(runnable);
     }
 
@@ -74,7 +74,7 @@ public class GUI {
      *
      * @param runnable The task to run.
      */
-    public void runAndWait(@NotNull Runnable runnable) {
+    public synchronized void runAndWait(@NotNull Runnable runnable) {
         try {
             thread.invokeAndWait(runnable);
         } catch (InterruptedException e) {
