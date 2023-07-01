@@ -25,6 +25,7 @@ def set_lookup_table(data: Union[None, list[dict[str, str]]]) -> None:
         - 'state'
         - 'postal_code'
         - 'normalized'
+        - 'normalizd_cleaned'
 
     Each dictionary provides the normalization for some address that would otherwise be unparseable
     by this library, thereby allowing for manual overrides.
@@ -35,7 +36,9 @@ def set_lookup_table(data: Union[None, list[dict[str, str]]]) -> None:
     If the given data is malformed, this will catch it and throw an exception.
 
     The 'normalized' value is optional in the input; if it's not provided, it will be generated.
-    If it is provided, but the value is None or empty, it's re-generated and overwritten.
+    If it is provided, but the value is None or empty, it's re-generated and overwritten. The
+    'normalized_cleaned' is always generated automatically by cleaning the 'normalized' value to
+    make it ready for comparisons (e.g. trimmed, all lowercase, etc.)
 
     Input entries must not contain the key 'error'.
 
@@ -77,6 +80,8 @@ def set_lookup_table(data: Union[None, list[dict[str, str]]]) -> None:
 
         if 'normalized' not in item or not item['normalized']:
             item['normalized'] = format(item)
+
+        item['normalized_cleaned'] = _clean_address(item['normalized']).strip().lower()
 
         LOOKUP_TABLE.append(item)
 
@@ -164,16 +169,17 @@ def _check_lookup_table(raw_input: Union[str, None], cleaned_input: Union[str, N
 
     raw_input = None if not raw_input else raw_input.strip().lower()
     cleaned_input = None if not cleaned_input else cleaned_input.strip().lower()
+
     for entry in LOOKUP_TABLE:
         if raw_input == entry['raw'] or cleaned_input == entry['raw'] or \
-                raw_input == entry['normalized'] or cleaned_input == entry['normalized']:
+                raw_input == entry['normalized_cleaned'] or cleaned_input == entry['normalized_cleaned']:
             return utils.define_address(entry['address_line_1'],
                                         entry['address_line_2'],
                                         entry['city'],
                                         entry['state'],
                                         entry['postal_code'],
-                                        normalized = entry['normalized'])
-    
+                                        normalized=entry['normalized'])
+
     return None
 
 
@@ -321,10 +327,10 @@ def format(address: OrderedDict[str, Union[str, None]]) -> Union[str, None]:
 
     if not address:
         return None
-    
+
     if 'normalized' in address and address['normalized']:
         return address['normalized']
-    
+
     if 'error' in address:
         return None
 
