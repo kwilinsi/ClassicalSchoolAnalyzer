@@ -164,6 +164,9 @@ public class JsoupHandler {
      * Save the contents of an HTML {@link Document} to a file, and store the reference to this cache in the database.
      * <p>
      * This also saves a reference to the file in the database Cache, so it can be retrieved later.
+     * <p>
+     * This method is <code>synchronized</code>, as it appears that many concurrent threads saving files was causing
+     * <code>IOExceptions</code> when the files failed to be {@link File#createNewFile() created}.
      *
      * @param path     The path to the desired output file.
      * @param document The document to save.
@@ -171,7 +174,9 @@ public class JsoupHandler {
      *                 <code>document</code> {@link Document#baseUri() baseUri} is used instead.
      * @throws IOException If an error occurs while saving the file.
      */
-    public static void save(@NotNull Path path, @NotNull Document document, @Nullable String url) throws IOException {
+    public static synchronized void save(@NotNull Path path,
+                                         @NotNull Document document,
+                                         @Nullable String url) throws IOException {
         File file = path.toFile();
 
         // Create the file (and parent directories) if it doesn't exist
