@@ -165,6 +165,6 @@ public abstract class Correction implements Construct {
     @Override
     @NotNull
     public String toString() {
-        return String.format("%s correction%s", type, id == -1 ? "" : " (" + id + ")");
+        return String.format("%s Correction%s", type, id == -1 ? "" : " (" + id + ")");
     }
 }

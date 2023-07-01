@@ -147,7 +147,7 @@ public class SchoolMatchCorrection extends Correction {
      */
     @NotNull
     public MatchData determineMatchData(@NotNull SchoolComparison comparison) {
-        logger.info("Applying school match correction {} to incoming {} and existing {}",
+        logger.info("Applying {} to incoming {} and existing {}",
                 this, comparison.getIncomingSchool(), comparison.getExistingSchool());
 
         return switch (matchData.getLevel()) {

@@ -318,7 +318,8 @@ public record AttributeComparison(@NotNull Attribute attribute,
 
         // Check addresses
         if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
-            if (attribute != Attribute.address) logger.debug("Comparing {}:", attribute.name());
+            if (attribute != Attribute.address)
+                logger.trace("Comparing {}:", attribute.name());
             return compareAddress(attribute, (String) valA, (String) valB).level();
         }
 
@@ -407,7 +408,8 @@ public record AttributeComparison(@NotNull Attribute attribute,
 
         // Check addresses
         if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
-            if (attribute != Attribute.address) logger.debug("Comparing {}:", attribute.name());
+            if (attribute != Attribute.address)
+                logger.trace("Comparing {}:", attribute.name());
             return compareAddress(attribute, (String) valI, (String) valE);
         }
 
@@ -441,7 +443,8 @@ public record AttributeComparison(@NotNull Attribute attribute,
 
         // Handle address based attributes separately
         if (Attribute.ADDRESS_BASED_ATTRIBUTES.contains(attribute)) {
-            if (attribute != Attribute.address) logger.debug("Comparing {}:", attribute.name());
+            if (attribute != Attribute.address)
+                logger.trace("Comparing {}:", attribute.name());
             comparisons = compareAddress(attribute, incomingSchool, existingSchools);
         } else {
             // Handle all other attributes
