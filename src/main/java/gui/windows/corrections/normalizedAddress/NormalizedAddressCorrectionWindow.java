@@ -141,11 +141,15 @@ public class NormalizedAddressCorrectionWindow extends CorrectionAddWindow {
             showError("Missing Raw Value", "Missing the raw value, which is required for normalization.");
             return false;
         } else if (BAD_ASCII_PATTERN.matcher(raw).find()) {
-            // The raw value can't have null or non-printable characters, as those are removed from inputs in the
-            // python script
-            showError("Illegal Characters","The raw value can't contain null characters or " +
-                    "non-printable ASCII characters. Those are automatically removed from addresses by the Python " +
-                    "script when matching against this string.");
+            // Show a different message based on whether the only bad characters are line breaks
+            if (BAD_ASCII_PATTERN.matcher(raw.replaceAll("\r?\n", "")).find())
+                showError("Illegal Linebreaks", "The raw value can't contain any linebreaks. " +
+                        "Use a command and space \", \" instead, as that is the replacement for linebreaks " +
+                        "in the Python parser script.");
+            else
+                showError("Illegal Characters", "The raw value can't contain null characters or " +
+                        "non-printable ASCII characters. Those are automatically removed from addresses by the " +
+                        "Python script when matching against this string.");
             return false;
         } else if (!super.validateInput())
             return false;
