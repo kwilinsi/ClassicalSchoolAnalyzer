@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import processing.schoolLists.matching.MatchIdentifier;
 import utils.Config;
 import utils.JsoupHandler;
+import utils.JsoupHandler.DownloadConfig;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -212,7 +213,7 @@ public class Organization implements Construct {
      * returned instead.
      *
      * @param progress An optional progress window. If this is given, it is updated accordingly.
-     * @param useCache If this is true, the {@link JsoupHandler.DownloadConfig} configuration instance will have
+     * @param useCache If this is true, the {@link DownloadConfig} configuration instance will have
      *                 useCache enabled.
      * @return The contents of the school list page as a {@link Document}.
      * @throws IOException If there is an error loading the page.
@@ -225,13 +226,10 @@ public class Organization implements Construct {
             progress.setGeneralTask("Downloading " + name_abbr + " schools...")
                     .setSubTask("Downloading school list...");
 
-        // Select a config based on whether caching is enabled
-        JsoupHandler.DownloadConfig config = JsoupHandler.DownloadConfig.of(useCache, true);
-
         // Download the document
         return JsoupHandler.downloadAndSave(
                 this.school_list_url,
-                config,
+                useCache ? DownloadConfig.CACHE_AND_IGNORE_CONTENT_TYPE : DownloadConfig.IGNORE_CONTENT_TYPE_ONLY,
                 getFilePath(Config.SCHOOL_LIST_FILE_NAME.get())
         );
     }

@@ -18,7 +18,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-@SuppressWarnings("unused")
 public class JsoupHandler {
     private static final Logger logger = LoggerFactory.getLogger(JsoupHandler.class);
 
@@ -33,7 +32,7 @@ public class JsoupHandler {
      * @throws IOException If there is an error downloading or saving the website.
      */
     public static Document downloadAndSave(@NotNull String url,
-                                           DownloadConfig config,
+                                           @NotNull DownloadConfig config,
                                            @NotNull Path cacheFile) throws IOException {
         // Download the document
         Pair<Document, Boolean> download = downloadAndResults(url, config);
@@ -286,16 +285,6 @@ public class JsoupHandler {
         private DownloadConfig(boolean useCache, boolean ignoreContentType) {
             this.useCache = useCache;
             this.ignoreContentType = ignoreContentType;
-        }
-
-        /**
-         * Create a new {@link DownloadConfig DownloadConfig} with custom settings.
-         *
-         * @param useCache          See {@link #useCache}.
-         * @param ignoreContentType See {@link #ignoreContentType}.
-         */
-        public static DownloadConfig of(boolean useCache, boolean ignoreContentType) {
-            return new DownloadConfig(useCache, ignoreContentType);
         }
     }
 }
