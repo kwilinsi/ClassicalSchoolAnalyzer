@@ -160,6 +160,7 @@ public class ACCSSchoolParser extends Helper<CreatedSchool> {
         school.put(Attribute.accredited_other, ExtUtils.extHtmlStr(document,
                 "div:contains(accredited other) ~ div"));
 
+        parent.incrementProgressBar(progress, school);
         return school;
     }
 

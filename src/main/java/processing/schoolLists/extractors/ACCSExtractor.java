@@ -84,9 +84,7 @@ public class ACCSExtractor implements Extractor {
                 Future<CreatedSchool> future = futures.get(i);
 
                 try {
-                    CreatedSchool school = future.get();
-                    list.add(school);
-                    incrementProgressBar(progress, school);
+                    list.add(future.get());
                 } catch (InterruptedException | ExecutionException e) {
                     // Any thread that encountered an error will log this to the console and be omitted from the
                     // final returned list.
