@@ -8,14 +8,19 @@ import gui.windows.schoolMatch.SchoolListProgressWindow;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import processing.schoolLists.extractors.ACCSExtractor;
 import processing.schoolLists.extractors.Extractor;
 import utils.Config;
 import utils.JsoupHandler;
 import utils.JsoupHandler.DownloadConfig;
 import utils.Pair;
+import utils.Utils;
 
 import java.io.IOException;
+import java.util.Locale;
+import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,6 +67,7 @@ public class ACCSSchoolParser extends Helper<CreatedSchool> {
      * @return The {@link School} object.
      * @throws IOException If there is some error parsing this school's ACCS page.
      */
+    @SuppressWarnings("SpellCheckingInspection")
     @Override
     @NotNull
     public CreatedSchool call() throws IOException {
@@ -159,6 +165,28 @@ public class ACCSSchoolParser extends Helper<CreatedSchool> {
                 "div:contains(chairman name) ~ div"));
         school.put(Attribute.accredited_other, ExtUtils.extHtmlStr(document,
                 "div:contains(accredited other) ~ div"));
+
+        // Extract the bio, if it exists. This consists of all elements before the "school information" header
+        Elements elements = document.select("div.ccsf-content-wrap > *");
+        Elements filtered = new Elements();
+
+        for (Element element : elements)
+            if (element.ownText().trim().toLowerCase(Locale.ROOT).contains("school information"))
+                break;
+            else if (!element.ownText().isBlank())
+                filtered.add(element);
+            else if (!element.text().isBlank())
+                filtered.addAll(element.children());
+
+        // Take the filtered list of elements and combine them into a string, adding linebreaks between elements
+        if (!filtered.isEmpty()) {
+            StringJoiner bio = new StringJoiner("\n");
+            for (Element element : filtered)
+                if (!element.text().isBlank())
+                    bio.add((element.is("h1, h2, h3") ? "\n" : "") + element.text());
+
+            school.put(Attribute.bio, Utils.nullIfBlank(bio.toString().trim()));
+        }
 
         parent.incrementProgressBar(progress, school);
         return school;
